@@ -1,0 +1,9 @@
+construct==2.9.45
+attrs==19.1.0
+click==7.0
+inflection==0.3.1
+jsonlines==1.2.0
+logbook==1.4.3
+pytz==2018.9
+tabulate==0.8.3
+tqdm==4.31.1
