@@ -8,8 +8,10 @@ Regipy is a python library for parsing offline registry hives. regipy has a lot 
     * Read specific subkeys and values
     * Apply transaction logs on a registry hive
 * Command Line Tools
-    * ...
-
+    * Dump an entire registry hive to json
+    * Apply transaction logs on a registry hive
+    * Compare registry hives
+    * Execute plugins from a robust plugin system (i.e: amcache, shimcache, extract computer name...)
 
 
 ## CLI
