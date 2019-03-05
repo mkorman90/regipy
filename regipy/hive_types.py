@@ -1,0 +1,5 @@
+NTUSER_HIVE_TYPE = 'ntuser'
+SYSTEM_HIVE_TYPE = 'system'
+AMCACHE_HIVE_TYPE = 'amcache'
+SOFTWARE_HIVE_TYPE = 'software'
+SAM_HIVE_TYPE = 'sam'
