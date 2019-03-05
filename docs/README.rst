@@ -1,3 +1,7 @@
+
+.. image:: https://travis-ci.com/mkorman90/regipy.svg?branch=master
+    :target: https://travis-ci.com/mkorman90/regipy
+
 regipy
 ==========
 Regipy is a python library for parsing offline registry hives!
