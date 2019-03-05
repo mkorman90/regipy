@@ -5,7 +5,6 @@ from setuptools import setup, find_packages
 
 # Requirements.
 setup_requirements = ['pytest-runner'] if {'pytest', 'test', 'ptr'}.intersection(sys.argv) else []
-install_requirements = ['attrs', 'click', 'construct', 'inflection', 'jsonlines', 'logbook', 'pytz', 'tabulate', 'tqdm']
 test_requirements = ['pytest', 'pytest-pep8', 'pytest-flakes']
 
 # Fetch readme content.
@@ -25,7 +24,6 @@ def main():
           download_url='https://github.com/mkorman90/regipy/releases/download/1.0.0/regipy-1.0.0.tar.gz',
           license="MIT",
           setup_requires=setup_requirements,
-          install_requires=install_requirements,
           tests_require=test_requirements,
           extras_require={
               'test': test_requirements
