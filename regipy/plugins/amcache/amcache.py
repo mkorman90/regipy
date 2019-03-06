@@ -49,9 +49,9 @@ class AmCachePlugin(Plugin):
         entries = []
 
         try:
-            amcache_subkey = self.registry_hive.get_key('\Root\File')
+            amcache_subkey = self.registry_hive.get_key(r'\Root\File')
         except RegistryKeyNotFoundException:
-            amcache_subkey = self.registry_hive.get_key('\Root\InventoryApplicationFile')
+            amcache_subkey = self.registry_hive.get_key(r'\Root\InventoryApplicationFile')
             is_win_7_hive = True
 
         if is_win_7_hive:
@@ -62,6 +62,13 @@ class AmCachePlugin(Plugin):
                 entry['sha1'] = entry['file_id']
                 entry['timestamp'] = convert_wintime(subkey.header.last_modified, as_json=self.as_json)
                 entry['size'] = int(entry['size'], 16) if isinstance(entry['size'], str) else entry['size']
+
+                entry['is_pe_file'] = bool(entry['is_pe_file'])
+                entry['is_os_component'] = bool(entry['is_os_component'])
+
+                if entry['link_date'] == 0:
+                    entry.pop('link_date')
+
                 entry['type'] = 'win_7_amcache'
                 entries.append(entry)
         else:
@@ -70,7 +77,7 @@ class AmCachePlugin(Plugin):
                     entry = {x.name: x.value for x in file_subkey.iter_values(as_json=self.as_json)}
                     entry['timestamp'] = convert_wintime(file_subkey.header.last_modified, as_json=self.as_json)
 
-                    for k,v in WIN8_AMCACHE_MAPPINGS.items():
+                    for k, v in WIN8_AMCACHE_MAPPINGS.items():
                         content = entry.pop(k, None)
                         if content:
                             entry[v] = content
@@ -85,5 +92,3 @@ class AmCachePlugin(Plugin):
                             entry[ts_field_name] = convert_wintime(ts, as_json=self.as_json)
                     entries.append(entry)
         return entries
-
-

@@ -34,7 +34,7 @@ class VKRecord:
     """
     value_type = attr.ib(type=EnumIntegerString)
     value_type_str = attr.ib(type=str)
-    value = attr.ib(type=Bytes)
+    value = attr.ib(type=bytes)
     size = attr.ib(type=int, default=0)
     is_corrupted = attr.ib(type=bool, default=False)
 
@@ -149,7 +149,7 @@ class RegistryHive:
 
         key_path_parts = key_path.split('\\')[1:]
         previous_key_name = ['root']
-        subkey = self.root.find_key(key_path_parts.pop(0))
+        subkey = self.root.get_key(key_path_parts.pop(0))
 
         if not subkey:
             raise RegistryKeyNotFoundException(
@@ -161,7 +161,7 @@ class RegistryHive:
         for path_part in key_path_parts:
             new_path = '\\'.join(previous_key_name)
             previous_key_name.append(subkey.name)
-            subkey = subkey.find_key(path_part)
+            subkey = subkey.get_key(path_part)
 
             if not subkey:
                 raise RegistryKeyNotFoundException('Did not find {} at {}'.format(path_part, new_path))
@@ -235,7 +235,7 @@ class NKRecord:
         self.values_count = self.header.values_count
         self.volatile_subkeys_count = self.header.volatile_subkey_count
 
-    def find_key(self, key_name):
+    def get_key(self, key_name):
         if not self.subkey_count:
             raise NoRegistrySubkeysException('No subkeys for {}'.format(self.header.key_name_string))
 
@@ -373,6 +373,7 @@ class NKRecord:
                     elif vk.data_size > 0x3fd8:
                         try:
                             actual_value = self._parse_indirect_block(substream, value)
+                            actual_value = try_decode_binary(actual_value, as_json=True) if as_json else actual_value
                         except ConstError:
                             logger.error(f'Bad value at {actual_vk_offset}')
                             continue
