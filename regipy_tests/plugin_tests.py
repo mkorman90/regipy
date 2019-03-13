@@ -107,7 +107,7 @@ def test_user_assist_plugin_ntuser(ntuser_hive):
     user_assist_plugin_result = UserAssistPlugin(registry_hive, as_json=True).run()
     assert len(user_assist_plugin_result) == 62
     assert user_assist_plugin_result[-1] == {
-        'name': 'C:\\Program Files (x86)\\Microsoft Office\\Office14\\EXCEL.EXE',
+        'name': '%PROGRAMFILES(X86)%\\Microsoft Office\\Office14\\EXCEL.EXE',
         'timestamp': '2012-04-04T15:43:14.785000+00:00',
         'run_counter': 4,
         'focus_count': 1,
@@ -115,7 +115,7 @@ def test_user_assist_plugin_ntuser(ntuser_hive):
         'session_id': 0
     }
     assert user_assist_plugin_result[0] == {
-        'name': 'C:\\ProgramData\\Microsoft\\Windows \\Start Menu\\Programs\\Accessories\\Welcome Center.lnk',
+        'name': '%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Accessories\\Welcome Center.lnk',
         'timestamp': '2012-04-03T22:06:58.124282+00:00',
         'run_counter': 14,
         'focus_count': 0,
