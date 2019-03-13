@@ -37,9 +37,9 @@ GUID_TO_PATH_MAPPINGS = {
     '{6D809377-6AF0-444B-8957-A3773F02200E}': r'C:\Program Files',
     '{7C5A40EF-A0FB-4BFC-874A-C0F2E0B9FA8E}': r'C:\Program Files (x86)',
     '{F38BF404-1D43-42F2-9305-67DE0B28FC23}': r'C:\Windows',
-    '{0139D44E-6AFE-49F2-8690-3DAFCAE6FFB8}': r'C:\ProgramData\Microsoft\Windows \Start Menu\Programs',
+    '{0139D44E-6AFE-49F2-8690-3DAFCAE6FFB8}': r'C:\ProgramData\Microsoft\Windows\Start Menu\Programs',
     '{9E3995AB-1F9C-4F13-B827-48B24B6C7174}': r'%AppData%\Roaming\Microsoft\Internet Explorer\Quick Launch\User Pinned',
-    '{A77F5D77-2E2B-44C3-A6A2-ABA601054A51}': r'%AppData%\Roaming\Microsoft\Windows \Start Menu\Programs',
+    '{A77F5D77-2E2B-44C3-A6A2-ABA601054A51}': r'%AppData%\Roaming\Microsoft\Windows\Start Menu\Programs',
     '{D65231B0-B2F1-4857-A4CE-A8E7C6EA7D27}': r'C:\Windows\SysWOW64'
 }
 
