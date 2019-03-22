@@ -32,6 +32,7 @@ class Plugin(object):
         Execute the plugin
         :return:
         """
+
     def detect_anomalies(self):
         """
         Run on the output of a plugin and detect possible anomalies

@@ -32,7 +32,15 @@ HBIN_HEADER = Struct(
 
 CM_KEY_NODE_SIZE = 76
 CM_KEY_NODE = Struct(
-    'flags' / Bytes(2),
+    'flags' / FlagsEnum(Int8ul,
+                        KEY_VOLATILE=0x0001,
+                        KEY_HIVE_EXIT=0x0002,
+                        KEY_HIVE_ENTRY=0x0004,
+                        KEY_NO_DELETE=0x0008,
+                        KEY_SYM_LINK=0x0010,
+                        KEY_COMP_NAME=0x0020,
+                        KEY_PREDEF_HANDLE=0x0040
+                        ),
     'last_modified' / Int64ul,
     'access_bits' / Bytes(4),
     'parent_key_offset' / Int32ul,
@@ -137,7 +145,6 @@ VALUE_KEY = Struct(
     'padding' * Int16ul,
     'name' / Bytes(this.name_size)
 ).compile()
-
 
 HASH_LEAF_SIGNATURE = b'lh'
 FAST_LEAF_SIGNATURE = b'lf'
