@@ -8,7 +8,7 @@ from construct import *
 from io import BytesIO
 
 from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundException, NoRegistryValuesException, \
-    RegistryValueNotFoundException, RegipyGeneralException
+    RegistryValueNotFoundException, RegipyGeneralException, UnidentifiedHiveException
 from regipy.structs import REGF_HEADER, HBIN_HEADER, CM_KEY_NODE, LF_LH_SK_ELEMENT, VALUE_KEY, INDEX_ROOT, \
     REGF_HEADER_SIZE, INDEX_ROOT_SIGNATURE, LEAF_INDEX_SIGNATURE, FAST_LEAF_SIGNATURE, HASH_LEAF_SIGNATURE, \
     BIG_DATA_BLOCK
@@ -88,7 +88,11 @@ class RegistryHive:
             root_hbin_cell = next(root_hbin.iter_cells(s))
             self.root = NKRecord(root_hbin_cell, s)
         self.name = self.header.file_name
-        self.hive_type = identify_hive_type(self.name)
+
+        try:
+            self.hive_type = identify_hive_type(self.name)
+        except UnidentifiedHiveException:
+            self.hive_type = None
 
     def recurse_subkeys(self, nk_record=None, path=None, as_json=False):
         """
@@ -397,17 +401,21 @@ class NKRecord:
                 yield Value(name=value_name, value_type=str(value.value_type), value=actual_value,
                             is_corrupted=is_corrupted)
 
-    def get_value(self, value_name, as_json=False):
+    def get_value(self, value_name, as_json=False, raise_on_missing=False):
         """
-        Get a value by name. Will raise if not found
+        Get a value by name. Will raise if not found, except a default is given
         :param value_name: The value name to look for
         :param as_json: Whether to normalize the data as JSON or not
+        :param raise_on_missing: Will raise exception if value is missing, else will return None
         :return:
         """
         for value in self.iter_values(as_json=as_json):
             if value.name == value_name:
-                return value
-        raise RegistryValueNotFoundException('Did not find the value {} on subkey {}'.format(value_name, self.name))
+                return value.value
+
+        if raise_on_missing:
+            raise RegistryValueNotFoundException('Did not find the value {} on subkey {}'.format(value_name, self.name))
+        return None
 
     def __dict__(self):
         return {
