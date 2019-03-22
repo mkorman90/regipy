@@ -23,9 +23,8 @@ class ComputerNamePlugin(Plugin):
             subkey = self.registry_hive.get_key(subkey_path)
 
             try:
-                computer_name = subkey.get_value('ComputerName', as_json=self.as_json)
                 computer_names.append({
-                    'name': computer_name.value,
+                    'name': subkey.get_value('ComputerName', as_json=self.as_json),
                     'timestamp': convert_wintime(subkey.header.last_modified, as_json=self.as_json)
                 })
             except RegistryValueNotFoundException as ex:

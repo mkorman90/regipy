@@ -20,7 +20,8 @@ class ShimCachePlugin(Plugin):
         shimcaches = []
         for subkey_path in self.registry_hive.get_control_sets(COMPUTER_NAME_PATH):
             appcompat_cache = self.registry_hive.get_key(subkey_path).get_key('AppCompatCache')
-            shimcache = appcompat_cache.get_value('AppCompatCache').value
-            for entry in get_shimcache_entries(shimcache, as_json=self.as_json):
-                shimcaches.append(entry)
+            shimcache = appcompat_cache.get_value('AppCompatCache')
+            if shimcache:
+                for entry in get_shimcache_entries(shimcache, as_json=self.as_json):
+                    shimcaches.append(entry)
         return shimcaches
