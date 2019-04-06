@@ -76,13 +76,10 @@ def hive_to_json(hive_path, output_path, registry_path, timeline, verbose):
                         entry.pop('values')
                         csvwriter.writerow(entry)
             else:
-                with jsonlines.open(output_path, mode='w') as writer:
-                    for entry in tqdm(registry_hive.recurse_subkeys(name_key_entry, as_json=True)):
-                        entry.timestamp = entry.timestamp.isoformat()
-                        writer.write(attr.asdict(entry))
+                registry_hive.dump_hive_to_json(output_path, name_key_entry, verbose)
         else:
             for entry in registry_hive.recurse_subkeys(name_key_entry, as_json=True):
-                click.secho(json.dumps(entry, indent=4))
+                click.secho(json.dumps(attr.asdict(entry), indent=4))
 
 
 @click.command()
