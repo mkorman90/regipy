@@ -1,11 +1,15 @@
 import binascii
 import datetime as dt
+
+import jsonlines
 import logbook
 
 import attr
 
 from construct import *
 from io import BytesIO
+
+from tqdm import tqdm
 
 from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundException, NoRegistryValuesException, \
     RegistryValueNotFoundException, RegipyGeneralException, UnidentifiedHiveException
@@ -121,8 +125,9 @@ class RegistryHive:
                 else:
                     values = list(subkey.iter_values(as_json=as_json))
 
+            ts = convert_wintime(subkey.header.last_modified)
             yield Subkey(subkey_name=subkey.name, path=r'{}\{}'.format(path, subkey.name) if path else '\\',
-                         timestamp=convert_wintime(subkey.header.last_modified), values=values,
+                         timestamp=ts.isoformat() if as_json else ts, values=values,
                          values_count=len(values))
 
         # Get the values of the subkey
@@ -133,8 +138,9 @@ class RegistryHive:
             else:
                 values = list(nk_record.iter_values(as_json=as_json))
 
+        ts = convert_wintime(nk_record.header.last_modified)
         yield Subkey(subkey_name=nk_record.name, path=path,
-                     timestamp=convert_wintime(nk_record.header.last_modified), values=values, values_count=len(values))
+                     timestamp=ts.isoformat() if as_json else ts, values=values, values_count=len(values))
 
     def get_hbin_at_offset(self, offset=0):
         """
@@ -187,6 +193,11 @@ class RegistryHive:
         result = [r'\{}\{}'.format(subkey.name, registry_path) for subkey in found_control_sets]
         logger.info('Found control sets: {}'.format(result))
         return result
+
+    def dump_hive_to_json(self, output_path, name_key_entry, verbose=False):
+        with jsonlines.open(output_path, mode='w') as writer:
+            for entry in tqdm(self.recurse_subkeys(name_key_entry, as_json=True), disable=not verbose):
+                writer.write(attr.asdict(entry))
 
 
 class HBin:
@@ -417,6 +428,9 @@ class NKRecord:
             raise RegistryValueNotFoundException('Did not find the value {} on subkey {}'.format(value_name, self.name))
         return None
 
+    def get_values(self, as_json=False):
+        return [x for x in self.iter_values(as_json=as_json)]
+
     def __dict__(self):
         return {
             'name': self.name,
@@ -427,3 +441,4 @@ class NKRecord:
             'timestamp': convert_wintime(self.header.last_modified, as_json=True),
             'volatile_subkeys': self.volatile_subkeys_count
         }
+

@@ -112,7 +112,7 @@ reg = RegistryHive('/Users/martinkorman/Documents/TestEvidence/Registry/Vibraniu
 
 #### Iterate recursively over the entire hive, from root key
 ```python
-for entry in reg.rec_subkeys(as_json=True):
+for entry in reg.recurse_subkeys(as_json=True):
     print(entry)
 ```
 
