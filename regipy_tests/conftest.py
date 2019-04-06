@@ -16,6 +16,13 @@ def extract_lzma(path):
     return tempfile_path
 
 
+@pytest.fixture()
+def temp_output_file():
+    tempfile_path = mktemp()
+    yield tempfile_path
+    os.remove(tempfile_path)
+
+
 @pytest.fixture(scope='module')
 def test_data_dir():
     return str(Path(__file__).parent.joinpath('data'))

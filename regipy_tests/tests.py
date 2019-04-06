@@ -1,3 +1,4 @@
+import json
 import os
 from tempfile import mkdtemp
 
@@ -169,5 +170,13 @@ def test_ntuser_apply_transaction_logs(transaction_ntuser, transaction_log):
     assert len([x for x in found_differences if x[0] == 'new_subkey']) == 527
     assert len([x for x in found_differences if x[0] == 'new_value']) == 59
 
-# TODO:
-# Have a REG file of a couple of registry hives, and compare with output of regipy
+
+def test_hive_serialization(ntuser_hive, temp_output_file):
+    registry_hive = RegistryHive(ntuser_hive)
+    registry_hive.dump_hive_to_json(temp_output_file, registry_hive.root, verbose=False)
+    counter = 0
+    with open(temp_output_file, 'r') as dumped_hive:
+        for x in dumped_hive.readlines():
+            assert json.loads(x)
+            counter += 1
+    assert counter == 2318
