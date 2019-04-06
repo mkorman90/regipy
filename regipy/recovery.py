@@ -5,6 +5,7 @@ import logbook
 
 from construct import Int32ul
 
+from regipy.exceptions import RegistryRecoveryException
 from regipy.registry import RegistryHive
 from regipy.structs import TRANSACTION_LOG, REGF_HEADER_SIZE, REGF_HEADER
 
@@ -66,6 +67,50 @@ def _parse_hvle_block(hive_path, transaction_log_stream, log_size, expected_sequ
     return restored_hive_buffer, recovered_dirty_pages_count
 
 
+def _parse_dirt_block(hive_path, transaction_log, hbins_data_size):
+    restored_hive_buffer = BytesIO(open(hive_path, 'rb').read())
+    recovered_dirty_pages_count = 0
+
+    dirty_vector_length = hbins_data_size // 4096
+
+    if transaction_log.read(4) != b'DIRT':
+        raise RegistryRecoveryException('Expected DIRT signature!')
+
+    log_file_base = 1024  # 512 + len(b'DIRT') + dirty_vector_length
+    primary_file_base = 4096
+    bitmap = transaction_log.read(dirty_vector_length)
+
+    bit_counter = 0
+    bitmap_offset = 0
+
+    # Tuples of offset in primary and offset in transaction log
+    offsets = []
+    while bit_counter < dirty_vector_length * 8:
+        is_bit_set = ((bitmap[bit_counter // 8] >> (bit_counter % 8)) & 1) != 0
+        if is_bit_set:
+            # We skip the basic block for the offsets
+            registry_offset = primary_file_base + (bit_counter * 512)
+
+            # And also the DIRT signature in the transaction log
+            transaction_log_offset = log_file_base + (bitmap_offset * 512)
+
+            offsets.append((registry_offset, transaction_log_offset))
+            bitmap_offset += 1
+
+        bit_counter += 1
+
+    for registry_offset, transaction_log_offset in offsets:
+        logger.debug(f'Reading 512 bytes from {transaction_log_offset} writing to {registry_offset}')
+
+        restored_hive_buffer.seek(registry_offset)
+        transaction_log.seek(transaction_log_offset)
+
+        restored_hive_buffer.write(transaction_log.read(512))
+
+        recovered_dirty_pages_count += 1
+    return restored_hive_buffer, recovered_dirty_pages_count
+
+
 def apply_transaction_logs(hive_path, transaction_log_path, restored_hive_path=None, verbose=False):
     if not restored_hive_path:
         restored_hive_path = f'{hive_path}.restored'
@@ -76,7 +121,6 @@ def apply_transaction_logs(hive_path, transaction_log_path, restored_hive_path=N
 
     logger.info(f'Log Size: {log_size}')
 
-    recovered_dirty_pages_count = 0
     with open(transaction_log_path, 'rb') as transaction_log:
 
         transaction_log_regf_header = REGF_HEADER.parse_stream(transaction_log)
@@ -88,7 +132,9 @@ def apply_transaction_logs(hive_path, transaction_log_path, restored_hive_path=N
                                                                                   expected_sequence_number)
         else:
             # This is an old transaction log - DIRT
-            pass
+            hbins_data_size = registry_hive.header.hive_bins_data_size
+            restored_hive_buffer, recovered_dirty_pages_count = _parse_dirt_block(hive_path, transaction_log,
+                                                                                  hbins_data_size)
 
     # Write to disk the modified registry hive
     with open(restored_hive_path, 'wb') as f:
