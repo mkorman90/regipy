@@ -15,7 +15,7 @@ with open('docs/README.rst', 'r') as readme_file:
 def main():
     setup(name='regipy',
           packages=find_packages(),
-          version='1.0.4',
+          version='1.0.5',
           description='Python Registry Parser',
           long_description=readme,
           author='Martin G. Korman',
@@ -24,6 +24,15 @@ def main():
           download_url='https://github.com/mkorman90/regipy/releases/download/1.0.0/regipy-1.0.0.tar.gz',
           license="MIT",
           setup_requires=setup_requirements,
+          install_requires=['construct==2.9.45',
+                            'attrs==19.1.0',
+                            'click==7.0',
+                            'inflection==0.3.1',
+                            'jsonlines==1.2.0',
+                            'logbook==1.4.3',
+                            'pytz==2018.9',
+                            'tabulate==0.8.3',
+                            'tqdm==4.31.1'],
           tests_require=test_requirements,
           extras_require={
               'test': test_requirements
