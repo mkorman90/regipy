@@ -31,3 +31,6 @@ class RegistryKeyNotFoundException(RegipyException):
 class UnidentifiedHiveException(RegipyException):
     pass
 
+
+class RegistryRecoveryException(RegipyException):
+    pass
