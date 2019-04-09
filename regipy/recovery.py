@@ -37,9 +37,6 @@ def _parse_hvle_block(hive_path, transaction_log_stream, log_size, expected_sequ
         if parsed_hvle_block.sequence_number == expected_sequence_number:
             logger.info(f'This hvle block holds valid dirty blocks')
             expected_sequence_number += 1
-        else:
-            logger.info(f'This block is invalid. stopping.')
-            break
 
         for dirty_page_entry in parsed_hvle_block.dirty_pages_references:
             # Write the actual dirty page to the original hive
@@ -117,6 +114,7 @@ def apply_transaction_logs(hive_path, transaction_log_path, restored_hive_path=N
 
     registry_hive = RegistryHive(hive_path)
     log_size = os.path.getsize(transaction_log_path)
+    
     expected_sequence_number = registry_hive.header.secondary_sequence_num
 
     logger.info(f'Log Size: {log_size}')
