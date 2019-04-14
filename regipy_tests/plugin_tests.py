@@ -2,6 +2,7 @@ import pytest
 
 from regipy.plugins import NTUserPersistencePlugin, UserAssistPlugin, AmCachePlugin, WordWheelQueryPlugin, \
     UACStatusPlugin, LastLogonPlugin
+from regipy.plugins.ntuser.typed_urls import TypedUrlsPlugin
 from regipy.plugins.software.persistence import SoftwarePersistencePlugin
 from regipy.plugins.system.computer_name import ComputerNamePlugin
 from regipy.plugins.system.shimcache import ShimCachePlugin
@@ -191,4 +192,18 @@ def test_last_logon_plugin_software(software_hive):
         'last_logged_on_user': 'SHIELDBASE\\rsydow',
         'last_write': '2012-04-04T12:20:41.453654+00:00',
         'show_tablet_keyboard': 0
+    }
+
+
+def test_typed_urls_plugin_ntuser(ntuser_hive):
+    registry_hive = RegistryHive(ntuser_hive)
+    plugin_instance = TypedUrlsPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == {
+        'last_write': '2012-04-03T22:37:55.411500+00:00',
+        'entries': [
+            {'url1': 'http://199.73.28.114:53/'},
+            {'url2': 'http://go.microsoft.com/fwlink/?LinkId=69157'}
+        ]
     }
