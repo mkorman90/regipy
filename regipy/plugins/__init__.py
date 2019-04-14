@@ -2,6 +2,7 @@ from .amcache.amcache import AmCachePlugin
 from .ntuser.persistence import NTUserPersistencePlugin
 from .ntuser.user_assist import UserAssistPlugin
 from .ntuser.word_wheel_query import WordWheelQueryPlugin
+from .ntuser.typed_urls import TypedUrlsPlugin
 from .system.routes import RoutesPlugin
 from .system.services import ServicesPlugin
 from .system.computer_name import ComputerNamePlugin
