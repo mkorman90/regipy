@@ -8,7 +8,7 @@ from construct import *
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
-from regipy.utils import get_subkey_values_from_list, convert_wintime
+from regipy.utils import convert_wintime
 
 logger = logbook.Logger(__name__)
 
@@ -112,6 +112,5 @@ class UserAssistPlugin(Plugin):
 
                     if entry:
                         self.entries.append(entry)
-
             except RegistryKeyNotFoundException:
                 continue

@@ -1,6 +1,7 @@
 import pytest
 
-from regipy.plugins import NTUserPersistencePlugin, UserAssistPlugin, AmCachePlugin
+from regipy.plugins import NTUserPersistencePlugin, UserAssistPlugin, AmCachePlugin, WordWheelQueryPlugin, \
+    UACStatusPlugin, LastLogonPlugin
 from regipy.plugins.software.persistence import SoftwarePersistencePlugin
 from regipy.plugins.system.computer_name import ComputerNamePlugin
 from regipy.plugins.system.shimcache import ShimCachePlugin
@@ -114,15 +115,7 @@ def test_user_assist_plugin_ntuser(ntuser_hive):
     plugin_instance = UserAssistPlugin(registry_hive, as_json=True)
     plugin_instance.run()
 
-    assert len(plugin_instance.entries) == 64
-    assert plugin_instance.entries[-1] == {
-        'name': '%PROGRAMFILES(X86)%\\Microsoft Office\\Office14\\EXCEL.EXE',
-        'timestamp': '2012-04-04T15:43:14.785000+00:00',
-        'run_counter': 4,
-        'focus_count': 1,
-        'total_focus_time_ms': 47673,
-        'session_id': 0
-    }
+    assert len(plugin_instance.entries) == 62
     assert plugin_instance.entries[-1] == {
         'focus_count': 1,
         'name': '%PROGRAMFILES(X86)%\\Microsoft Office\\Office14\\EXCEL.EXE',
@@ -132,18 +125,70 @@ def test_user_assist_plugin_ntuser(ntuser_hive):
         'total_focus_time_ms': 47673
     }
 
+    assert plugin_instance.entries[50] == {
+        'focus_count': 9,
+        'name': 'Microsoft.Windows.RemoteDesktop',
+        'run_counter': 8,
+        'session_id': 0,
+        'timestamp': '2012-04-03T22:06:58.124282+00:00',
+        'total_focus_time_ms': 180000
+    }
+
 
 def test_plugin_amcache(amcache_hive):
     registry_hive = RegistryHive(amcache_hive)
     plugin_instance = AmCachePlugin(registry_hive, as_json=True)
     plugin_instance.run()
 
-    assert len(plugin_instance.entries) == 1184
+    assert len(plugin_instance.entries) == 1120
     assert plugin_instance.entries[100] == {
-        'full_path': 'C:\\Program Files\\VMware\\VMware Tools\\Drivers\\hgfs\\Win8\\vmhgfs_x86.dll',
-        'last_modified_timestamp_2': '2017-03-17T05:53:39.999340+00:00',
+        'full_path': 'C:\\Windows\\system32\\TPVMMondeu.dll',
+        'last_modified_timestamp_2': '2017-03-17T05:06:04.002722+00:00',
         'program_id': '75a010066bb612ca7357ce31df8e9f0300000904',
-        'sha1': '384583d55816b3e9df8b5c02ed10c850d83e102b',
-        'timestamp': '2017-08-03T11:34:02.247796+00:00',
+        'sha1': '056f4b9d9ec9b5dc548e1b460da889e44089d76f',
+        'timestamp': '2017-08-03T11:34:02.263418+00:00',
         'type': 'win_8+_amcache'
+    }
+
+
+def test_word_wheel_query_plugin_ntuser(ntuser_hive):
+    registry_hive = RegistryHive(ntuser_hive)
+    plugin_instance = WordWheelQueryPlugin(registry_hive, ntuser_hive)
+    plugin_instance.run()
+
+    assert len(plugin_instance.entries) == 6
+    assert plugin_instance.entries[0] == {
+        'last_write': '2012-04-04T15:45:18.551340+00:00',
+        'mru_id': 1,
+        'name': 'alloy',
+        'order': 0
+    }
+
+
+def test_uac_status_plugin_software(software_hive):
+    registry_hive = RegistryHive(software_hive)
+    plugin_instance = UACStatusPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == {
+        'consent_prompt_admin': 5,
+        'consent_prompt_user': 3,
+        'enable_limited_user_accounts': 1,
+        'enable_virtualization': 1,
+        'filter_admin_token': 0,
+        'last_write': '2011-08-30T18:47:10.734144+00:00'
+    }
+
+
+def test_last_logon_plugin_software(software_hive):
+    registry_hive = RegistryHive(software_hive)
+    plugin_instance = LastLogonPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == {
+        'last_logged_on_provider': '{6F45DC1E-5384-457A-BC13-2CD81B0D28ED}',
+        'last_logged_on_sam_user': 'SHIELDBASE\\rsydow',
+        'last_logged_on_user': 'SHIELDBASE\\rsydow',
+        'last_write': '2012-04-04T12:20:41.453654+00:00',
+        'show_tablet_keyboard': 0
     }

@@ -13,15 +13,15 @@ class Plugin(object):
     DESCRIPTION = None
     COMPATIBLE_HIVE = None
 
-    # This variable should always hold the final result - in order to use it in anomaly detection and timeline gen.
-    entries = []
-
     def __init_subclass__(cls):
         PLUGINS.add(cls)
 
     def __init__(self, registry_hive: RegistryHive, as_json=False):
         self.registry_hive = registry_hive
         self.as_json = as_json
+
+        # This variable should always hold the final result - in order to use it in anomaly detection and timeline gen.
+        self.entries = list()
 
     def can_run(self):
         """

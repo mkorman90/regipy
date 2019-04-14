@@ -17,7 +17,7 @@ class InstalledSoftwarePlugin(Plugin):
     def run(self):
         uninstall_sk = self.registry_hive.get_key(INSTALLED_SOFTWARE_PATH)
         for installed_program in uninstall_sk.iter_subkeys():
-            values = {x['name']: x['value'] for x in
+            values = {x.name: x.value for x in
                       installed_program.iter_values(as_json=self.as_json)} if installed_program.values_count else {}
             self.entries.append({
                 'service_name': installed_program.name,
