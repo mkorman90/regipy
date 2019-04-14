@@ -46,7 +46,6 @@ class AmCachePlugin(Plugin):
     def run(self):
         logger.info('Started AmCache Plugin...')
         is_win_7_hive = False
-        entries = []
 
         try:
             amcache_subkey = self.registry_hive.get_key(r'\Root\File')
@@ -70,7 +69,7 @@ class AmCachePlugin(Plugin):
                     entry.pop('link_date')
 
                 entry['type'] = 'win_7_amcache'
-                entries.append(entry)
+                self.entries.append(entry)
         else:
             for subkey in amcache_subkey.iter_subkeys():
                 for file_subkey in subkey.iter_subkeys():
@@ -90,5 +89,4 @@ class AmCachePlugin(Plugin):
                         ts = entry.pop(ts_field_name, None)
                         if ts:
                             entry[ts_field_name] = convert_wintime(ts, as_json=self.as_json)
-                    entries.append(entry)
-        return entries
+                    self.entries.append(entry)

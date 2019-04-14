@@ -13,6 +13,9 @@ class Plugin(object):
     DESCRIPTION = None
     COMPATIBLE_HIVE = None
 
+    # This variable should always hold the final result - in order to use it in anomaly detection and timeline gen.
+    entries = []
+
     def __init_subclass__(cls):
         PLUGINS.add(cls)
 
@@ -32,6 +35,13 @@ class Plugin(object):
         Execute the plugin
         :return:
         """
+
+    def generate_timeline_artifacts(self):
+        """
+        Run on the output of a plugin and generate timeline entries
+        :return:
+        """
+        pass
 
     def detect_anomalies(self):
         """

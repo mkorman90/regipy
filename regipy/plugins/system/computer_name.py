@@ -18,16 +18,14 @@ class ComputerNamePlugin(Plugin):
     def run(self):
         logger.info('Started Computer Name Plugin...')
 
-        computer_names = []
         for subkey_path in self.registry_hive.get_control_sets(COMPUTER_NAME_PATH):
             subkey = self.registry_hive.get_key(subkey_path)
 
             try:
-                computer_names.append({
+                self.entries.append({
                     'name': subkey.get_value('ComputerName', as_json=self.as_json),
                     'timestamp': convert_wintime(subkey.header.last_modified, as_json=self.as_json)
                 })
             except RegistryValueNotFoundException as ex:
                 continue
-        return computer_names
 

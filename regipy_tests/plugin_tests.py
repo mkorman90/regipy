@@ -9,9 +9,11 @@ from regipy.registry import RegistryHive
 
 def test_shimcache_plugin(system_hive):
     registry_hive = RegistryHive(system_hive)
-    shimcache_plugin_result = ShimCachePlugin(registry_hive, as_json=True).run()
-    assert len(shimcache_plugin_result) == 660
-    assert shimcache_plugin_result[0] == {
+    plugin_instance = ShimCachePlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert len(plugin_instance.entries) == 660
+    assert plugin_instance.entries[0] == {
         'last_mod_date': '2011-01-12T12:08:00+00:00',
         'path': '\\??\\C:\\Program Files\\McAfee\\VirusScan Enterprise\\mfeann.exe',
         'exec_flag': 'True'
@@ -20,9 +22,10 @@ def test_shimcache_plugin(system_hive):
 
 def test_computer_name_plugin(system_hive):
     registry_hive = RegistryHive(system_hive)
-    computer_name_plugin_result = ComputerNamePlugin(registry_hive, as_json=True).run()
+    plugin_instance = ComputerNamePlugin(registry_hive, as_json=True)
+    plugin_instance.run()
 
-    assert computer_name_plugin_result == [
+    assert plugin_instance.entries == [
         {'name': 'WKS-WIN732BITA',
          'timestamp': '2010-11-10T17:18:08.718750+00:00'
          },
@@ -34,8 +37,10 @@ def test_computer_name_plugin(system_hive):
 
 def test_persistence_plugin_ntuser(ntuser_hive):
     registry_hive = RegistryHive(ntuser_hive)
-    persistence_plugin_result = NTUserPersistencePlugin(registry_hive, as_json=True).run()
-    assert persistence_plugin_result == {
+    plugin_instance = NTUserPersistencePlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == {
         '\\Software\\Microsoft\\Windows\\CurrentVersion\\Run': {
             'timestamp': '2012-04-03T21:19:54.837716+00:00',
             'values': [
@@ -50,8 +55,10 @@ def test_persistence_plugin_ntuser(ntuser_hive):
 
 def test_persistence_plugin_software(software_hive):
     registry_hive = RegistryHive(software_hive)
-    persistence_plugin_result = SoftwarePersistencePlugin(registry_hive, as_json=True).run()
-    assert persistence_plugin_result == {
+    plugin_instance = SoftwarePersistencePlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == {
         '\\Microsoft\\Windows\\CurrentVersion\\Run':
             {'timestamp': '2012-04-04T01:54:23.669836+00:00',
              'values': [
@@ -104,9 +111,11 @@ def test_persistence_plugin_software(software_hive):
 
 def test_user_assist_plugin_ntuser(ntuser_hive):
     registry_hive = RegistryHive(ntuser_hive)
-    user_assist_plugin_result = UserAssistPlugin(registry_hive, as_json=True).run()
-    assert len(user_assist_plugin_result) == 62
-    assert user_assist_plugin_result[-1] == {
+    plugin_instance = UserAssistPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert len(plugin_instance.entries) == 62
+    assert plugin_instance.entries[-1] == {
         'name': '%PROGRAMFILES(X86)%\\Microsoft Office\\Office14\\EXCEL.EXE',
         'timestamp': '2012-04-04T15:43:14.785000+00:00',
         'run_counter': 4,
@@ -114,7 +123,7 @@ def test_user_assist_plugin_ntuser(ntuser_hive):
         'total_focus_time_ms': 47673,
         'session_id': 0
     }
-    assert user_assist_plugin_result[0] == {
+    assert plugin_instance.entries[0] == {
         'name': '%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Accessories\\Welcome Center.lnk',
         'timestamp': '2012-04-03T22:06:58.124282+00:00',
         'run_counter': 14,
@@ -126,9 +135,11 @@ def test_user_assist_plugin_ntuser(ntuser_hive):
 
 def test_plugin_amcache(amcache_hive):
     registry_hive = RegistryHive(amcache_hive)
-    amcache_plugin_result = AmCachePlugin(registry_hive, as_json=True).run()
-    assert len(amcache_plugin_result) == 1120
-    assert amcache_plugin_result[0] == {
+    plugin_instance = AmCachePlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert len(plugin_instance.entries) == 1120
+    assert plugin_instance.entries[0] == {
         'timestamp': '2017-08-03T11:34:04.654176+00:00',
         'full_path': 'c:\\users\\user\\appdata\\local\\microsoft\\onedrive\\17.3.6943.0625\\FileSyncFAL.dll',
         'program_id': '659b3b63c514582e025e19d3276899150000ffff',

@@ -17,11 +17,10 @@ class ShimCachePlugin(Plugin):
     def run(self):
         logger.info('Started Shim Cache Plugin...')
 
-        shimcaches = []
+        self.entries = []
         for subkey_path in self.registry_hive.get_control_sets(COMPUTER_NAME_PATH):
             appcompat_cache = self.registry_hive.get_key(subkey_path).get_key('AppCompatCache')
             shimcache = appcompat_cache.get_value('AppCompatCache')
             if shimcache:
                 for entry in get_shimcache_entries(shimcache, as_json=self.as_json):
-                    shimcaches.append(entry)
-        return shimcaches
+                    self.entries.append(entry)

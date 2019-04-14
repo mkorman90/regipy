@@ -68,9 +68,7 @@ class UserAssistPlugin(Plugin):
     COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
 
     def run(self):
-        user_assist_entries = []
         entry = None
-
         for guid in GUIDS:
             try:
                 subkey = self.registry_hive.get_key(r'{}\{}'.format(USER_ASSIST_KEY_PATH, guid))
@@ -112,7 +110,6 @@ class UserAssistPlugin(Plugin):
                             'run_counter': parsed_entry.run_counter
                         }
                     if entry:
-                        user_assist_entries.append(entry)
+                        self.entries.append(entry)
             except RegistryKeyNotFoundException:
                 continue
-        return user_assist_entries
