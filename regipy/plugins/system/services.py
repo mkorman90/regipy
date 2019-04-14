@@ -17,7 +17,6 @@ class ServicesPlugin(Plugin):
 
     def run(self):
         logger.info('Started Services enumeration Plugin...')
-        result = {}
         for control_set_services_path in self.registry_hive.get_control_sets(SERVICES_PATH):
 
             try:
@@ -26,7 +25,7 @@ class ServicesPlugin(Plugin):
                 logger.error(ex)
                 continue
 
-            result[control_set_services_path] = {
+            self.entries[control_set_services_path] = {
                 'timestamp': subkey.header.last_modified
             }
             services = []
@@ -42,5 +41,4 @@ class ServicesPlugin(Plugin):
                     'parameters': [x for x in self.registry_hive.recurse_subkeys(nk_record=service, path=r'{}\{}'.format(
                         control_set_services_path, service.name), as_json=True)] if service.subkey_count else None
                 })
-                result[control_set_services_path]['services'] = services
-        return result
+                self.entries[control_set_services_path]['services'] = services

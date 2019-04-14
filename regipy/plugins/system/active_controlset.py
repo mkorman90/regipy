@@ -16,7 +16,7 @@ class ActiveControlSetPlugin(Plugin):
 
     def run(self):
         subkey = self.registry_hive.get_key(SELECT)
-        return [x for x in subkey.iter_values(as_json=self.as_json)]
+        self.entries = [x for x in subkey.iter_values(as_json=self.as_json)]
 
 
 

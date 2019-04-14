@@ -36,7 +36,15 @@ def test_parse_root_key(ntuser_hive):
         'access_bits': b'\x00\x00\x00\x00',
         'class_name_offset': 4294967295,
         'class_name_size': 0,
-        'flags': b',\x00',
+        'flags': {
+            'KEY_COMP_NAME': True,
+            'KEY_HIVE_ENTRY': True,
+            'KEY_HIVE_EXIT': False,
+            'KEY_NO_DELETE': True,
+            'KEY_PREDEF_HANDLE': False,
+            'KEY_SYM_LINK': False,
+            'KEY_VOLATILE': False
+        },
         'key_name_size': 52,
         'key_name_string': b'CMI-CreateHive{6A1C4018-979D-4291-A7DC-7AED1C75B67C}',
         'largest_sk_class_name': 0,

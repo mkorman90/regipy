@@ -8,7 +8,7 @@ from construct import *
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
-from regipy.utils import get_subkey_values_from_list, convert_wintime
+from regipy.utils import convert_wintime
 
 logger = logbook.Logger(__name__)
 
@@ -68,9 +68,6 @@ class UserAssistPlugin(Plugin):
     COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
 
     def run(self):
-        user_assist_entries = []
-        entry = None
-
         for guid in GUIDS:
             try:
                 subkey = self.registry_hive.get_key(r'{}\{}'.format(USER_ASSIST_KEY_PATH, guid))
@@ -91,6 +88,7 @@ class UserAssistPlugin(Plugin):
                             name = name.replace(k, v)
                             break
 
+                    entry = None
                     data = value.value
                     if len(data) == 72:
                         parsed_entry = WIN7_USER_ASSIST.parse(data)
@@ -111,8 +109,8 @@ class UserAssistPlugin(Plugin):
                             'session_id': parsed_entry.session_id,
                             'run_counter': parsed_entry.run_counter
                         }
+
                     if entry:
-                        user_assist_entries.append(entry)
+                        self.entries.append(entry)
             except RegistryKeyNotFoundException:
                 continue
-        return user_assist_entries

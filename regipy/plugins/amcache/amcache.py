@@ -46,7 +46,6 @@ class AmCachePlugin(Plugin):
     def run(self):
         logger.info('Started AmCache Plugin...')
         is_win_7_hive = False
-        entries = []
 
         try:
             amcache_subkey = self.registry_hive.get_key(r'\Root\File')
@@ -63,14 +62,17 @@ class AmCachePlugin(Plugin):
                 entry['timestamp'] = convert_wintime(subkey.header.last_modified, as_json=self.as_json)
                 entry['size'] = int(entry['size'], 16) if isinstance(entry['size'], str) else entry['size']
 
-                entry['is_pe_file'] = bool(entry['is_pe_file'])
-                entry['is_os_component'] = bool(entry['is_os_component'])
+                is_pefile = entry.get('is_pe_file')
+                entry['is_pe_file'] = bool(is_pefile) if is_pefile is not None else None
 
-                if entry['link_date'] == 0:
+                is_os_component = entry.get('is_os_component')
+                entry['is_os_component'] = bool(is_os_component) if is_os_component is not None else None
+
+                if entry.get('link_date') == 0:
                     entry.pop('link_date')
 
                 entry['type'] = 'win_7_amcache'
-                entries.append(entry)
+                self.entries.append(entry)
         else:
             for subkey in amcache_subkey.iter_subkeys():
                 for file_subkey in subkey.iter_subkeys():
@@ -90,5 +92,5 @@ class AmCachePlugin(Plugin):
                         ts = entry.pop(ts_field_name, None)
                         if ts:
                             entry[ts_field_name] = convert_wintime(ts, as_json=self.as_json)
-                    entries.append(entry)
-        return entries
+
+                    self.entries.append(entry)
