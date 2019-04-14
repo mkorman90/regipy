@@ -62,10 +62,13 @@ class AmCachePlugin(Plugin):
                 entry['timestamp'] = convert_wintime(subkey.header.last_modified, as_json=self.as_json)
                 entry['size'] = int(entry['size'], 16) if isinstance(entry['size'], str) else entry['size']
 
-                entry['is_pe_file'] = bool(entry['is_pe_file'])
-                entry['is_os_component'] = bool(entry['is_os_component'])
+                is_pefile = entry.get('is_pe_file')
+                entry['is_pe_file'] = bool(is_pefile) if is_pefile is not None else None
 
-                if entry['link_date'] == 0:
+                is_os_component = entry.get('is_os_component')
+                entry['is_os_component'] = bool(is_os_component) if is_os_component is not None else None
+
+                if entry.get('link_date') == 0:
                     entry.pop('link_date')
 
                 entry['type'] = 'win_7_amcache'
@@ -89,4 +92,5 @@ class AmCachePlugin(Plugin):
                         ts = entry.pop(ts_field_name, None)
                         if ts:
                             entry[ts_field_name] = convert_wintime(ts, as_json=self.as_json)
+
                     self.entries.append(entry)

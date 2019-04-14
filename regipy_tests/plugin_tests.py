@@ -114,7 +114,7 @@ def test_user_assist_plugin_ntuser(ntuser_hive):
     plugin_instance = UserAssistPlugin(registry_hive, as_json=True)
     plugin_instance.run()
 
-    assert len(plugin_instance.entries) == 62
+    assert len(plugin_instance.entries) == 64
     assert plugin_instance.entries[-1] == {
         'name': '%PROGRAMFILES(X86)%\\Microsoft Office\\Office14\\EXCEL.EXE',
         'timestamp': '2012-04-04T15:43:14.785000+00:00',
@@ -123,13 +123,13 @@ def test_user_assist_plugin_ntuser(ntuser_hive):
         'total_focus_time_ms': 47673,
         'session_id': 0
     }
-    assert plugin_instance.entries[0] == {
-        'name': '%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Accessories\\Welcome Center.lnk',
-        'timestamp': '2012-04-03T22:06:58.124282+00:00',
-        'run_counter': 14,
-        'focus_count': 0,
-        'total_focus_time_ms': 14,
-        'session_id': 0
+    assert plugin_instance.entries[-1] == {
+        'focus_count': 1,
+        'name': '%PROGRAMFILES(X86)%\\Microsoft Office\\Office14\\EXCEL.EXE',
+        'run_counter': 4,
+        'session_id': 0,
+        'timestamp': '2012-04-04T15:43:14.785000+00:00',
+        'total_focus_time_ms': 47673
     }
 
 
@@ -138,12 +138,12 @@ def test_plugin_amcache(amcache_hive):
     plugin_instance = AmCachePlugin(registry_hive, as_json=True)
     plugin_instance.run()
 
-    assert len(plugin_instance.entries) == 1120
-    assert plugin_instance.entries[0] == {
-        'timestamp': '2017-08-03T11:34:04.654176+00:00',
-        'full_path': 'c:\\users\\user\\appdata\\local\\microsoft\\onedrive\\17.3.6943.0625\\FileSyncFAL.dll',
-        'program_id': '659b3b63c514582e025e19d3276899150000ffff',
-        'sha1': '818b581a471c1c6833839d35a9d6f3544f6a9c92',
-        'last_modified_timestamp_2': '2017-08-01T12:05:02.598866+00:00',
+    assert len(plugin_instance.entries) == 1184
+    assert plugin_instance.entries[100] == {
+        'full_path': 'C:\\Program Files\\VMware\\VMware Tools\\Drivers\\hgfs\\Win8\\vmhgfs_x86.dll',
+        'last_modified_timestamp_2': '2017-03-17T05:53:39.999340+00:00',
+        'program_id': '75a010066bb612ca7357ce31df8e9f0300000904',
+        'sha1': '384583d55816b3e9df8b5c02ed10c850d83e102b',
+        'timestamp': '2017-08-03T11:34:02.247796+00:00',
         'type': 'win_8+_amcache'
     }

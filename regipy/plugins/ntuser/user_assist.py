@@ -68,7 +68,6 @@ class UserAssistPlugin(Plugin):
     COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
 
     def run(self):
-        entry = None
         for guid in GUIDS:
             try:
                 subkey = self.registry_hive.get_key(r'{}\{}'.format(USER_ASSIST_KEY_PATH, guid))
@@ -89,6 +88,7 @@ class UserAssistPlugin(Plugin):
                             name = name.replace(k, v)
                             break
 
+                    entry = None
                     data = value.value
                     if len(data) == 72:
                         parsed_entry = WIN7_USER_ASSIST.parse(data)
@@ -109,7 +109,9 @@ class UserAssistPlugin(Plugin):
                             'session_id': parsed_entry.session_id,
                             'run_counter': parsed_entry.run_counter
                         }
+
                     if entry:
                         self.entries.append(entry)
+
             except RegistryKeyNotFoundException:
                 continue
