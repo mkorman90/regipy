@@ -32,7 +32,7 @@ HBIN_HEADER = Struct(
 
 CM_KEY_NODE_SIZE = 76
 CM_KEY_NODE = Struct(
-    'flags' / FlagsEnum(Int8ul,
+    'flags' / FlagsEnum(Int16ul,
                         KEY_VOLATILE=0x0001,
                         KEY_HIVE_EXIT=0x0002,
                         KEY_HIVE_ENTRY=0x0004,
