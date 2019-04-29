@@ -110,25 +110,26 @@ class RegistryHive:
             nk_record = self.root
 
         # Iterate over subkeys
-        for subkey in nk_record.iter_subkeys():
-            if subkey.subkey_count:
-                if path:
-                    yield from self.recurse_subkeys(nk_record=subkey, path=r'{}\{}'.format(path, subkey.name),
-                                                    as_json=as_json)
-                else:
-                    yield from self.recurse_subkeys(nk_record=subkey, path=r'\{}'.format(subkey.name), as_json=as_json)
+        if nk_record.header.subkey_count:
+            for subkey in nk_record.iter_subkeys():
+                if subkey.subkey_count:
+                    if path:
+                        yield from self.recurse_subkeys(nk_record=subkey, path=r'{}\{}'.format(path, subkey.name),
+                                                        as_json=as_json)
+                    else:
+                        yield from self.recurse_subkeys(nk_record=subkey, path=r'\{}'.format(subkey.name), as_json=as_json)
 
-            values = []
-            if subkey.values_count:
-                if as_json:
-                    values = [attr.asdict(x) for x in subkey.iter_values(as_json=as_json)]
-                else:
-                    values = list(subkey.iter_values(as_json=as_json))
+                values = []
+                if subkey.values_count:
+                    if as_json:
+                        values = [attr.asdict(x) for x in subkey.iter_values(as_json=as_json)]
+                    else:
+                        values = list(subkey.iter_values(as_json=as_json))
 
-            ts = convert_wintime(subkey.header.last_modified)
-            yield Subkey(subkey_name=subkey.name, path=r'{}\{}'.format(path, subkey.name) if path else '\\',
-                         timestamp=ts.isoformat() if as_json else ts, values=values,
-                         values_count=len(values))
+                ts = convert_wintime(subkey.header.last_modified)
+                yield Subkey(subkey_name=subkey.name, path=r'{}\{}'.format(path, subkey.name) if path else '\\',
+                             timestamp=ts.isoformat() if as_json else ts, values=values,
+                             values_count=len(values))
 
         # Get the values of the subkey
         values = []
@@ -159,11 +160,11 @@ class RegistryHive:
 
         key_path_parts = key_path.split('\\')[1:]
         previous_key_name = ['root']
+
         subkey = self.root.get_key(key_path_parts.pop(0))
 
         if not subkey:
-            raise RegistryKeyNotFoundException(
-                'Did not find {} at {}'.format(key_path, r'\\'.join(previous_key_name)))
+            raise RegistryKeyNotFoundException('Did not find subkey at {}'.format(key_path))
 
         if not key_path_parts:
             return subkey
@@ -265,7 +266,7 @@ class NKRecord:
     def iter_subkeys(self):
 
         if not self.header.subkey_count:
-            raise NoRegistrySubkeysException('No subkeys for {}'.format(self.name))
+            return None
 
         # Go to the offset where the subkey list starts (+4 is because of the cell header)
         target_offset = REGF_HEADER_SIZE + 4 + self.header.subkeys_list_offset
@@ -350,7 +351,7 @@ class NKRecord:
         :return: List of values for the subkey
         """
         if not self.values_count:
-            raise NoRegistryValuesException(f'No registry values for {self.name}')
+            return None
 
         # Get the offset of the values key. We skip 4 because of Cell Header
         target_offset = REGF_HEADER_SIZE + 4 + self.header.values_list_offset

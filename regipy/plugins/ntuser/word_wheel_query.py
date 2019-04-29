@@ -28,7 +28,13 @@ class WordWheelQueryPlugin(Plugin):
             return None
 
         timestamp = convert_wintime(subkey.header.last_modified, as_json=self.as_json)
+
         mru_list_order = subkey.get_value('MRUListEx')
+
+        # If this is the value, the list is empty
+        if mru_list_order == 0xffffffff:
+            return None
+
         for i, entry_name in enumerate(GreedyRange(Int32ul).parse(mru_list_order)):
             entry_value = subkey.get_value(str(entry_name))
 
