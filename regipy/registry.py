@@ -112,6 +112,11 @@ class RegistryHive:
         # Iterate over subkeys
         if nk_record.header.subkey_count:
             for subkey in nk_record.iter_subkeys():
+
+                # Leaf Index records do not contain subkeys
+                if isinstance(subkey, LIRecord):
+                    continue
+
                 if subkey.subkey_count:
                     if path:
                         yield from self.recurse_subkeys(nk_record=subkey, path=r'{}\{}'.format(path, subkey.name),
@@ -377,7 +382,7 @@ class NKRecord:
                         # data is contained in the data_offset field
                         value.size -= 0x80000000
                         actual_value = vk.data_offset
-                    elif vk.data_size > 0x3fd8:
+                    elif vk.data_size > 0x3fd8 and value.value[:2] == b'db':
                         data = self._parse_indirect_block(substream, value)
                         actual_value = try_decode_binary(data, as_json=as_json)
                     else:
@@ -386,7 +391,7 @@ class NKRecord:
                     if vk.data_size >= 0x80000000:
                         # data is contained in the data_offset field
                         actual_value = vk.data_offset
-                    elif vk.data_size > 0x3fd8:
+                    elif vk.data_size > 0x3fd8 and value.value[:2] == b'db':
                         try:
                             actual_value = self._parse_indirect_block(substream, value)
                             actual_value = try_decode_binary(actual_value, as_json=True) if as_json else actual_value
