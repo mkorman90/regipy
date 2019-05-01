@@ -121,7 +121,7 @@ def test_recurse_ntuser(ntuser_hive):
                 value_types[x['value_type']] += 1
 
     assert subkey_count == 2318
-    assert values_count == 4612
+    assert values_count == 4613
     assert value_types == {
         'REG_BINARY': 619,
         'REG_DWORD': 1516,
