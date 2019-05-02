@@ -15,7 +15,7 @@ with open('docs/README.rst', 'r') as readme_file:
 def main():
     setup(name='regipy',
           packages=find_packages(),
-          version='1.1.3',
+          version='1.1.4',
           description='Python Registry Parser',
           long_description=readme,
           author='Martin G. Korman',
@@ -30,7 +30,7 @@ def main():
                             'inflection==0.3.1',
                             'jsonlines==1.2.0',
                             'logbook==1.4.3',
-                            'pytz==2018.9',
+                            'pytz==2019.1',
                             'tabulate==0.8.3',
                             'tqdm==4.31.1'],
           tests_require=test_requirements,
