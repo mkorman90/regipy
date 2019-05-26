@@ -148,14 +148,17 @@ def reg_diff(first_hive_path, second_hive_path, output_path, verbose):
 
 @click.command()
 @click.argument('hive_path', type=click.Path(exists=True, dir_okay=False, resolve_path=True), required=True)
-@click.argument('transaction_log_path', type=click.Path(exists=True, dir_okay=False, resolve_path=True), required=True)
+@click.option('-p', 'primary_log_path', type=click.Path(exists=True, dir_okay=False, resolve_path=True), required=True)
+@click.option('-s', 'secondary_log_path', type=click.Path(exists=True, dir_okay=False, resolve_path=True), required=False)
 @click.option('-o', 'output_path', type=click.Path(exists=False, dir_okay=False, resolve_path=True), required=False)
 @click.option('-v', '--verbose', is_flag=True, default=True, help='Verbosity')
-def parse_transaction_log(hive_path, transaction_log_path, output_path, verbose):
+def parse_transaction_log(hive_path, primary_log_path, secondary_log_path, output_path, verbose):
     with logbook.NestedSetup(_get_log_handlers(verbose=verbose)).applicationbound():
-        logger.info(f'Processing hive {hive_path} with transaction log {transaction_log_path}')
+        logger.info(f'Processing hive {hive_path} with transaction log {primary_log_path}')
+        if secondary_log_path:
+            logger.info(f'Processing hive {hive_path} with secondary transaction log {primary_log_path}')
 
-        restored_hive_path, recovered_dirty_pages_count = apply_transaction_logs(hive_path, transaction_log_path,
+        restored_hive_path, recovered_dirty_pages_count = apply_transaction_logs(hive_path, primary_log_path,
                                                                                  restored_hive_path=output_path,
                                                                                  verbose=verbose)
         if recovered_dirty_pages_count:

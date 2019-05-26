@@ -1,4 +1,5 @@
 import logbook
+import attr
 
 from regipy.exceptions import RegistryValueNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
@@ -28,4 +29,3 @@ class ComputerNamePlugin(Plugin):
                 })
             except RegistryValueNotFoundException as ex:
                 continue
-

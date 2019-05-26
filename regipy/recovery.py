@@ -5,6 +5,7 @@ import logbook
 
 from construct import Int32ul
 
+from regipy import boomerang_stream
 from regipy.exceptions import RegistryRecoveryException
 from regipy.registry import RegistryHive
 from regipy.structs import TRANSACTION_LOG, REGF_HEADER_SIZE, REGF_HEADER
@@ -28,6 +29,10 @@ def _parse_hvle_block(hive_path, transaction_log_stream, log_size, expected_sequ
 
     while hvle_block_start_offset < log_size:
         logger.info(f'Parsing hvle block at {hvle_block_start_offset}')
+        with boomerang_stream(transaction_log_stream) as x:
+            if x.read(4) != b'HvLE':
+                logger.info('Reached a non HvLE object. stopping')
+                break
 
         parsed_hvle_block = TRANSACTION_LOG.parse_stream(transaction_log_stream)
         logger.info(f'Currently at start of dirty pages: {transaction_log_stream.tell()}')
@@ -42,9 +47,11 @@ def _parse_hvle_block(hive_path, transaction_log_stream, log_size, expected_sequ
             # Write the actual dirty page to the original hive
             target_offset = REGF_HEADER_SIZE + dirty_page_entry.offset
             restored_hive_buffer.seek(target_offset)
+            transaction_log_stream_offset = transaction_log_stream.tell()
             dirty_page_buffer = transaction_log_stream.read(dirty_page_entry.size)
             restored_hive_buffer.write(dirty_page_buffer)
-            logger.info(f'Restored {dirty_page_entry.size} bytes to offset {target_offset}')
+            logger.info(f'Restored {dirty_page_entry.size} bytes to offset {target_offset} '
+                        f'from offset {transaction_log_stream_offset}')
             recovered_dirty_pages_count += 1
 
         # TODO: update hive flags from hvle to original header
@@ -108,18 +115,28 @@ def _parse_dirt_block(hive_path, transaction_log, hbins_data_size):
     return restored_hive_buffer, recovered_dirty_pages_count
 
 
-def apply_transaction_logs(hive_path, transaction_log_path, restored_hive_path=None, verbose=False):
+def apply_transaction_logs(hive_path, primary_transaction_log_path, secondary_transaction_log_path=None,
+                           restored_hive_path=None, verbose=False):
+    """
+    Apply transactions logs
+    :param hive_path:
+    :param primary_transaction_log_path:
+    :param secondary_transaction_log_path:
+    :param restored_hive_path:
+    :param verbose:
+    :return:
+    """
     if not restored_hive_path:
         restored_hive_path = f'{hive_path}.restored'
 
     registry_hive = RegistryHive(hive_path)
-    log_size = os.path.getsize(transaction_log_path)
-    
+    log_size = os.path.getsize(primary_transaction_log_path)
+
     expected_sequence_number = registry_hive.header.secondary_sequence_num
 
     logger.info(f'Log Size: {log_size}')
 
-    with open(transaction_log_path, 'rb') as transaction_log:
+    with open(primary_transaction_log_path, 'rb') as transaction_log:
 
         transaction_log_regf_header = REGF_HEADER.parse_stream(transaction_log)
         transaction_log.seek(512, 0)
