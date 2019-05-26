@@ -39,11 +39,12 @@ def get_file_from_tests(file_name):
     os.remove(tempfile_path)
 
 
-registry_path = 'SAM.xz'
-logger.info(f'Iterating over all subkeys in {registry_path}')
+registry_path = 'SYSTEM.xz'
+print(f'Iterating over all subkeys in {registry_path}')
 with profiling():
     with get_file_from_tests(registry_path) as reg:
         registry_hive = RegistryHive(reg)
         keys = [x for x in registry_hive.recurse_subkeys()]
+print(f'Done.')
 
 

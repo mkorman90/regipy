@@ -1,3 +1,5 @@
+import attr
+
 import logbook
 
 from regipy.hive_types import SYSTEM_HIVE_TYPE
@@ -20,6 +22,10 @@ class TimezoneDataPlugin(Plugin):
         for tzdata_subkey in tzdata_subkeys:
             tzdata = self.registry_hive.get_key(tzdata_subkey)
             self.entries[tzdata_subkey] = [x for x in tzdata.iter_values(as_json=self.as_json)]
+
+        if self.as_json:
+            for k, v in self.entries.items():
+                self.entries[k] = [attr.asdict(x) for x in v]
 
 
 

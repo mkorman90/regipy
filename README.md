@@ -98,7 +98,7 @@ Example output:
 
 ## Recover a registry hive, using transaction logs:
 ```bash
-registry-transaction-logs NTUSER.DAT ntuser.dat.log1 -o recovered_NTUSER.dat 
+registry-transaction-logs NTUSER.DAT -p ntuser.dat.log1 -s ntuser.dat.log2 -o recovered_NTUSER.dat 
 ```
 After recovering, compare the hives with registry-diff to see what changed
 
@@ -118,7 +118,7 @@ for entry in reg.recurse_subkeys(as_json=True):
 
 #### Iterate over a key and get all subkeys and their modification time:
 ```
-for sk in reg.get_key('Software').get_subkeys():
+for sk in reg.get_key('Software').iter_subkeys():
     print(sk.name, convert_wintime(sk.header.last_modified).isoformat())
 
 Adobe 2019-02-03T22:05:32.525965
