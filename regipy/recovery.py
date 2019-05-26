@@ -115,28 +115,13 @@ def _parse_dirt_block(hive_path, transaction_log, hbins_data_size):
     return restored_hive_buffer, recovered_dirty_pages_count
 
 
-def apply_transaction_logs(hive_path, primary_transaction_log_path, secondary_transaction_log_path=None,
-                           restored_hive_path=None, verbose=False):
-    """
-    Apply transactions logs
-    :param hive_path:
-    :param primary_transaction_log_path:
-    :param secondary_transaction_log_path:
-    :param restored_hive_path:
-    :param verbose:
-    :return:
-    """
-    if not restored_hive_path:
-        restored_hive_path = f'{hive_path}.restored'
-
-    registry_hive = RegistryHive(hive_path)
-    log_size = os.path.getsize(primary_transaction_log_path)
+def _parse_transaction_log(registry_hive, hive_path, transaction_log_path):
+    log_size = os.path.getsize(transaction_log_path)
+    logger.info(f'Log Size: {log_size}')
 
     expected_sequence_number = registry_hive.header.secondary_sequence_num
 
-    logger.info(f'Log Size: {log_size}')
-
-    with open(primary_transaction_log_path, 'rb') as transaction_log:
+    with open(transaction_log_path, 'rb') as transaction_log:
 
         transaction_log_regf_header = REGF_HEADER.parse_stream(transaction_log)
         transaction_log.seek(512, 0)
@@ -150,10 +135,48 @@ def apply_transaction_logs(hive_path, primary_transaction_log_path, secondary_tr
             hbins_data_size = registry_hive.header.hive_bins_data_size
             restored_hive_buffer, recovered_dirty_pages_count = _parse_dirt_block(hive_path, transaction_log,
                                                                                   hbins_data_size)
+    return restored_hive_buffer, recovered_dirty_pages_count
+
+
+def apply_transaction_logs(hive_path, primary_log_path, secondary_log_path=None,
+                           restored_hive_path=None, verbose=False):
+    """
+    Apply transactions logs
+    :param hive_path: The path to the original hive
+    :param primary_log_path: The path to the primary log path
+    :param secondary_transaction_log_path: The path to the secondary log path (optional).
+    :param restored_hive_path: Path to save the restored hive
+    :param verbose: verbosity
+    :return:
+    """
+    recovered_dirty_pages_total_count = 0
+
+    if not restored_hive_path:
+        restored_hive_path = f'{hive_path}.restored'
+
+    registry_hive = RegistryHive(hive_path)
+
+    log_size = os.path.getsize(primary_log_path)
+    logger.info(f'Log Size: {log_size}')
+
+    restored_hive_buffer, recovered_dirty_pages_count = _parse_transaction_log(registry_hive, hive_path,
+                                                                               primary_log_path)
+
+    recovered_dirty_pages_total_count += recovered_dirty_pages_count
 
     # Write to disk the modified registry hive
     with open(restored_hive_path, 'wb') as f:
         restored_hive_buffer.seek(0)
         f.write(restored_hive_buffer.read())
 
-    return restored_hive_path, recovered_dirty_pages_count
+    if secondary_log_path:
+        registry_hive = RegistryHive(restored_hive_path)
+        restored_hive_buffer, recovered_dirty_pages_count = _parse_transaction_log(registry_hive, restored_hive_path,
+                                                                                   secondary_log_path)
+        # Write to disk the modified registry hive
+        with open(restored_hive_path, 'wb') as f:
+            restored_hive_buffer.seek(0)
+            f.write(restored_hive_buffer.read())
+
+        recovered_dirty_pages_total_count += recovered_dirty_pages_count
+    return restored_hive_path, recovered_dirty_pages_total_count
