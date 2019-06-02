@@ -14,3 +14,4 @@ from .software.uac import UACStatusPlugin
 from .software.last_logon import LastLogonPlugin
 from .system.timezone_data import TimezoneDataPlugin
 from .system.active_controlset import ActiveControlSetPlugin
+from .software.profilelist import ProfileListPlugin

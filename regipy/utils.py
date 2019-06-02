@@ -1,3 +1,4 @@
+import pytz
 import attr
 import binascii
 import hashlib
@@ -56,6 +57,22 @@ def boomerang_stream(stream: TextIOWrapper) -> TextIOWrapper:
     current_offset = stream.tell()
     yield stream
     stream.seek(current_offset)
+
+
+def convert_filetime(dw_low_date_time, dw_high_date_time):
+    """
+    """
+    if dw_high_date_time is None or dw_low_date_time is None:
+        return None
+    try:
+        date = dt.datetime(1601, 1, 1, 0, 0, 0)
+        temp_time = dw_high_date_time
+        temp_time <<= 32
+        temp_time |= dw_low_date_time
+        date = pytz.utc.localize(date + dt.timedelta(microseconds=temp_time / 10))
+        return date.isoformat()
+    except OverflowError:
+        return None
 
 
 def convert_wintime(wintime: int, as_json=False) -> dt.datetime:
