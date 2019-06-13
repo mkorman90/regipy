@@ -34,3 +34,10 @@ class UnidentifiedHiveException(RegipyException):
 
 class RegistryRecoveryException(RegipyException):
     pass
+
+
+class RegistryParsingException(RegipyException):
+    """
+    Raised when there is a parsing error, most probably a corrupted hive
+    """
+    pass

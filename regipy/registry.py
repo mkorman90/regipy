@@ -12,10 +12,10 @@ from io import BytesIO
 from tqdm import tqdm
 
 from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundException, NoRegistryValuesException, \
-    RegistryValueNotFoundException, RegipyGeneralException, UnidentifiedHiveException
+    RegistryValueNotFoundException, RegipyGeneralException, UnidentifiedHiveException, RegistryParsingException
 from regipy.structs import REGF_HEADER, HBIN_HEADER, CM_KEY_NODE, LF_LH_SK_ELEMENT, VALUE_KEY, INDEX_ROOT, \
     REGF_HEADER_SIZE, INDEX_ROOT_SIGNATURE, LEAF_INDEX_SIGNATURE, FAST_LEAF_SIGNATURE, HASH_LEAF_SIGNATURE, \
-    BIG_DATA_BLOCK
+    BIG_DATA_BLOCK, INDEX_LEAF
 from regipy.utils import boomerang_stream, convert_wintime, identify_hive_type, MAX_LEN, try_decode_binary
 
 logger = logbook.Logger(__name__)
@@ -118,11 +118,10 @@ class RegistryHive:
                     continue
 
                 if subkey.subkey_count:
-                    if path:
-                        yield from self.recurse_subkeys(nk_record=subkey, path=r'{}\{}'.format(path, subkey.name),
-                                                        as_json=as_json)
-                    else:
-                        yield from self.recurse_subkeys(nk_record=subkey, path=r'\{}'.format(subkey.name), as_json=as_json)
+                    yield from self.recurse_subkeys(nk_record=subkey,
+                                                    path=r'{}\{}'.format(path, subkey.name) if path else r'\{}'.format(
+                                                        subkey.name),
+                                                    as_json=as_json)
 
                 values = []
                 if subkey.values_count:
@@ -278,11 +277,14 @@ class NKRecord:
         self._stream.seek(target_offset)
 
         # Read the signature
-        signature = Bytes(2).parse_stream(self._stream)
+        try:
+            signature = Bytes(2).parse_stream(self._stream)
+        except StreamError as ex:
+            raise RegistryParsingException(f'Bad subkey at offset {target_offset}: {ex}')
 
         # LF and LH contain subkeys
         if signature in [HASH_LEAF_SIGNATURE, FAST_LEAF_SIGNATURE]:
-            yield from self._parse_subkeys(self._stream)
+            yield from self._parse_subkeys(self._stream, signature=signature)
         elif signature == LEAF_INDEX_SIGNATURE:
             yield LIRecord(Int32ul.parse_stream(self._stream))
         # RI contains pointers to arrays of subkeys
@@ -291,19 +293,29 @@ class NKRecord:
             if ri_record.header.element_count > 0:
                 for element in ri_record.header.elements:
                     # We skip 6 because of the signature as well as the cell header
-                    self._stream.seek(REGF_HEADER_SIZE + 6 + element.subkey_list_offset)
+                    element_target_offset = REGF_HEADER_SIZE + 4 + element.subkey_list_offset
+                    self._stream.seek(element_target_offset)
                     yield from self._parse_subkeys(self._stream)
 
     @staticmethod
-    def _parse_subkeys(stream):
+    def _parse_subkeys(stream, signature=None):
         """
-        Parse an LF or LH Record
+        Parse an LI , LF or LH Record
         :param stream: A stream at the header of the LH or LF entry, skipping the signature
         :return:
         """
-        subkeys = LF_LH_SK_ELEMENT.parse_stream(stream)
+        if not signature:
+            signature = stream.read(2)
+
+        if signature in [HASH_LEAF_SIGNATURE, FAST_LEAF_SIGNATURE]:
+            subkeys = LF_LH_SK_ELEMENT.parse_stream(stream)
+        elif signature == LEAF_INDEX_SIGNATURE:
+            subkeys = INDEX_LEAF.parse_stream(stream)
+        else:
+            raise RegistryParsingException(f'Expected a known signature, got: {signature} at offset {stream.tell()}')
+
         for subkey in subkeys.elements:
-            stream.seek(REGF_HEADER_SIZE + subkey.named_key_offset)
+            stream.seek(REGF_HEADER_SIZE + subkey.key_node_offset)
 
             # This cell should always be allocated, therefor we expect a negative size
             cell_size = Int32sl.parse_stream(stream) * -1
@@ -447,4 +459,3 @@ class NKRecord:
             'timestamp': convert_wintime(self.header.last_modified, as_json=True),
             'volatile_subkeys': self.volatile_subkeys_count
         }
-

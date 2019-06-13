@@ -85,7 +85,11 @@ class AmCachePlugin(Plugin):
                             entry[v] = content
 
                     entry['sha1'] = entry['sha1'][4:]
-                    entry['program_id'] = entry['program_id'][4:]
+
+                    program_id = entry.get('program_id')
+                    if program_id:
+                        entry['program_id'] = entry['program_id'][4:]
+
                     entry['type'] = 'win_8+_amcache'
 
                     for ts_field_name in WIN8_TS_FIELDS:
