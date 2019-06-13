@@ -153,7 +153,7 @@ LF_LH_SK_ELEMENT = Struct(
     'elements' / Array(
         this.element_count,
         Struct(
-            'named_key_offset' / Int32ul,
+            'key_node_offset' / Int32ul,
             'hash_value' / Int32ul
         )
     )
