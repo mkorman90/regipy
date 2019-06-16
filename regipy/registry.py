@@ -282,11 +282,9 @@ class NKRecord:
         except StreamError as ex:
             raise RegistryParsingException(f'Bad subkey at offset {target_offset}: {ex}')
 
-        # LF and LH contain subkeys
-        if signature in [HASH_LEAF_SIGNATURE, FAST_LEAF_SIGNATURE]:
+        # LF,  LH and RI contain subkeys
+        if signature in [HASH_LEAF_SIGNATURE, FAST_LEAF_SIGNATURE, LEAF_INDEX_SIGNATURE]:
             yield from self._parse_subkeys(self._stream, signature=signature)
-        elif signature == LEAF_INDEX_SIGNATURE:
-            yield LIRecord(Int32ul.parse_stream(self._stream))
         # RI contains pointers to arrays of subkeys
         elif signature == INDEX_ROOT_SIGNATURE:
             ri_record = RIRecord(self._stream)
