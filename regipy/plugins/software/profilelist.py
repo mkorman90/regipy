@@ -16,10 +16,7 @@ PROFILE_LIST_KEY_PATH = r"\Microsoft\Windows NT\CurrentVersion\ProfileList"
 class ProfileListPlugin(Plugin):
     NAME = 'profilelist_plugin'
     DESCRIPTION = 'Parses information about user profiles found in the ProfileList key'
-
-    def can_run(self):
-        # TODO: Choose the relevant condition - to determine if the plugin is relevant for the given hive
-        return self.registry_hive.hive_type == SOFTWARE_HIVE_TYPE
+    COMPATIBLE_HIVE = SOFTWARE_HIVE_TYPE
 
     def run(self):
         logger.info('Started profile list plugin...')
@@ -27,14 +24,7 @@ class ProfileListPlugin(Plugin):
             subkey = self.registry_hive.get_key(PROFILE_LIST_KEY_PATH)
         except RegistryKeyNotFoundException as ex:
             logger.error(ex)
-        
-        
-        #TODO: understand difference between ProfileLoadTime & LocalProfileLoadTimeHigh
-        #TODO: Parse the "flags" & State
-        #TODO: ask martin to add default value like dict.get method
-        #TODO: write a docstring for utils.convert_filetime
-
-        
+                
         for profile in subkey.iter_subkeys():
             self.entries.append({
                 'last_write': convert_wintime(profile.header.last_modified, as_json=self.as_json),
