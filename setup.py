@@ -15,7 +15,7 @@ with open('docs/README.rst', 'r') as readme_file:
 def main():
     setup(name='regipy',
           packages=find_packages(),
-          version='1.2.2',
+          version='1.2.3',
           description='Python Registry Parser',
           long_description=readme,
           author='Martin G. Korman',
