@@ -3,6 +3,7 @@ import pytest
 from regipy.plugins import NTUserPersistencePlugin, UserAssistPlugin, AmCachePlugin, WordWheelQueryPlugin, \
     UACStatusPlugin, LastLogonPlugin
 from regipy.plugins.ntuser.typed_urls import TypedUrlsPlugin
+from regipy.plugins.software.profilelist import ProfileListPlugin
 from regipy.plugins.software.persistence import SoftwarePersistencePlugin
 from regipy.plugins.system.computer_name import ComputerNamePlugin
 from regipy.plugins.system.shimcache import ShimCachePlugin
@@ -207,3 +208,110 @@ def test_typed_urls_plugin_ntuser(ntuser_hive):
             {'url2': 'http://go.microsoft.com/fwlink/?LinkId=69157'}
         ]
     }
+
+def test_profilelist_plugin(software_hive):
+    registry_hive = RegistryHive(software_hive)
+    plugin_instance = ProfileListPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == [{
+		"last_write": "2009-07-14T04:41:12.493608+00:00",
+		"path": "%systemroot%\\system32\\config\\systemprofile",
+		"flags": 12,
+		"full_profile": None,
+		"state": 0,
+		"sid": "S-1-5-18",
+		"load_time": None,
+		"local_load_time": None
+	}, {
+		"last_write": "2010-11-10T18:09:16.250000+00:00",
+		"path": "C:\\Windows\\ServiceProfiles\\LocalService",
+		"flags": 0,
+		"full_profile": None,
+		"state": 0,
+		"sid": "S-1-5-19",
+		"load_time": None,
+		"local_load_time": None
+	}, {
+		"last_write": "2010-11-10T18:09:16.250000+00:00",
+		"path": "C:\\Windows\\ServiceProfiles\\NetworkService",
+		"flags": 0,
+		"full_profile": None,
+		"state": 0,
+		"sid": "S-1-5-20",
+		"load_time": None,
+		"local_load_time": None
+	}, {
+		"last_write": "2010-11-10T17:22:52.109376+00:00",
+		"path": "C:\\Users\\Pepper",
+		"flags": 0,
+		"full_profile": None,
+		"state": 0,
+		"sid": "S-1-5-21-100689374-1717798114-2601648136-1000",
+		"load_time": "1601-01-01T00:00:00+00:00",
+		"local_load_time": None
+	}, {
+		"last_write": "2012-04-04T12:42:17.719834+00:00",
+		"path": "C:\\Users\\SRL-Helpdesk",
+		"flags": 0,
+		"full_profile": None,
+		"state": 0,
+		"sid": "S-1-5-21-100689374-1717798114-2601648136-1001",
+		"load_time": "1601-01-01T00:00:00+00:00",
+		"local_load_time": None
+	}, {
+		"last_write": "2011-08-21T00:51:19.820166+00:00",
+		"path": "C:\\Users\\nfury",
+		"flags": 0,
+		"full_profile": None,
+		"state": 0,
+		"sid": "S-1-5-21-2036804247-3058324640-2116585241-1105",
+		"load_time": "1601-01-01T00:00:00+00:00",
+		"local_load_time": None
+	}, {
+		"last_write": "2011-08-23T01:33:29.006350+00:00",
+		"path": "C:\\Users\\mhill",
+		"flags": 0,
+		"full_profile": None,
+		"state": 0,
+		"sid": "S-1-5-21-2036804247-3058324640-2116585241-1106",
+		"load_time": "1601-01-01T00:00:00+00:00",
+		"local_load_time": None
+	}, {
+		"last_write": "2011-09-17T13:33:17.372366+00:00",
+		"path": "C:\\Users\\Tdungan",
+		"flags": 0,
+		"full_profile": None,
+		"state": 0,
+		"sid": "S-1-5-21-2036804247-3058324640-2116585241-1107",
+		"load_time": "1601-01-01T00:00:00+00:00",
+		"local_load_time": None
+	}, {
+		"last_write": "2012-04-06T19:44:17.844274+00:00",
+		"path": "C:\\Users\\nromanoff",
+		"flags": 0,
+		"full_profile": None,
+		"state": 0,
+		"sid": "S-1-5-21-2036804247-3058324640-2116585241-1109",
+		"load_time": "1601-01-01T00:00:00+00:00",
+		"local_load_time": None
+	}, {
+		"last_write": "2012-04-06T19:42:31.408714+00:00",
+		"path": "C:\\Users\\rsydow",
+		"flags": 0,
+		"full_profile": None,
+		"state": 256,
+		"sid": "S-1-5-21-2036804247-3058324640-2116585241-1114",
+		"load_time": "1601-01-01T00:00:00+00:00",
+		"local_load_time": None
+	}, {
+		"last_write": "2012-04-06T19:22:20.845938+00:00",
+		"path": "C:\\Users\\vibranium",
+		"flags": 0,
+		"full_profile": None,
+		"state": 256,
+		"sid": "S-1-5-21-2036804247-3058324640-2116585241-1673",
+		"load_time": "1601-01-01T00:00:00+00:00",
+		"local_load_time": None
+	}
+]

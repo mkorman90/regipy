@@ -29,6 +29,7 @@
 - [ ] Sysinternals EULA
 - [ ] User SIDs
 - [ ] Windows version info
+- [X] Profile List
 
 #### SAM Hive
 - [ ] Users and groups
