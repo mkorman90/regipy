@@ -6,4 +6,4 @@ jsonlines==1.2.0
 logbook==1.4.3
 pytz==2019.1
 tabulate==0.8.3
-tqdm==4.32.2
+tqdm==4.33.0
