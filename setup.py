@@ -32,8 +32,8 @@ def main():
                             'pytz==2019.2',
                             'logbook==1.5.2',
                             'tabulate==0.8.3',
-                            'jsonlines==1.2.0',
-                            'tqdm==4.32.2'],
+                            'tqdm==4.35.0',
+                            'jsonlines==1.2.0'],
           tests_require=test_requirements,
           extras_require={
               'test': test_requirements
