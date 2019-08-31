@@ -29,7 +29,7 @@ def main():
                             'click==7.0',
                             'inflection==0.3.1',
                             'jsonlines==1.2.0',
-                            'logbook==1.4.3',
+                            'logbook==1.5.2',
                             'pytz==2019.1',
                             'tabulate==0.8.3',
                             'tqdm==4.32.2'],
