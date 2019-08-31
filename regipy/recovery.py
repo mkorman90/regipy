@@ -7,6 +7,7 @@ from construct import Int32ul
 
 from regipy import boomerang_stream
 from regipy.exceptions import RegistryRecoveryException
+from regipy.hive_types import HVLE_TRANSACTION_LOG_MAGIC, DIRT_TRANSACTION_LOG_MAGIC
 from regipy.registry import RegistryHive
 from regipy.structs import TRANSACTION_LOG, REGF_HEADER_SIZE, REGF_HEADER
 
@@ -122,19 +123,24 @@ def _parse_transaction_log(registry_hive, hive_path, transaction_log_path):
     expected_sequence_number = registry_hive.header.secondary_sequence_num
 
     with open(transaction_log_path, 'rb') as transaction_log:
-
-        transaction_log_regf_header = REGF_HEADER.parse_stream(transaction_log)
+        # Skip the REGF header
         transaction_log.seek(512, 0)
 
-        if transaction_log_regf_header.major_version == 1 and transaction_log_regf_header.minor_version >= 5:
+        # Read the header of the transaction log vector and determine its type
+        with boomerang_stream(transaction_log) as s:
+            magic = s.read(4)
+
+        if magic == HVLE_TRANSACTION_LOG_MAGIC:
             # This is an HvLE block
             restored_hive_buffer, recovered_dirty_pages_count = _parse_hvle_block(hive_path, transaction_log, log_size,
                                                                                   expected_sequence_number)
-        else:
+        elif magic == DIRT_TRANSACTION_LOG_MAGIC:
             # This is an old transaction log - DIRT
             hbins_data_size = registry_hive.header.hive_bins_data_size
             restored_hive_buffer, recovered_dirty_pages_count = _parse_dirt_block(hive_path, transaction_log,
                                                                                   hbins_data_size)
+        else:
+            raise RegistryRecoveryException(f'The transaction log vector magic was not expected: {magic}')
     return restored_hive_buffer, recovered_dirty_pages_count
 
 
