@@ -29,10 +29,11 @@ def main():
                             'click==7.0',
                             'inflection==0.3.1',
                             'jsonlines==1.2.0',
-                            'logbook==1.4.3',
-                            'pytz==2019.1',
+                            'pytz==2019.2',
+                            'logbook==1.5.2',
                             'tabulate==0.8.3',
-                            'tqdm==4.35.0 '],
+                            'tqdm==4.35.0'
+                            'jsonlines==1.2.0'],
           tests_require=test_requirements,
           extras_require={
               'test': test_requirements
