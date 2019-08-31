@@ -32,6 +32,7 @@ def main():
                             'logbook==1.5.2',
                             'pytz==2019.1',
                             'tabulate==0.8.3',
+                            'jsonlines==1.2.0',
                             'tqdm==4.32.2'],
           tests_require=test_requirements,
           extras_require={
