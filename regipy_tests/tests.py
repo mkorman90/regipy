@@ -179,11 +179,11 @@ def test_ntuser_apply_transaction_logs(transaction_ntuser, transaction_log):
     assert len([x for x in found_differences if x[0] == 'new_value']) == 59
 
 
-def test_system_apply_transaction_logs(transaction_system, transaction_log_1, transaction_log_2):
+def test_system_apply_transaction_logs(transaction_system, system_tr_log_1, system_tr_log_2):
     output_path = os.path.join(mkdtemp(), 'recovered_hive.dat')
     restored_hive_path, recovered_dirty_pages_count = apply_transaction_logs(transaction_system,
-                                                                             primary_log_path=transaction_log_1,
-                                                                             secondary_log_path=transaction_log_2,
+                                                                             primary_log_path=system_tr_log_1,
+                                                                             secondary_log_path=system_tr_log_2,
                                                                              restored_hive_path=output_path)
     assert recovered_dirty_pages_count == 315
 
@@ -191,6 +191,20 @@ def test_system_apply_transaction_logs(transaction_system, transaction_log_1, tr
     assert len(found_differences) == 2486
     assert len([x for x in found_differences if x[0] == 'new_subkey']) == 2472
     assert len([x for x in found_differences if x[0] == 'new_value']) == 13
+
+
+def test_system_apply_transaction_logs_2(transaction_usrclass, usrclass_tr_log_1, usrclass_tr_log_2):
+    output_path = os.path.join(mkdtemp(), 'recovered_hive.dat')
+    restored_hive_path, recovered_dirty_pages_count = apply_transaction_logs(transaction_usrclass,
+                                                                             primary_log_path=usrclass_tr_log_1,
+                                                                             secondary_log_path=usrclass_tr_log_2,
+                                                                             restored_hive_path=output_path)
+    assert recovered_dirty_pages_count == 158
+
+    found_differences = compare_hives(transaction_usrclass, restored_hive_path)
+    assert len(found_differences) == 73
+    assert len([x for x in found_differences if x[0] == 'new_subkey']) == 33
+    assert len([x for x in found_differences if x[0] == 'new_value']) == 40
 
 
 def test_hive_serialization(ntuser_hive, temp_output_file):

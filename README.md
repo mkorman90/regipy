@@ -73,7 +73,7 @@ registry-dump util can also output a timeline instead of a JSON, by adding the `
 
 #### Run relevant plugins on Hive
 ```bash
-registry-run-plugins ~/Documents/TestEvidence/Registry/SYSTEM -o /tmp/plugins_output.json
+registry-plugins-run ~/Documents/TestEvidence/Registry/SYSTEM -o /tmp/plugins_output.json
 ```
 The hive type will be detected automatically and the relevant plugins will be executed. 
 [**See the plugins section for more information**](docs/PLUGINS.md)
