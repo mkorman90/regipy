@@ -15,7 +15,7 @@ from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundExc
     RegistryValueNotFoundException, RegipyGeneralException, UnidentifiedHiveException, RegistryParsingException
 from regipy.structs import REGF_HEADER, HBIN_HEADER, CM_KEY_NODE, LF_LH_SK_ELEMENT, VALUE_KEY, INDEX_ROOT, \
     REGF_HEADER_SIZE, INDEX_ROOT_SIGNATURE, LEAF_INDEX_SIGNATURE, FAST_LEAF_SIGNATURE, HASH_LEAF_SIGNATURE, \
-    BIG_DATA_BLOCK, INDEX_LEAF
+    BIG_DATA_BLOCK, INDEX_LEAF, DEFAULT_VALUE
 from regipy.utils import boomerang_stream, convert_wintime, identify_hive_type, MAX_LEN, try_decode_binary
 
 logger = logbook.Logger(__name__)
@@ -428,9 +428,10 @@ class NKRecord:
                 yield Value(name=value_name, value_type=str(value.value_type), value=actual_value,
                             is_corrupted=is_corrupted)
 
-    def get_value(self, value_name, as_json=False, raise_on_missing=False):
+    def get_value(self, value_name=DEFAULT_VALUE, as_json=False, raise_on_missing=False):
         """
-        Get a value by name. Will raise if not found, except a default is given
+        Get a value by name. Will raise if raise_on_missing is set,
+        if no value name is given, will return the content of the default value
         :param value_name: The value name to look for
         :param as_json: Whether to normalize the data as JSON or not
         :param raise_on_missing: Will raise exception if value is missing, else will return None

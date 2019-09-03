@@ -1,7 +1,7 @@
 import pytest
 
 from regipy.plugins import NTUserPersistencePlugin, UserAssistPlugin, AmCachePlugin, WordWheelQueryPlugin, \
-    UACStatusPlugin, LastLogonPlugin
+    UACStatusPlugin, LastLogonPlugin, SoftwareClassesInstallerPlugin, InstalledSoftwarePlugin, RASTracingPlugin
 from regipy.plugins.ntuser.typed_urls import TypedUrlsPlugin
 from regipy.plugins.software.profilelist import ProfileListPlugin
 from regipy.plugins.software.persistence import SoftwarePersistencePlugin
@@ -182,6 +182,62 @@ def test_uac_status_plugin_software(software_hive):
     }
 
 
+def test_classes_installer_plugin_software(software_hive):
+    registry_hive = RegistryHive(software_hive)
+    plugin_instance = SoftwareClassesInstallerPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries[0] == {
+        'identifier': '000041091A0090400000000000F01FEC',
+        'is_hidden': False,
+        'product_name': 'Microsoft Office OneNote MUI (English) 2010',
+        'timestamp': '2010-11-10T10:31:06.573040+00:00'
+    }
+
+    assert not any([x['is_hidden'] for x in plugin_instance.entries])
+
+
+def test_ras_tracing_plugin_software(software_hive):
+    registry_hive = RegistryHive(software_hive)
+    plugin_instance = RASTracingPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert len(plugin_instance.entries) == 140
+
+    assert plugin_instance.entries[0] == {
+        'name': 'AcroRd32_RASAPI32',
+        'timestamp': '2012-03-16T21:31:26.613878+00:00'
+    }
+
+    assert plugin_instance.entries[-1] == {
+        'name': 'wmplayer_RASMANCS',
+        'timestamp': '2012-03-12T20:58:55.476336+00:00'
+    }
+
+
+def test_installed_programs_plugin_software(software_hive):
+    registry_hive = RegistryHive(software_hive)
+    plugin_instance = InstalledSoftwarePlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert len(plugin_instance.entries) == 134
+
+    assert plugin_instance.entries[0] == {
+        'registry_path': '\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+        'service_name': 'AddressBook',
+        'timestamp': '2009-07-14T04:41:12.758808+00:00'
+    }
+
+    assert plugin_instance.entries[-1].items() > {
+        'service_name': '{FE2F6A2C-196E-4210-9C04-2B1BC21F07EF}',
+        'timestamp': '2011-07-05T22:58:57.996094+00:00',
+        'registry_path': 'WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+        'UninstallString': 'MsiExec.exe /X{FE2F6A2C-196E-4210-9C04-2B1BC21F07EF}',
+        'URLInfoAbout': 'http://www.vmware.com',
+        'DisplayName': 'VMware Tools'
+    }.items()
+
+
 def test_last_logon_plugin_software(software_hive):
     registry_hive = RegistryHive(software_hive)
     plugin_instance = LastLogonPlugin(registry_hive, as_json=True)
@@ -209,109 +265,110 @@ def test_typed_urls_plugin_ntuser(ntuser_hive):
         ]
     }
 
+
 def test_profilelist_plugin(software_hive):
     registry_hive = RegistryHive(software_hive)
     plugin_instance = ProfileListPlugin(registry_hive, as_json=True)
     plugin_instance.run()
 
     assert plugin_instance.entries == [{
-		"last_write": "2009-07-14T04:41:12.493608+00:00",
-		"path": "%systemroot%\\system32\\config\\systemprofile",
-		"flags": 12,
-		"full_profile": None,
-		"state": 0,
-		"sid": "S-1-5-18",
-		"load_time": None,
-		"local_load_time": None
-	}, {
-		"last_write": "2010-11-10T18:09:16.250000+00:00",
-		"path": "C:\\Windows\\ServiceProfiles\\LocalService",
-		"flags": 0,
-		"full_profile": None,
-		"state": 0,
-		"sid": "S-1-5-19",
-		"load_time": None,
-		"local_load_time": None
-	}, {
-		"last_write": "2010-11-10T18:09:16.250000+00:00",
-		"path": "C:\\Windows\\ServiceProfiles\\NetworkService",
-		"flags": 0,
-		"full_profile": None,
-		"state": 0,
-		"sid": "S-1-5-20",
-		"load_time": None,
-		"local_load_time": None
-	}, {
-		"last_write": "2010-11-10T17:22:52.109376+00:00",
-		"path": "C:\\Users\\Pepper",
-		"flags": 0,
-		"full_profile": None,
-		"state": 0,
-		"sid": "S-1-5-21-100689374-1717798114-2601648136-1000",
-		"load_time": "1601-01-01T00:00:00+00:00",
-		"local_load_time": None
-	}, {
-		"last_write": "2012-04-04T12:42:17.719834+00:00",
-		"path": "C:\\Users\\SRL-Helpdesk",
-		"flags": 0,
-		"full_profile": None,
-		"state": 0,
-		"sid": "S-1-5-21-100689374-1717798114-2601648136-1001",
-		"load_time": "1601-01-01T00:00:00+00:00",
-		"local_load_time": None
-	}, {
-		"last_write": "2011-08-21T00:51:19.820166+00:00",
-		"path": "C:\\Users\\nfury",
-		"flags": 0,
-		"full_profile": None,
-		"state": 0,
-		"sid": "S-1-5-21-2036804247-3058324640-2116585241-1105",
-		"load_time": "1601-01-01T00:00:00+00:00",
-		"local_load_time": None
-	}, {
-		"last_write": "2011-08-23T01:33:29.006350+00:00",
-		"path": "C:\\Users\\mhill",
-		"flags": 0,
-		"full_profile": None,
-		"state": 0,
-		"sid": "S-1-5-21-2036804247-3058324640-2116585241-1106",
-		"load_time": "1601-01-01T00:00:00+00:00",
-		"local_load_time": None
-	}, {
-		"last_write": "2011-09-17T13:33:17.372366+00:00",
-		"path": "C:\\Users\\Tdungan",
-		"flags": 0,
-		"full_profile": None,
-		"state": 0,
-		"sid": "S-1-5-21-2036804247-3058324640-2116585241-1107",
-		"load_time": "1601-01-01T00:00:00+00:00",
-		"local_load_time": None
-	}, {
-		"last_write": "2012-04-06T19:44:17.844274+00:00",
-		"path": "C:\\Users\\nromanoff",
-		"flags": 0,
-		"full_profile": None,
-		"state": 0,
-		"sid": "S-1-5-21-2036804247-3058324640-2116585241-1109",
-		"load_time": "1601-01-01T00:00:00+00:00",
-		"local_load_time": None
-	}, {
-		"last_write": "2012-04-06T19:42:31.408714+00:00",
-		"path": "C:\\Users\\rsydow",
-		"flags": 0,
-		"full_profile": None,
-		"state": 256,
-		"sid": "S-1-5-21-2036804247-3058324640-2116585241-1114",
-		"load_time": "1601-01-01T00:00:00+00:00",
-		"local_load_time": None
-	}, {
-		"last_write": "2012-04-06T19:22:20.845938+00:00",
-		"path": "C:\\Users\\vibranium",
-		"flags": 0,
-		"full_profile": None,
-		"state": 256,
-		"sid": "S-1-5-21-2036804247-3058324640-2116585241-1673",
-		"load_time": "1601-01-01T00:00:00+00:00",
-		"local_load_time": None
-	}
-]
+        "last_write": "2009-07-14T04:41:12.493608+00:00",
+        "path": "%systemroot%\\system32\\config\\systemprofile",
+        "flags": 12,
+        "full_profile": None,
+        "state": 0,
+        "sid": "S-1-5-18",
+        "load_time": None,
+        "local_load_time": None
+    }, {
+        "last_write": "2010-11-10T18:09:16.250000+00:00",
+        "path": "C:\\Windows\\ServiceProfiles\\LocalService",
+        "flags": 0,
+        "full_profile": None,
+        "state": 0,
+        "sid": "S-1-5-19",
+        "load_time": None,
+        "local_load_time": None
+    }, {
+        "last_write": "2010-11-10T18:09:16.250000+00:00",
+        "path": "C:\\Windows\\ServiceProfiles\\NetworkService",
+        "flags": 0,
+        "full_profile": None,
+        "state": 0,
+        "sid": "S-1-5-20",
+        "load_time": None,
+        "local_load_time": None
+    }, {
+        "last_write": "2010-11-10T17:22:52.109376+00:00",
+        "path": "C:\\Users\\Pepper",
+        "flags": 0,
+        "full_profile": None,
+        "state": 0,
+        "sid": "S-1-5-21-100689374-1717798114-2601648136-1000",
+        "load_time": "1601-01-01T00:00:00+00:00",
+        "local_load_time": None
+    }, {
+        "last_write": "2012-04-04T12:42:17.719834+00:00",
+        "path": "C:\\Users\\SRL-Helpdesk",
+        "flags": 0,
+        "full_profile": None,
+        "state": 0,
+        "sid": "S-1-5-21-100689374-1717798114-2601648136-1001",
+        "load_time": "1601-01-01T00:00:00+00:00",
+        "local_load_time": None
+    }, {
+        "last_write": "2011-08-21T00:51:19.820166+00:00",
+        "path": "C:\\Users\\nfury",
+        "flags": 0,
+        "full_profile": None,
+        "state": 0,
+        "sid": "S-1-5-21-2036804247-3058324640-2116585241-1105",
+        "load_time": "1601-01-01T00:00:00+00:00",
+        "local_load_time": None
+    }, {
+        "last_write": "2011-08-23T01:33:29.006350+00:00",
+        "path": "C:\\Users\\mhill",
+        "flags": 0,
+        "full_profile": None,
+        "state": 0,
+        "sid": "S-1-5-21-2036804247-3058324640-2116585241-1106",
+        "load_time": "1601-01-01T00:00:00+00:00",
+        "local_load_time": None
+    }, {
+        "last_write": "2011-09-17T13:33:17.372366+00:00",
+        "path": "C:\\Users\\Tdungan",
+        "flags": 0,
+        "full_profile": None,
+        "state": 0,
+        "sid": "S-1-5-21-2036804247-3058324640-2116585241-1107",
+        "load_time": "1601-01-01T00:00:00+00:00",
+        "local_load_time": None
+    }, {
+        "last_write": "2012-04-06T19:44:17.844274+00:00",
+        "path": "C:\\Users\\nromanoff",
+        "flags": 0,
+        "full_profile": None,
+        "state": 0,
+        "sid": "S-1-5-21-2036804247-3058324640-2116585241-1109",
+        "load_time": "1601-01-01T00:00:00+00:00",
+        "local_load_time": None
+    }, {
+        "last_write": "2012-04-06T19:42:31.408714+00:00",
+        "path": "C:\\Users\\rsydow",
+        "flags": 0,
+        "full_profile": None,
+        "state": 256,
+        "sid": "S-1-5-21-2036804247-3058324640-2116585241-1114",
+        "load_time": "1601-01-01T00:00:00+00:00",
+        "local_load_time": None
+    }, {
+        "last_write": "2012-04-06T19:22:20.845938+00:00",
+        "path": "C:\\Users\\vibranium",
+        "flags": 0,
+        "full_profile": None,
+        "state": 256,
+        "sid": "S-1-5-21-2036804247-3058324640-2116585241-1673",
+        "load_time": "1601-01-01T00:00:00+00:00",
+        "local_load_time": None
+    }
+    ]

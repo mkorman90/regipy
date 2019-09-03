@@ -3,10 +3,16 @@ from .ntuser.persistence import NTUserPersistencePlugin
 from .ntuser.user_assist import UserAssistPlugin
 from .ntuser.word_wheel_query import WordWheelQueryPlugin
 from .ntuser.typed_urls import TypedUrlsPlugin
+from .ntuser.installed_programs_ntuser import InstalledSoftwareNTUserPlugin
+from .ntuser.tsclient import TSClientPlugin
+from .ntuser.classes_installer import ClassesInstallerPlugin
 from .system.routes import RoutesPlugin
 from .system.services import ServicesPlugin
 from .system.computer_name import ComputerNamePlugin
 from .system.shimcache import ShimCachePlugin
+from .system.safeboot_configuration import SafeBootConfigurationPlugin
+from .software.tracing import RASTracingPlugin
+from .software.classes_installer import SoftwareClassesInstallerPlugin
 from .software.installed_programs import InstalledSoftwarePlugin
 from .software.image_file_execution_options import ImageFileExecutionOptions
 from .software.persistence import SoftwarePersistencePlugin
