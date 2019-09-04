@@ -185,3 +185,6 @@ BIG_DATA_BLOCK = Struct(
     'number_of_segments' / Int16ul,
     'offset_to_list_of_segments' / Int32ul,
 )
+
+# This is the default name of a registry subkey
+DEFAULT_VALUE = '(default)'

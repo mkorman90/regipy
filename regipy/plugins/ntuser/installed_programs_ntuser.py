@@ -1,20 +1,19 @@
 import logbook
 
 from regipy import RegistryKeyNotFoundException
-from regipy.hive_types import SOFTWARE_HIVE_TYPE
+from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
-from regipy.utils import get_subkey_values_from_list, convert_wintime
+from regipy.utils import convert_wintime
 
 logger = logbook.Logger(__name__)
 
-X64_INSTALLED_SOFTWARE_PATH = r'\Microsoft\Windows\CurrentVersion\Uninstall'
-X86_INSTALLED_SOFTWARE_PATH = 'WOW6432Node' + X64_INSTALLED_SOFTWARE_PATH
+INSTALLED_SOFTWARE_PATH = r'\Microsoft\Windows\CurrentVersion\Uninstall'
 
 
-class InstalledSoftwarePlugin(Plugin):
-    NAME = 'installed_software'
+class InstalledSoftwareNTUserPlugin(Plugin):
+    NAME = 'installed_software_ntuser'
     DESCRIPTION = 'Retrieve list of installed programs and their install date'
-    COMPATIBLE_HIVE = SOFTWARE_HIVE_TYPE
+    COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
 
     def _get_installed_software(self, subkey_path):
         try:
@@ -35,6 +34,5 @@ class InstalledSoftwarePlugin(Plugin):
             })
 
     def run(self):
-        self._get_installed_software(X64_INSTALLED_SOFTWARE_PATH)
-        self._get_installed_software(X86_INSTALLED_SOFTWARE_PATH)
+        self._get_installed_software(INSTALLED_SOFTWARE_PATH)
 
