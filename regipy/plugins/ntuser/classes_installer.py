@@ -10,7 +10,7 @@ CLASSES_INSTALLER_PATH = r'\Software\Classes\Installer\Product'
 
 
 class ClassesInstallerPlugin(Plugin):
-    NAME = 'ntuser_classes_installer'
+    NAME = 'hkcu_installer_classes'
     DESCRIPTION = 'List of installed software'
     COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
 
