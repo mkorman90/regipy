@@ -1,9 +1,10 @@
 import logbook
+from inflection import underscore
 
 from regipy import RegistryKeyNotFoundException
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
-from regipy.utils import get_subkey_values_from_list, convert_wintime
+from regipy.utils import convert_wintime
 
 logger = logbook.Logger(__name__)
 
@@ -24,7 +25,7 @@ class InstalledSoftwarePlugin(Plugin):
             return
 
         for installed_program in uninstall_sk.iter_subkeys():
-            values = {x.name: x.value for x in
+            values = {underscore(x.name): x.value for x in
                       installed_program.iter_values(as_json=self.as_json)} if installed_program.values_count else {}
             self.entries.append({
                 'service_name': installed_program.name,

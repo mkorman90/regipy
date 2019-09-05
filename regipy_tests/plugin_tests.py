@@ -232,9 +232,9 @@ def test_installed_programs_plugin_software(software_hive):
         'service_name': '{FE2F6A2C-196E-4210-9C04-2B1BC21F07EF}',
         'timestamp': '2011-07-05T22:58:57.996094+00:00',
         'registry_path': 'WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
-        'UninstallString': 'MsiExec.exe /X{FE2F6A2C-196E-4210-9C04-2B1BC21F07EF}',
-        'URLInfoAbout': 'http://www.vmware.com',
-        'DisplayName': 'VMware Tools'
+        'uninstall_string': 'MsiExec.exe /X{FE2F6A2C-196E-4210-9C04-2B1BC21F07EF}',
+        'url_info_about': 'http://www.vmware.com',
+        'display_name': 'VMware Tools'
     }.items()
 
 
