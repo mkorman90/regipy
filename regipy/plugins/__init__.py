@@ -6,7 +6,6 @@ from .ntuser.typed_urls import TypedUrlsPlugin
 from .ntuser.installed_programs_ntuser import InstalledSoftwareNTUserPlugin
 from .ntuser.tsclient import TSClientPlugin
 from .ntuser.classes_installer import ClassesInstallerPlugin
-from .ntuser.installed_programs import InstalledSoftwarePlugin
 from .system.routes import RoutesPlugin
 from .system.services import ServicesPlugin
 from .system.computer_name import ComputerNamePlugin

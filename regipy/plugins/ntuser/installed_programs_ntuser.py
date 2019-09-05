@@ -7,7 +7,7 @@ from regipy.utils import convert_wintime
 
 logger = logbook.Logger(__name__)
 
-INSTALLED_SOFTWARE_PATH = r'\Microsoft\Windows\CurrentVersion\Uninstall'
+INSTALLED_SOFTWARE_PATH = r'\Software\Microsoft\Windows\CurrentVersion\Uninstall'
 
 
 class InstalledSoftwareNTUserPlugin(Plugin):
