@@ -9,7 +9,7 @@ from regipy.utils import convert_wintime
 logger = logbook.Logger(__name__)
 
 X64_INSTALLED_SOFTWARE_PATH = r'\Microsoft\Windows\CurrentVersion\Uninstall'
-X86_INSTALLED_SOFTWARE_PATH = 'WOW6432Node' + X64_INSTALLED_SOFTWARE_PATH
+X86_INSTALLED_SOFTWARE_PATH = r'\Wow6432Node' + X64_INSTALLED_SOFTWARE_PATH
 
 
 class InstalledSoftwarePlugin(Plugin):

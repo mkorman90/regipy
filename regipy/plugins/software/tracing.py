@@ -7,7 +7,7 @@ from regipy.plugins.plugin import Plugin
 logger = logbook.Logger(__name__)
 
 TRACING_PATH = r'\Microsoft\Tracing'
-X86_TRACING_PATH = 'WOW6432Node' + TRACING_PATH
+X86_TRACING_PATH = r'\Wow6432Node' + TRACING_PATH
 
 
 class RASTracingPlugin(Plugin):

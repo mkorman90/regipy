@@ -202,7 +202,7 @@ def test_ras_tracing_plugin_software(software_hive):
     plugin_instance = RASTracingPlugin(registry_hive, as_json=True)
     plugin_instance.run()
 
-    assert len(plugin_instance.entries) == 140
+    assert len(plugin_instance.entries) == 70
 
     assert plugin_instance.entries[0] == {
         'name': 'AcroRd32_RASAPI32',
@@ -220,7 +220,7 @@ def test_installed_programs_plugin_software(software_hive):
     plugin_instance = InstalledSoftwarePlugin(registry_hive, as_json=True)
     plugin_instance.run()
 
-    assert len(plugin_instance.entries) == 134
+    assert len(plugin_instance.entries) == 67
 
     assert plugin_instance.entries[0] == {
         'registry_path': '\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
@@ -231,7 +231,7 @@ def test_installed_programs_plugin_software(software_hive):
     assert plugin_instance.entries[-1].items() > {
         'service_name': '{FE2F6A2C-196E-4210-9C04-2B1BC21F07EF}',
         'timestamp': '2011-07-05T22:58:57.996094+00:00',
-        'registry_path': 'WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+        'registry_path': '\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
         'uninstall_string': 'MsiExec.exe /X{FE2F6A2C-196E-4210-9C04-2B1BC21F07EF}',
         'url_info_about': 'http://www.vmware.com',
         'display_name': 'VMware Tools'
