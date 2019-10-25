@@ -1,10 +1,10 @@
 construct==2.9.45
-attrs==19.1.0
+attrs==19.3.0
 click==7.0
 inflection==0.3.1
 jsonlines==1.2.0
-pytz==2019.2
-logbook==1.5.2
-tabulate==0.8.3
-tqdm==4.35.0
+pytz==2019.3
+logbook==1.5.3
+tabulate==0.8.5
+tqdm==4.36.1
 jsonlines==1.2.0
