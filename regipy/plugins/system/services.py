@@ -20,12 +20,14 @@ class ServicesPlugin(Plugin):
         self.entries = {}
         logger.info('Started Services enumeration Plugin...')
         for control_set_services_path in self.registry_hive.get_control_sets(SERVICES_PATH):
-            self.entries[control_set_services_path] = {}
             try:
                 subkey = self.registry_hive.get_key(control_set_services_path)
             except RegistryKeyNotFoundException as ex:
                 logger.error(ex)
                 continue
+            self.entries[control_set_services_path] = {
+                'timestamp': convert_wintime(subkey.header.last_modified, as_json=self.as_json)        
+            }
             services = []
             for service in subkey.iter_subkeys():
                 values = None
