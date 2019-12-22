@@ -1,5 +1,6 @@
 import logbook
 
+import attr
 from regipy.exceptions import RegistryKeyNotFoundException, NoRegistryValuesException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
@@ -16,29 +17,29 @@ class ServicesPlugin(Plugin):
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
     def run(self):
+        self.entries = {}
         logger.info('Started Services enumeration Plugin...')
         for control_set_services_path in self.registry_hive.get_control_sets(SERVICES_PATH):
-
             try:
                 subkey = self.registry_hive.get_key(control_set_services_path)
             except RegistryKeyNotFoundException as ex:
                 logger.error(ex)
                 continue
-
             self.entries[control_set_services_path] = {
-                'timestamp': subkey.header.last_modified
+                'timestamp': convert_wintime(subkey.header.last_modified, as_json=self.as_json)        
             }
             services = []
             for service in subkey.iter_subkeys():
                 values = None
                 if service.values_count > 0:
-                    values = [x for x in service.iter_values(as_json=True)]
-
-                services.append({
+                    values = [attr.asdict(x) for x in service.iter_values(as_json=True)]
+                entry = {
                     'name': service.name,
                     'last_modified': convert_wintime(service.header.last_modified, as_json=self.as_json),
                     'values': values,
-                    'parameters': [x for x in self.registry_hive.recurse_subkeys(nk_record=service, path=r'{}\{}'.format(
+                    'parameters': [attr.asdict(x) for x in self.registry_hive.recurse_subkeys(nk_record=service, path=r'{}\{}'.format(
                         control_set_services_path, service.name), as_json=True)] if service.subkey_count else None
-                })
-                self.entries[control_set_services_path]['services'] = services
+                }
+                services.append(entry)
+            self.entries[control_set_services_path]['services'] = services
+
