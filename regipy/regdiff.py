@@ -1,9 +1,10 @@
 import os
+from typing import Set
 
 import logbook
 from tqdm import tqdm
 
-from regipy.registry import RegistryHive
+from regipy.registry import RegistryHive, NKRecord
 from regipy.utils import convert_wintime, calculate_sha1
 
 logger = logbook.Logger(__name__)
@@ -28,6 +29,24 @@ def get_timestamp_for_subkeys(registry_hive, subkey_list):
     for subkey_path in subkey_list:
         subkey = registry_hive.get_key(subkey_path)
         yield subkey_path, convert_wintime(subkey.header.last_modified, as_json=True)
+
+
+def _get_name_value_tuples(subkey: NKRecord) -> Set[tuple]:
+    """
+    Iterate over value in a subkey and return a set of tuples containing value names and values
+    :param subkey: NKRecord to iterate over
+    :return: A set of tuples containing value names and values
+    """
+    values_tuple = set()
+    for value in subkey.iter_values(as_json=True):
+        if not value.value:
+            continue
+
+        if isinstance(value.value, list):
+            values_tuple.update({(value.name, x) for x in value.value})
+        else:
+            values_tuple.add((value.name, value.value))
+    return values_tuple
 
 
 def compare_hives(first_hive_path, second_hive_path, verbose=False):
@@ -84,12 +103,10 @@ def compare_hives(first_hive_path, second_hive_path, verbose=False):
                 second_subkey_values = set()
 
                 if first_subkey_nk_record.values_count:
-                    first_subkey_values = set(
-                        (x.name, x.value) for x in first_subkey_nk_record.iter_values(as_json=True))
+                    first_subkey_values = _get_name_value_tuples(first_subkey_nk_record)
 
                 if second_subkey_nk_record.values_count:
-                    second_subkey_values = set(
-                        (x.name, x.value) for x in second_subkey_nk_record.iter_values(as_json=True))
+                    second_subkey_values = _get_name_value_tuples(second_subkey_nk_record)
 
                 # If one hive or the other contain values, and they are different, compare values
                 if (first_subkey_values or second_subkey_values) and (first_subkey_values != second_subkey_values):

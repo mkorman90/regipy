@@ -386,6 +386,22 @@ class NKRecord:
                 else:
                     value_name = vk.name.decode(errors='replace')
 
+                # If the value is bigger tha this value, it means this is a DEVPROP structure
+                # https://doxygen.reactos.org/d0/dba/devpropdef_8h_source.html
+                # https://sourceforge.net/p/mingw-w64/mingw-w64/ci/668a1d3e85042c409e0c292e621b3dc0aa26177c/tree/
+                # mingw-w64-headers/include/devpropdef.h?diff=dd86a3b7594dadeef9d6a37c4b6be3ca42ef7e94
+                # We currently do not support these, but also wouldn't like to yield this as binary data
+                # This int casting will always work because the data_type is construct's EnumIntegerString
+                # TODO: Add actual parsing
+                if int(vk.data_type) > 0xffff0000:
+                    data_type = int(vk.data_type) & 0xffff
+                    continue
+
+                # Skip this unknown data type, research pending :)
+                # TODO: Add actual parsing
+                if int(vk.data_type) == 0x200000:
+                    continue
+
                 data_type = str(vk.data_type)
                 if data_type in ['REG_SZ', 'REG_EXPAND', 'REG_EXPAND_SZ']:
                     if vk.data_size >= 0x80000000:
@@ -404,6 +420,7 @@ class NKRecord:
                     elif vk.data_size > 0x3fd8 and value.value[:2] == b'db':
                         try:
                             actual_value = self._parse_indirect_block(substream, value)
+
                             actual_value = try_decode_binary(actual_value, as_json=True) if as_json else actual_value
                         except ConstError:
                             logger.error(f'Bad value at {actual_vk_offset}')
@@ -422,7 +439,11 @@ class NKRecord:
                     parsed_value = GreedyRange(CString('utf-16-le')).parse(value.value)
                     # Because the ListContainer object returned by Construct cannot be turned into a list,
                     # we do this trick
-                    actual_value = str(parsed_value) if as_json else [x for x in parsed_value if x]
+                    actual_value = [x for x in parsed_value if x]
+                # We currently dumps this as hex string or raw
+                # TODO: Add actual parsing
+                elif data_type in ['REG_RESOURCE_REQUIREMENTS_LIST', 'REG_RESOURCE_LIST']:
+                    actual_value = binascii.b2a_hex(value.value).decode()[:max_len] if as_json else value.value
                 else:
                     actual_value = try_decode_binary(value.value, as_json=as_json)
                 yield Value(name=value_name, value_type=str(value.value_type), value=actual_value,

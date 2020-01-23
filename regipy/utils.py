@@ -142,10 +142,10 @@ def identify_hive_type(name: str) -> str:
 
 def try_decode_binary(data, as_json=False, max_len=MAX_LEN):
     try:
-        value = data.decode('utf-16-le').rstrip('\x00')
+        value = data.decode('utf-16-le').rstrip('\x00')[:max_len]
     except UnicodeDecodeError:
         try:
-            value = data.decode().rstrip('\x00')
+            value = data.decode().rstrip('\x00')[:max_len]
         except:
             value = binascii.b2a_hex(data).decode()[:max_len] if as_json else data
     return value
