@@ -174,9 +174,9 @@ def test_ntuser_apply_transaction_logs(transaction_ntuser, transaction_log):
     assert recovered_dirty_pages_count == 132
 
     found_differences = compare_hives(transaction_ntuser, restored_hive_path)
-    assert len(found_differences) == 587
+    assert len(found_differences) == 588
     assert len([x for x in found_differences if x[0] == 'new_subkey']) == 527
-    assert len([x for x in found_differences if x[0] == 'new_value']) == 59
+    assert len([x for x in found_differences if x[0] == 'new_value']) == 60
 
 
 def test_system_apply_transaction_logs(transaction_system, system_tr_log_1, system_tr_log_2):
@@ -188,9 +188,9 @@ def test_system_apply_transaction_logs(transaction_system, system_tr_log_1, syst
     assert recovered_dirty_pages_count == 315
 
     found_differences = compare_hives(transaction_system, restored_hive_path)
-    assert len(found_differences) == 2486
+    assert len(found_differences) == 2514
     assert len([x for x in found_differences if x[0] == 'new_subkey']) == 2472
-    assert len([x for x in found_differences if x[0] == 'new_value']) == 13
+    assert len([x for x in found_differences if x[0] == 'new_value']) == 41
 
 
 def test_system_apply_transaction_logs_2(transaction_usrclass, usrclass_tr_log_1, usrclass_tr_log_2):
