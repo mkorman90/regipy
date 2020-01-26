@@ -366,7 +366,7 @@ class NKRecord:
         :return: List of values for the subkey
         """
         if not self.values_count:
-            return None
+            return
 
         # Get the offset of the values key. We skip 4 because of Cell Header
         target_offset = REGF_HEADER_SIZE + 4 + self.header.values_list_offset
@@ -378,7 +378,12 @@ class NKRecord:
             with boomerang_stream(self._stream) as substream:
                 actual_vk_offset = REGF_HEADER_SIZE + 4 + vk_offset
                 substream.seek(actual_vk_offset)
-                vk = VALUE_KEY.parse_stream(substream)
+                try:
+                    vk = VALUE_KEY.parse_stream(substream)
+                except ConstError:
+                    logger.error(f'Could not parse VK at {substream.tell()}, registry hive is probably corrupted.')
+                    return
+
                 value = self.read_value(vk, substream)
 
                 if vk.name_size == 0:
@@ -386,7 +391,7 @@ class NKRecord:
                 else:
                     value_name = vk.name.decode(errors='replace')
 
-                # If the value is bigger tha this value, it means this is a DEVPROP structure
+                # If the value is bigger than this value, it means this is a DEVPROP structure
                 # https://doxygen.reactos.org/d0/dba/devpropdef_8h_source.html
                 # https://sourceforge.net/p/mingw-w64/mingw-w64/ci/668a1d3e85042c409e0c292e621b3dc0aa26177c/tree/
                 # mingw-w64-headers/include/devpropdef.h?diff=dd86a3b7594dadeef9d6a37c4b6be3ca42ef7e94
