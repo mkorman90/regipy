@@ -117,3 +117,10 @@ def usrclass_tr_log_2(test_data_dir):
     temp_path = extract_lzma(os.path.join(test_data_dir, 'UsrClass.dat.LOG2.xz'))
     yield temp_path
     os.remove(temp_path)
+
+
+@pytest.fixture(scope='module')
+def ntuser_software_partial(test_data_dir):
+    temp_path = extract_lzma(os.path.join(test_data_dir, 'ntuser_software_partial.xz'))
+    yield temp_path
+    os.remove(temp_path)

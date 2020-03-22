@@ -87,7 +87,7 @@ def convert_wintime(wintime: int, as_json=False) -> dt.datetime:
     try:
         date = dt.datetime(1601, 1, 1, tzinfo=pytz.utc) + dt.timedelta(microseconds=us)
     except OverflowError:
-        # If date is too big, it is probably corrupted' let's return the smalles possible windows timestamp.
+        # If date is too big, it is probably corrupted' let's return the smallest possible windows timestamp.
         date = dt.datetime(1601, 1, 1, tzinfo=pytz.utc)
     return date.isoformat() if as_json else date
 

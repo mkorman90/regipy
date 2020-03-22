@@ -45,10 +45,16 @@ def parse_header(hive_path, verbose):
 @click.option('-o', 'output_path', type=click.Path(exists=False, dir_okay=False, resolve_path=True), required=False)
 @click.option('-p', '--registry-path', help='A registry path to start iterating from')
 @click.option('-t', '--timeline', is_flag=True, default=False, help='Create a CSV timeline instead')
+@click.option('-t', '--hive-type', type=click.STRING, required=False,
+              help='Specify a hive type, if it could not be identified for some reason')
+@click.option('-r', '--partial_hive_path', type=click.STRING, required=False,
+              help='The path from which the partial hive actually starts, for example: -t ntuser -r "/Software" '
+                   'would mean this is actually a HKCU hive, starting from HKCU/Software')
 @click.option('-v', '--verbose', is_flag=True, default=False, help='Verbosity')
-def hive_to_json(hive_path, output_path, registry_path, timeline, verbose):
+def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, partial_hive_path, verbose):
     with logbook.NestedSetup(_get_log_handlers(verbose=verbose)).applicationbound():
-        registry_hive = RegistryHive(hive_path)
+        registry_hive = RegistryHive(hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path)
+
         if registry_path:
             try:
                 name_key_entry = registry_hive.get_key(registry_path)
@@ -88,10 +94,15 @@ def hive_to_json(hive_path, output_path, registry_path, timeline, verbose):
               help='Output path for plugins result')
 @click.option('-p', '--plugins', type=click.STRING, required=False,
               help='A plugin or list of plugins to execute command separated')
+@click.option('-t', '--hive-type', type=click.STRING, required=False,
+              help='Specify a hive type, if it could not be identified for some reason')
+@click.option('-r', '--partial_hive_path', type=click.STRING, required=False,
+              help='The path from which the partial hive actually starts, for example: -t ntuser -r "/Software" '
+                   'would mean this is actually a HKCU hive, starting from HKCU/Software')
 @click.option('-v', '--verbose', is_flag=True, default=False, help='Verbosity')
-def run_plugins(hive_path, output_path, plugins, verbose):
+def run_plugins(hive_path, output_path, plugins, hive_type, partial_hive_path, verbose):
     with logbook.NestedSetup(_get_log_handlers(verbose=verbose)).applicationbound():
-        registry_hive = RegistryHive(hive_path)
+        registry_hive = RegistryHive(hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path)
         click.secho('Loaded {} plugins'.format(len(PLUGINS)), fg='white')
 
         if plugins:

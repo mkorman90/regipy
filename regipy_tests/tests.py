@@ -3,6 +3,7 @@ import os
 from tempfile import mkdtemp
 
 import pytest
+from regipy.hive_types import NTUSER_HIVE_TYPE
 
 from regipy.recovery import apply_transaction_logs
 from regipy.regdiff import compare_hives
@@ -75,6 +76,18 @@ def test_find_keys_ntuser(ntuser_hive):
     assert values[0].value_type == 'REG_EXPAND_SZ'
 
 
+def test_find_keys_partial_ntuser_hive(ntuser_software_partial):
+    registry_hive = RegistryHive(ntuser_software_partial, hive_type=NTUSER_HIVE_TYPE, partial_hive_path=r'\Software')
+
+    run_key = registry_hive.get_key(r'\Software\Microsoft\Windows\CurrentVersion\Run')
+    assert run_key.name == 'Run'
+    assert run_key.header.last_modified == 132024690510209250
+
+    values = [x for x in run_key.iter_values(as_json=True)]
+    assert values[0].name == 'OneDrive'
+    assert values[0].value_type == 'REG_SZ'
+
+
 def test_ntuser_timeline(ntuser_hive):
     registry_hive = RegistryHive(ntuser_hive)
     # TODO
@@ -98,7 +111,6 @@ def test_ntuser_emojis(transaction_ntuser):
 
 def test_recurse_ntuser(ntuser_hive):
     registry_hive = RegistryHive(ntuser_hive)
-    EXPECTED_KEYS = ['path', 'subkey_name', 'timestamp', 'values', 'values_count']
 
     value_types = {
         'REG_BINARY': 0,
@@ -131,6 +143,13 @@ def test_recurse_ntuser(ntuser_hive):
         'REG_QWORD': 57,
         'REG_SZ': 1870
     }
+
+
+def test_recurse_partial_ntuser(ntuser_software_partial):
+    registry_hive = RegistryHive(ntuser_software_partial, hive_type=NTUSER_HIVE_TYPE, partial_hive_path=r'\Software')
+    for subkey_count, subkey in enumerate(registry_hive.recurse_subkeys(as_json=True)):
+        assert subkey.actual_path.startswith(registry_hive.partial_hive_path)
+    assert subkey_count == 8110
 
 
 def test_recurse_amcache(amcache_hive):
@@ -188,9 +207,9 @@ def test_system_apply_transaction_logs(transaction_system, system_tr_log_1, syst
     assert recovered_dirty_pages_count == 315
 
     found_differences = compare_hives(transaction_system, restored_hive_path)
-    assert len(found_differences) == 2514
+    assert len(found_differences) == 2515
     assert len([x for x in found_differences if x[0] == 'new_subkey']) == 2472
-    assert len([x for x in found_differences if x[0] == 'new_value']) == 41
+    assert len([x for x in found_differences if x[0] == 'new_value']) == 42
 
 
 def test_system_apply_transaction_logs_2(transaction_usrclass, usrclass_tr_log_1, usrclass_tr_log_2):
