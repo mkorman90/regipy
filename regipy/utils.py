@@ -102,10 +102,6 @@ def get_subkey_values_from_list(registry_hive, entries_list, as_json=False):
     """
     result = {}
     for path in entries_list:
-
-        if registry_hive.partial_hive_path and path.startswith(registry_hive.partial_hive_path):
-            path = path.partition(registry_hive.partial_hive_path)[-1]
-
         try:
             subkey = registry_hive.get_key(path)
         except (RegistryKeyNotFoundException, NoRegistrySubkeysException) as ex:

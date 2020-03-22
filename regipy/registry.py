@@ -160,7 +160,7 @@ class RegistryHive:
                 yield Subkey(subkey_name=subkey.name, path=subkey_path,
                              timestamp=ts.isoformat() if as_json else ts, values=values,
                              values_count=len(values),
-                             actual_path=f'{self.partial_hive_path}\\{subkey_path}' if self.partial_hive_path else None)
+                             actual_path=f'{self.partial_hive_path}{subkey_path}' if self.partial_hive_path else None)
 
         # Get the values of the subkey
         values = []
