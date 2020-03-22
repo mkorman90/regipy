@@ -186,8 +186,11 @@ class RegistryHive:
         return HBin(self._stream)
 
     def get_key(self, key_path):
-        if self.partial_hive_path and key_path.startswith(self.partial_hive_path):
-            key_path = key_path.partition(self.partial_hive_path)[-1]
+        if self.partial_hive_path:
+            if key_path.startswith(self.partial_hive_path):
+                key_path = key_path.partition(self.partial_hive_path)[-1]
+            else:
+                raise RegistryKeyNotFoundException(f'Did not find subkey at {key_path}, because this is a partial hive')
 
         logger.debug('Getting key: {}'.format(key_path))
 
