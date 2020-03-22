@@ -209,7 +209,7 @@ def test_system_apply_transaction_logs(transaction_system, system_tr_log_1, syst
     found_differences = compare_hives(transaction_system, restored_hive_path)
     assert len(found_differences) == 2515
     assert len([x for x in found_differences if x[0] == 'new_subkey']) == 2472
-    assert len([x for x in found_differences if x[0] == 'new_value']) == 41
+    assert len([x for x in found_differences if x[0] == 'new_value']) == 42
 
 
 def test_system_apply_transaction_logs_2(transaction_usrclass, usrclass_tr_log_1, usrclass_tr_log_2):
