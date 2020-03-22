@@ -87,7 +87,7 @@ def convert_wintime(wintime: int, as_json=False) -> dt.datetime:
     try:
         date = dt.datetime(1601, 1, 1, tzinfo=pytz.utc) + dt.timedelta(microseconds=us)
     except OverflowError:
-        # If date is too big, it is probably corrupted' let's return the smalles possible windows timestamp.
+        # If date is too big, it is probably corrupted' let's return the smallest possible windows timestamp.
         date = dt.datetime(1601, 1, 1, tzinfo=pytz.utc)
     return date.isoformat() if as_json else date
 
@@ -102,6 +102,10 @@ def get_subkey_values_from_list(registry_hive, entries_list, as_json=False):
     """
     result = {}
     for path in entries_list:
+
+        if registry_hive.partial_hive_path and path.startswith(registry_hive.partial_hive_path):
+            path = path.partition(registry_hive.partial_hive_path)[-1]
+
         try:
             subkey = registry_hive.get_key(path)
         except (RegistryKeyNotFoundException, NoRegistrySubkeysException) as ex:

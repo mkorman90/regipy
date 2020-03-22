@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundException, NoRegistryValuesException, \
     RegistryValueNotFoundException, RegipyGeneralException, UnidentifiedHiveException, RegistryParsingException
+from regipy.hive_types import SUPPORTED_HIVE_TYPES
 from regipy.structs import REGF_HEADER, HBIN_HEADER, CM_KEY_NODE, LF_LH_SK_ELEMENT, VALUE_KEY, INDEX_ROOT, \
     REGF_HEADER_SIZE, INDEX_ROOT_SIGNATURE, LEAF_INDEX_SIGNATURE, FAST_LEAF_SIGNATURE, HASH_LEAF_SIGNATURE, \
     BIG_DATA_BLOCK, INDEX_LEAF, DEFAULT_VALUE
@@ -56,6 +57,9 @@ class Subkey:
     values_count = attr.ib(type=int)
     values = attr.ib(factory=list)
 
+    # This field will be used if a partial hive was given, if not it would be None.
+    actual_path = attr.ib(type=str, default=None)
+
 
 @attr.s
 class Value:
@@ -76,11 +80,20 @@ class RIRecord:
 class RegistryHive:
     CONTROL_SETS = [r'\ControlSet001', r'\ControlSet002']
 
-    def __init__(self, hive_path):
+    def __init__(self, hive_path, hive_type=None, partial_hive_path=None):
         """
         Represents a registry hive
         :param hive_path: Path to the registry hive
+        :param hive_type: The hive type can be specified if this is a partial hive,
+                          or for some other reason regipy cannot identify the hive type
+        :param partial_hive_path: The path from which the partial hive actually starts, for example:
+                                  hive_type=ntuser partial_hive_path="/Software" would mean
+                                  this is actually a HKCU hive, starting from HKCU/Software
         """
+
+        self.partial_hive_path = None
+        self.hive_type = None
+
         with open(hive_path, 'rb') as f:
             self._stream = BytesIO(f.read())
 
@@ -93,10 +106,20 @@ class RegistryHive:
             self.root = NKRecord(root_hbin_cell, s)
         self.name = self.header.file_name
 
-        try:
-            self.hive_type = identify_hive_type(self.name)
-        except UnidentifiedHiveException:
-            self.hive_type = None
+        if hive_type:
+            if hive_type.lower() in SUPPORTED_HIVE_TYPES:
+                self.hive_type = hive_type
+            else:
+                raise UnidentifiedHiveException(f'{hive_type} is not a supported hive type: '
+                                                f'only the following are supported: {SUPPORTED_HIVE_TYPES}')
+        else:
+            try:
+                self.hive_type = identify_hive_type(self.name)
+            except UnidentifiedHiveException:
+                logger.info(f'Hive type for {hive_path} was not identified: {self.name}')
+
+        if partial_hive_path:
+            self.partial_hive_path = partial_hive_path
 
     def recurse_subkeys(self, nk_record=None, path=None, as_json=False):
         """
@@ -112,6 +135,10 @@ class RegistryHive:
         # Iterate over subkeys
         if nk_record.header.subkey_count:
             for subkey in nk_record.iter_subkeys():
+                if path:
+                    subkey_path = r'{}\{}'.format(path, subkey.name) if path else r'\{}'.format(subkey.name)
+                else:
+                    subkey_path = f'\\{subkey.name}'
 
                 # Leaf Index records do not contain subkeys
                 if isinstance(subkey, LIRecord):
@@ -119,8 +146,7 @@ class RegistryHive:
 
                 if subkey.subkey_count:
                     yield from self.recurse_subkeys(nk_record=subkey,
-                                                    path=r'{}\{}'.format(path, subkey.name) if path else r'\{}'.format(
-                                                        subkey.name),
+                                                    path=subkey_path,
                                                     as_json=as_json)
 
                 values = []
@@ -131,9 +157,10 @@ class RegistryHive:
                         values = list(subkey.iter_values(as_json=as_json))
 
                 ts = convert_wintime(subkey.header.last_modified)
-                yield Subkey(subkey_name=subkey.name, path=r'{}\{}'.format(path, subkey.name) if path else '\\',
+                yield Subkey(subkey_name=subkey.name, path=subkey_path,
                              timestamp=ts.isoformat() if as_json else ts, values=values,
-                             values_count=len(values))
+                             values_count=len(values),
+                             actual_path=f'{self.partial_hive_path}\\{subkey_path}' if self.partial_hive_path else None)
 
         # Get the values of the subkey
         values = []
@@ -144,8 +171,10 @@ class RegistryHive:
                 values = list(nk_record.iter_values(as_json=as_json))
 
         ts = convert_wintime(nk_record.header.last_modified)
-        yield Subkey(subkey_name=nk_record.name, path=path,
-                     timestamp=ts.isoformat() if as_json else ts, values=values, values_count=len(values))
+        subkey_path = path or '\\'
+        yield Subkey(subkey_name=nk_record.name, path=subkey_path,
+                     timestamp=ts.isoformat() if as_json else ts, values=values, values_count=len(values),
+                     actual_path=f'{self.partial_hive_path}\\{subkey_path}' if self.partial_hive_path else None)
 
     def get_hbin_at_offset(self, offset=0):
         """
@@ -157,13 +186,16 @@ class RegistryHive:
         return HBin(self._stream)
 
     def get_key(self, key_path):
+        if self.partial_hive_path and key_path.startswith(self.partial_hive_path):
+            key_path = key_path.partition(self.partial_hive_path)[-1]
+
         logger.debug('Getting key: {}'.format(key_path))
 
         if key_path == '\\':
             return self.root
 
         key_path_parts = key_path.split('\\')[1:]
-        previous_key_name = ['root']
+        previous_key_name = []
 
         subkey = self.root.get_key(key_path_parts.pop(0))
 

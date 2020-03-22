@@ -20,6 +20,8 @@ class Plugin(object):
         self.registry_hive = registry_hive
         self.as_json = as_json
 
+        self.partial_hive_path = registry_hive.partial_hive_path
+
         # This variable should always hold the final result - in order to use it in anomaly detection and timeline gen.
         self.entries = list()
 
