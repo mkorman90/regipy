@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import sys
-
 from setuptools import setup, find_packages
+
+import regipy
 
 # Requirements.
 setup_requirements = ['pytest-runner'] if {'pytest', 'test', 'ptr'}.intersection(sys.argv) else []
@@ -15,7 +16,7 @@ with open('docs/README.rst', 'r') as readme_file:
 def main():
     setup(name='regipy',
           packages=find_packages(),
-          version='1.4.5',
+          version=regipy.__version__,
           description='Python Registry Parser',
           long_description=readme,
           author='Martin G. Korman',
