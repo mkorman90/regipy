@@ -326,11 +326,11 @@ def read_win10_entries(bin_data, ver_magic, creators_update=False, as_json=False
         # Read the remaining entry data
         low_datetime, high_datetime = struct.unpack('<LL', entry_data.read(8))
 
-        last_mod_date = convert_filetime(low_datetime, high_datetime)
-
         # Skip the unrecognized Microsoft App entry format for now
-        if last_mod_date == BAD_ENTRY_DATA:
-            continue
+        if not (low_datetime+high_datetime):
+        	continue
+        else:
+        	last_mod_date = convert_filetime(low_datetime, high_datetime)
 
         yield {
             'last_mod_date': last_mod_date.isoformat() if as_json else last_mod_date,
