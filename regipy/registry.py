@@ -299,7 +299,7 @@ class NKRecord:
             if not isinstance(subkey, NKRecord):
                 raise RegipyGeneralException(f'Unknown record type: {subkey}')
 
-            if subkey.name == key_name:
+            if subkey.name.upper() == key_name.upper():
                 return subkey
 
     def iter_subkeys(self):
