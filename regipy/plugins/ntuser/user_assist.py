@@ -107,7 +107,7 @@ class UserAssistPlugin(Plugin):
                             'name': name,
                             'timestamp': convert_wintime(parsed_entry.last_execution_timestamp, as_json=self.as_json),
                             'session_id': parsed_entry.session_id,
-                            'run_counter': parsed_entry.run_counter
+                            'run_counter': parsed_entry.run_counter - 5
                         }
 
                     if entry:
