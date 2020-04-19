@@ -84,7 +84,11 @@ class AmCachePlugin(Plugin):
                         if content:
                             entry[v] = content
 
-                    entry['sha1'] = entry['sha1'][4:]
+                    entry_sha1 = entry.get('sha1')
+                    if entry_sha1:
+                        entry['sha1'] = entry_sha1[4:]
+                    else:
+                        logger.info(f'entry {entry} has no SHA1')
 
                     program_id = entry.get('program_id')
                     if program_id:
