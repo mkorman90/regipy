@@ -1,6 +1,6 @@
 construct==2.10.56
 attrs==19.3.0
-click==7.0
+click==7.1.1
 inflection==0.4.0
 jsonlines==1.2.0
 pytz==2019.3
