@@ -1,7 +1,7 @@
 import binascii
 import datetime as dt
 
-import jsonlines
+
 import logbook
 
 import attr
@@ -9,7 +9,6 @@ import attr
 from construct import *
 from io import BytesIO
 
-from tqdm import tqdm
 
 from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundException, NoRegistryValuesException, \
     RegistryValueNotFoundException, RegipyGeneralException, UnidentifiedHiveException, RegistryParsingException
@@ -233,11 +232,6 @@ class RegistryHive:
         result = [r'\{}\{}'.format(subkey.name, registry_path) for subkey in found_control_sets]
         logger.info('Found control sets: {}'.format(result))
         return result
-
-    def dump_hive_to_json(self, output_path, name_key_entry, verbose=False):
-        with jsonlines.open(output_path, mode='w') as writer:
-            for entry in tqdm(self.recurse_subkeys(name_key_entry, as_json=True), disable=not verbose):
-                writer.write(attr.asdict(entry))
 
 
 class HBin:

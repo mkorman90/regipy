@@ -1,13 +1,10 @@
 import csv
 import json
 import os
-import shutil
-from io import BytesIO
 
 import attr
 import click
 import logbook
-import jsonlines
 from tabulate import tabulate
 
 from tqdm import tqdm
@@ -15,7 +12,7 @@ from tqdm import tqdm
 from regipy.plugins.plugin import PLUGINS
 from regipy.recovery import apply_transaction_logs
 from regipy.regdiff import compare_hives
-from regipy.plugins.utils import run_relevant_plugins
+from regipy.plugins.utils import run_relevant_plugins, dump_hive_to_json
 from regipy.registry import RegistryHive
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.utils import calculate_xor32_checksum, _get_log_handlers
@@ -82,7 +79,7 @@ def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, par
                         entry.pop('values')
                         csvwriter.writerow(entry)
             else:
-                registry_hive.dump_hive_to_json(output_path, name_key_entry, verbose)
+                dump_hive_to_json(registry_hive, output_path, name_key_entry, verbose)
         else:
             for entry in registry_hive.recurse_subkeys(name_key_entry, as_json=True):
                 click.secho(json.dumps(attr.asdict(entry), indent=4))

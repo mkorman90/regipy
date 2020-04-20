@@ -1,4 +1,4 @@
 from .registry import *
 
 name = 'regipy'
-__version__ = '1.5.4'
+__version__ = '1.5.5'

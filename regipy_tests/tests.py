@@ -4,6 +4,7 @@ from tempfile import mkdtemp
 
 import pytest
 from regipy.hive_types import NTUSER_HIVE_TYPE
+from regipy.plugins.utils import dump_hive_to_json
 
 from regipy.recovery import apply_transaction_logs
 from regipy.regdiff import compare_hives
@@ -228,7 +229,7 @@ def test_system_apply_transaction_logs_2(transaction_usrclass, usrclass_tr_log_1
 
 def test_hive_serialization(ntuser_hive, temp_output_file):
     registry_hive = RegistryHive(ntuser_hive)
-    registry_hive.dump_hive_to_json(temp_output_file, registry_hive.root, verbose=False)
+    dump_hive_to_json(registry_hive, temp_output_file, registry_hive.root, verbose=False)
     counter = 0
     with open(temp_output_file, 'r') as dumped_hive:
         for x in dumped_hive.readlines():
