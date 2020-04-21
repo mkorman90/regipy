@@ -1,22 +1,30 @@
 #!/usr/bin/env python
+import os
+import re
 import sys
 from setuptools import setup, find_packages
 
-import regipy
-
 # Requirements.
 setup_requirements = ['pytest-runner'] if {'pytest', 'test', 'ptr'}.intersection(sys.argv) else []
-test_requirements = ['pytest', 'pytest-pep8', 'pytest-flakes']
+test_requirements = ['pytest', 'pytest-flake8']
 
 # Fetch readme content.
 with open('docs/README.rst', 'r') as readme_file:
     readme = readme_file.read()
 
 
+def _find_version(file_path):
+    version_file = open(file_path, 'r').read()
+    version_match = re.search(r'^__version__ = [\'"]([^\'"]*)[\'"]', version_file, re.M)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError('Unable to find version string.')
+
+
 def main():
     setup(name='regipy',
           packages=find_packages(),
-          version=regipy.__version__,
+          version=_find_version(os.path.abspath(os.path.join('regipy', '__init__.py'))),
           description='Python Registry Parser',
           long_description=readme,
           author='Martin G. Korman',
@@ -33,8 +41,7 @@ def main():
                             'pytz==2019.3',
                             'logbook==1.5.3',
                             'tabulate==0.8.7',
-                            'tqdm==4.45.0',
-                            'jsonlines==1.2.0'],
+                            'tqdm==4.45.0'],
           tests_require=test_requirements,
           extras_require={
               'test': test_requirements
@@ -47,6 +54,7 @@ def main():
                        'License :: OSI Approved :: MIT License',
                        'Programming Language :: Python',
                        'Programming Language :: Python :: 3.7',
+                       'Programming Language :: Python :: 3.8',
                        'Topic :: Software Development :: Libraries',
                        'Topic :: Utilities'],
           entry_points={
