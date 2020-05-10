@@ -145,12 +145,13 @@ def try_decode_binary(data, as_json=False, max_len=MAX_LEN):
         value = data.decode('utf-16-le').rstrip('\x00')
     except UnicodeDecodeError:
         try:
-            value = data.decode().rstrip('\x00')[:max_len]
+            value = data.decode().rstrip('\x00')
         except:
             value = binascii.b2a_hex(data).decode() if as_json else data
 
     # If we the data should be exported as json, trim the value length
-    value = value[:max_len]
+    if as_json:
+        value = value[:max_len]
 
     return value
 
