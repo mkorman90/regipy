@@ -35,13 +35,13 @@ def main():
           setup_requires=setup_requirements,
           install_requires=['construct==2.10.56',
                             'attrs==19.3.0',
-                            'click==7.1.1',
+                            'click==7.1.2',
                             'inflection==0.4.0',
                             'jsonlines==1.2.0',
-                            'pytz==2019.3',
+                            'pytz==2020.1',
                             'logbook==1.5.3',
                             'tabulate==0.8.7',
-                            'tqdm==4.45.0'],
+                            'tqdm==4.46.0'],
           tests_require=test_requirements,
           extras_require={
               'test': test_requirements
