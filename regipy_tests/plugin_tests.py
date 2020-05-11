@@ -205,11 +205,13 @@ def test_ras_tracing_plugin_software(software_hive):
     assert len(plugin_instance.entries) == 70
 
     assert plugin_instance.entries[0] == {
+        'key': '\\Microsoft\\Tracing',
         'name': 'AcroRd32_RASAPI32',
         'timestamp': '2012-03-16T21:31:26.613878+00:00'
     }
 
     assert plugin_instance.entries[-1] == {
+        'key': '\\Microsoft\\Tracing',
         'name': 'wmplayer_RASMANCS',
         'timestamp': '2012-03-12T20:58:55.476336+00:00'
     }

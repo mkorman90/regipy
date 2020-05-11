@@ -25,6 +25,7 @@ class RASTracingPlugin(Plugin):
         for entry in ras_subkey.iter_subkeys():
             timestamp = convert_wintime(entry.header.last_modified, as_json=self.as_json)
             self.entries.append({
+                'key': subkey_path,
                 'name': entry.name,
                 'timestamp': timestamp
             })
