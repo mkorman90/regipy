@@ -20,5 +20,6 @@ from .software.persistence import SoftwarePersistencePlugin
 from .software.uac import UACStatusPlugin
 from .software.last_logon import LastLogonPlugin
 from .software.profilelist import ProfileListPlugin
+from .software.printdemon import PrintDemonPlugin
 from .system.timezone_data import TimezoneDataPlugin
 from .system.active_controlset import ActiveControlSetPlugin

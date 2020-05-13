@@ -1,7 +1,8 @@
 import pytest
 
 from regipy.plugins import NTUserPersistencePlugin, UserAssistPlugin, AmCachePlugin, WordWheelQueryPlugin, \
-    UACStatusPlugin, LastLogonPlugin, SoftwareClassesInstallerPlugin, InstalledSoftwarePlugin, RASTracingPlugin
+    UACStatusPlugin, LastLogonPlugin, SoftwareClassesInstallerPlugin, InstalledSoftwarePlugin, RASTracingPlugin, \
+    PrintDemonPlugin
 from regipy.plugins.ntuser.typed_urls import TypedUrlsPlugin
 from regipy.plugins.software.profilelist import ProfileListPlugin
 from regipy.plugins.software.persistence import SoftwarePersistencePlugin
@@ -373,4 +374,49 @@ def test_profilelist_plugin(software_hive):
         "load_time": "1601-01-01T00:00:00+00:00",
         "local_load_time": None
     }
+    ]
+
+
+def test_printdemon_plugin(software_hive):
+    registry_hive = RegistryHive(software_hive)
+    plugin_instance = PrintDemonPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+    
+    assert plugin_instance.entries == [
+        {'parameters': ['9600', 'n', '8', '1'],
+         'port_name': 'COM1:',
+         'timestamp': '2010-11-10T10:35:02.448040+00:00'},
+        {'parameters': ['9600', 'n', '8', '1'],
+         'port_name': 'COM2:',
+         'timestamp': '2010-11-10T10:35:02.448040+00:00'},
+        {'parameters': ['9600', 'n', '8', '1'],
+         'port_name': 'COM3:',
+         'timestamp': '2010-11-10T10:35:02.448040+00:00'},
+        {'parameters': ['9600', 'n', '8', '1'],
+         'port_name': 'COM4:',
+         'timestamp': '2010-11-10T10:35:02.448040+00:00'},
+        {'parameters': 0,
+         'port_name': 'FILE:',
+         'timestamp': '2010-11-10T10:35:02.448040+00:00'},
+        {'parameters': 0,
+         'port_name': 'LPT1:',
+         'timestamp': '2010-11-10T10:35:02.448040+00:00'},
+        {'parameters': 0,
+         'port_name': 'LPT2:',
+         'timestamp': '2010-11-10T10:35:02.448040+00:00'},
+        {'parameters': 0,
+         'port_name': 'LPT3:',
+         'timestamp': '2010-11-10T10:35:02.448040+00:00'},
+        {'parameters': 0,
+         'port_name': 'XPSPort:',
+         'timestamp': '2010-11-10T10:35:02.448040+00:00'},
+        {'parameters': 0,
+         'port_name': 'Ne00:',
+         'timestamp': '2010-11-10T10:35:02.448040+00:00'},
+        {'parameters': 0,
+         'port_name': 'Ne01:',
+         'timestamp': '2010-11-10T10:35:02.448040+00:00'},
+        {'parameters': 0,
+         'port_name': 'nul:',
+         'timestamp': '2010-11-10T10:35:02.448040+00:00'}
     ]
