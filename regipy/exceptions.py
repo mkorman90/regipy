@@ -4,7 +4,6 @@ class RegipyException(Exception):
     """
     pass
 
-
 class RegipyGeneralException(RegipyException):
     """
     General exception

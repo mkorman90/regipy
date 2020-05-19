@@ -91,7 +91,12 @@ class UserAssistPlugin(Plugin):
                     entry = None
                     data = value.value
                     if len(data) == 72:
-                        parsed_entry = WIN7_USER_ASSIST.parse(data)
+                        try:
+                            parsed_entry = WIN7_USER_ASSIST.parse(data)
+                        except ConstError as ex:
+                            logger.error(f'Could not parse user assist entry named {name}: {ex}')
+                            continue
+
                         entry = {
                             'name': name,
                             'timestamp': convert_wintime(parsed_entry.last_execution_timestamp, as_json=self.as_json),
@@ -102,7 +107,12 @@ class UserAssistPlugin(Plugin):
                         }
 
                     elif len(data) == 16:
-                        parsed_entry = WIN_XP_USER_ASSIST.parse(data)
+                        try:
+                            parsed_entry = WIN_XP_USER_ASSIST.parse(data)
+                        except ConstError as ex:
+                            logger.error(f'Could not parse user assist entry named {name}: {ex}')
+                            continue
+
                         entry = {
                             'name': name,
                             'timestamp': convert_wintime(parsed_entry.last_execution_timestamp, as_json=self.as_json),
