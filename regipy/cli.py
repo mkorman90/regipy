@@ -42,7 +42,7 @@ def parse_header(hive_path, verbose):
 @click.option('-o', 'output_path', type=click.Path(exists=False, dir_okay=False, resolve_path=True), required=False)
 @click.option('-p', '--registry-path', help='A registry path to start iterating from')
 @click.option('-t', '--timeline', is_flag=True, default=False, help='Create a CSV timeline instead')
-@click.option('-t', '--hive-type', type=click.STRING, required=False,
+@click.option('-l', '--hive-type', type=click.STRING, required=False,
               help='Specify a hive type, if it could not be identified for some reason')
 @click.option('-r', '--partial_hive_path', type=click.STRING, required=False,
               help='The path from which the partial hive actually starts, for example: -t ntuser -r "/Software" '
@@ -73,11 +73,13 @@ def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, par
                                                fieldnames=['timestamp', 'subkey_name', 'values_count'])
                     csvwriter.writeheader()
                     for entry in tqdm(registry_hive.recurse_subkeys(name_key_entry, as_json=True)):
-                        subkey_name = entry.pop('subkey_name')
-                        path = entry.pop('path')
-                        entry['subkey_name'] = r'{}\{}'.format(path, subkey_name)
-                        entry.pop('values')
-                        csvwriter.writerow(entry)
+                        entry_dict = entry.__dict__
+                        path = entry.path
+                        csvwriter.writerow({
+                            'subkey_name': r'{}\{}'.format(entry.path, path),
+                            'timestamp': entry_dict['timestamp'],
+                            'values_count': entry_dict['values_count']
+                        })
             else:
                 dump_hive_to_json(registry_hive, output_path, name_key_entry, verbose)
         else:

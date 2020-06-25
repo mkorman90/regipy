@@ -143,14 +143,13 @@ def test_plugin_amcache(amcache_hive):
     plugin_instance = AmCachePlugin(registry_hive, as_json=True)
     plugin_instance.run()
 
-    assert len(plugin_instance.entries) == 1120
+    assert len(plugin_instance.entries) == 1367
     assert plugin_instance.entries[100] == {
         'full_path': 'C:\\Windows\\system32\\TPVMMondeu.dll',
         'last_modified_timestamp_2': '2017-03-17T05:06:04.002722+00:00',
         'program_id': '75a010066bb612ca7357ce31df8e9f0300000904',
         'sha1': '056f4b9d9ec9b5dc548e1b460da889e44089d76f',
-        'timestamp': '2017-08-03T11:34:02.263418+00:00',
-        'type': 'win_8+_amcache'
+        'timestamp': '2017-08-03T11:34:02.263418+00:00'
     }
 
 
