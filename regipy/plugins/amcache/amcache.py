@@ -9,7 +9,7 @@ from regipy.utils import convert_wintime
 
 logger = logbook.Logger(__name__)
 
-WIN8_AMCACHE_MAPPINGS = {
+AMCACHE_FIELD_NUMERIC_MAPPINGS = {
     '0': 'product_name',
     '1': 'company_name',
     '2': 'file_version_number',
@@ -43,62 +43,71 @@ class AmCachePlugin(Plugin):
     DESCRIPTION = 'Parse Amcache'
     COMPATIBLE_HIVE = AMCACHE_HIVE_TYPE
 
+    def parse_amcache_file_entry(self, subkey):
+        entry = {underscore(x.name): x.value for x in subkey.iter_values(as_json=self.as_json)}
+
+        # Sometimes the value names might be numeric instead. Translate them:
+        for k, v in AMCACHE_FIELD_NUMERIC_MAPPINGS.items():
+            content = entry.pop(k, None)
+            if content:
+                entry[v] = content
+
+        if 'sha1' in entry:
+            entry['sha1'] = entry['sha1'][4:]
+
+        if 'file_id' in entry:
+            entry['file_id'] = entry['file_id'][4:]
+            if 'sha1' not in entry:
+                entry['sha1'] = entry['file_id']
+
+        entry['program_id'] = entry['program_id'][4:]
+
+        entry['timestamp'] = convert_wintime(subkey.header.last_modified, as_json=self.as_json)
+
+        if 'size' in entry:
+            entry['size'] = int(entry['size'], 16) if isinstance(entry['size'], str) else entry['size']
+
+        is_pefile = entry.get('is_pe_file')
+        if is_pefile is not None:
+            entry['is_pe_file'] = bool(is_pefile)
+
+        is_os_component = entry.get('is_os_component')
+        if is_os_component is not None:
+            entry['is_os_component'] = bool(is_os_component)
+
+        if entry.get('link_date') == 0:
+            entry.pop('link_date')
+
+        for ts_field_name in WIN8_TS_FIELDS:
+            ts = entry.pop(ts_field_name, None)
+            if ts:
+                entry[ts_field_name] = convert_wintime(ts, as_json=self.as_json)
+
+        self.entries.append(entry)
+
     def run(self):
         logger.info('Started AmCache Plugin...')
-        is_win_7_hive = False
 
         try:
-            amcache_subkey = self.registry_hive.get_key(r'\Root\File')
+            amcache_file_subkey = self.registry_hive.get_key(r'\Root\File')
         except RegistryKeyNotFoundException:
-            amcache_subkey = self.registry_hive.get_key(r'\Root\InventoryApplicationFile')
-            is_win_7_hive = True
+            logger.info(r'Could not find \Root\File subkey')
+            amcache_file_subkey = None
 
-        if is_win_7_hive:
-            for subkey in amcache_subkey.iter_subkeys():
-                entry = {underscore(x.name): x.value for x in subkey.iter_values(as_json=self.as_json)}
-                entry['program_id'] = entry['program_id'][4:]
-                entry['file_id'] = entry['file_id'][4:]
-                entry['sha1'] = entry['file_id']
-                entry['timestamp'] = convert_wintime(subkey.header.last_modified, as_json=self.as_json)
-                entry['size'] = int(entry['size'], 16) if isinstance(entry['size'], str) else entry['size']
+        try:
+            amcache_inventory_file_subkey = self.registry_hive.get_key(r'\Root\InventoryApplicationFile')
+        except RegistryKeyNotFoundException:
+            logger.info(r'Could not find \Root\InventoryApplicationFile subkey')
+            amcache_inventory_file_subkey = None
 
-                is_pefile = entry.get('is_pe_file')
-                entry['is_pe_file'] = bool(is_pefile) if is_pefile is not None else None
+        if amcache_file_subkey:
+            for subkey in amcache_file_subkey.iter_subkeys():
+                if subkey.header.subkey_count > 0:
+                    for file_subkey in subkey.iter_subkeys():
+                        self.parse_amcache_file_entry(file_subkey)
+                if subkey.header.values_count > 0:
+                    self.entries.append(subkey)
 
-                is_os_component = entry.get('is_os_component')
-                entry['is_os_component'] = bool(is_os_component) if is_os_component is not None else None
-
-                if entry.get('link_date') == 0:
-                    entry.pop('link_date')
-
-                entry['type'] = 'win_7_amcache'
-                self.entries.append(entry)
-        else:
-            for subkey in amcache_subkey.iter_subkeys():
-                for file_subkey in subkey.iter_subkeys():
-                    entry = {x.name: x.value for x in file_subkey.iter_values(as_json=self.as_json)}
-                    entry['timestamp'] = convert_wintime(file_subkey.header.last_modified, as_json=self.as_json)
-
-                    for k, v in WIN8_AMCACHE_MAPPINGS.items():
-                        content = entry.pop(k, None)
-                        if content:
-                            entry[v] = content
-
-                    entry_sha1 = entry.get('sha1')
-                    if entry_sha1:
-                        entry['sha1'] = entry_sha1[4:]
-                    else:
-                        logger.info(f'entry {entry} has no SHA1')
-
-                    program_id = entry.get('program_id')
-                    if program_id:
-                        entry['program_id'] = entry['program_id'][4:]
-
-                    entry['type'] = 'win_8+_amcache'
-
-                    for ts_field_name in WIN8_TS_FIELDS:
-                        ts = entry.pop(ts_field_name, None)
-                        if ts:
-                            entry[ts_field_name] = convert_wintime(ts, as_json=self.as_json)
-
-                    self.entries.append(entry)
+        if amcache_inventory_file_subkey:
+            for file_subkey in amcache_inventory_file_subkey.iter_subkeys():
+                self.parse_amcache_file_entry(file_subkey)
