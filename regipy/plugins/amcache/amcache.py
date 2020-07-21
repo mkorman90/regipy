@@ -60,7 +60,8 @@ class AmCachePlugin(Plugin):
             if 'sha1' not in entry:
                 entry['sha1'] = entry['file_id']
 
-        entry['program_id'] = entry['program_id'][4:]
+        if 'program_id' in entry:
+            entry['program_id'] = entry['program_id'][4:]
 
         entry['timestamp'] = convert_wintime(subkey.header.last_modified, as_json=self.as_json)
 
