@@ -6,9 +6,9 @@ from tqdm import tqdm
 from regipy.plugins.plugin import PLUGINS
 
 
-def dump_hive_to_json(registry_jhive, output_path, name_key_entry, verbose=False):
+def dump_hive_to_json(registry_hive, output_path, name_key_entry, verbose=False):
     with jsonlines.open(output_path, mode='w') as writer:
-        for entry in tqdm(registry_jhive.recurse_subkeys(name_key_entry, as_json=True), disable=not verbose):
+        for entry in tqdm(registry_hive.recurse_subkeys(name_key_entry, as_json=True), disable=not verbose):
             writer.write(attr.asdict(entry))
 
 
