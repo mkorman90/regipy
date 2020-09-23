@@ -55,7 +55,7 @@ class AmCachePlugin(Plugin):
         if 'sha1' in entry:
             entry['sha1'] = entry['sha1'][4:]
 
-        if 'file_id' in entry:
+        if 'file_id' in entry and entry['file_id'] != 0:
             entry['file_id'] = entry['file_id'][4:]
             if 'sha1' not in entry:
                 entry['sha1'] = entry['file_id']
