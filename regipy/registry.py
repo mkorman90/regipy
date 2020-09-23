@@ -403,13 +403,18 @@ class NKRecord:
 
         for _ in range(self.values_count):
             is_corrupted = False
-            vk_offset = Int32ul.parse_stream(self._stream)
+            try:
+                vk_offset = Int32ul.parse_stream(self._stream)
+            except StreamError:
+                logger.info(f'Skipping bad registry VK at {self._stream.tell()}')
+                raise RegistryParsingException(f'Bad registry VK at {self._stream.tell()}')
+
             with boomerang_stream(self._stream) as substream:
                 actual_vk_offset = REGF_HEADER_SIZE + 4 + vk_offset
                 substream.seek(actual_vk_offset)
                 try:
                     vk = VALUE_KEY.parse_stream(substream)
-                except ConstError:
+                except (ConstError, StreamError):
                     logger.error(f'Could not parse VK at {substream.tell()}, registry hive is probably corrupted.')
                     return
 

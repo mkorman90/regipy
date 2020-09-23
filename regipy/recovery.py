@@ -9,7 +9,7 @@ from regipy import boomerang_stream
 from regipy.exceptions import RegistryRecoveryException
 from regipy.hive_types import HVLE_TRANSACTION_LOG_MAGIC, DIRT_TRANSACTION_LOG_MAGIC
 from regipy.registry import RegistryHive
-from regipy.structs import TRANSACTION_LOG, REGF_HEADER_SIZE, REGF_HEADER
+from regipy.structs import TRANSACTION_LOG, REGF_HEADER_SIZE, REGF_HEADER, HBIN_HEADER
 
 logger = logbook.Logger(__name__)
 
@@ -29,12 +29,13 @@ def _parse_hvle_block(hive_path, transaction_log_stream, log_size, expected_sequ
     hvle_block_start_offset = transaction_log_stream.tell()
 
     while hvle_block_start_offset < log_size:
-        logger.info(f'Parsing hvle block at {hvle_block_start_offset}')
+        logger.info(f'Parsing hvle block at {hex(hvle_block_start_offset)}')
         with boomerang_stream(transaction_log_stream) as x:
             if x.read(4) != b'HvLE':
                 logger.info('Reached a non HvLE object. stopping')
                 break
 
+        logger.info(f'Parsing HvLE block at {hex(hvle_block_start_offset)}')
         parsed_hvle_block = TRANSACTION_LOG.parse_stream(transaction_log_stream)
         logger.info(f'Currently at start of dirty pages: {transaction_log_stream.tell()}')
         logger.info(f'seq number: {parsed_hvle_block.sequence_number}')
@@ -51,8 +52,8 @@ def _parse_hvle_block(hive_path, transaction_log_stream, log_size, expected_sequ
             transaction_log_stream_offset = transaction_log_stream.tell()
             dirty_page_buffer = transaction_log_stream.read(dirty_page_entry.size)
             restored_hive_buffer.write(dirty_page_buffer)
-            logger.info(f'Restored {dirty_page_entry.size} bytes to offset {target_offset} '
-                        f'from offset {transaction_log_stream_offset}')
+            logger.info(f'Restored {dirty_page_entry.size} bytes to offset {hex(target_offset)} '
+                        f'from offset {hex(transaction_log_stream_offset)}')
             recovered_dirty_pages_count += 1
 
         # TODO: update hive flags from hvle to original header
@@ -167,6 +168,7 @@ def apply_transaction_logs(hive_path, primary_log_path, secondary_log_path=None,
 
     restored_hive_buffer, recovered_dirty_pages_count = _parse_transaction_log(registry_hive, hive_path,
                                                                                primary_log_path)
+    logger.info(f'Recovered {recovered_dirty_pages_count} pages from primary transaction log')
 
     recovered_dirty_pages_total_count += recovered_dirty_pages_count
 
@@ -185,4 +187,6 @@ def apply_transaction_logs(hive_path, primary_log_path, secondary_log_path=None,
             f.write(restored_hive_buffer.read())
 
         recovered_dirty_pages_total_count += recovered_dirty_pages_count
+        logger.info(f'Recovered {recovered_dirty_pages_count} pages from secondary transaction log')
     return restored_hive_path, recovered_dirty_pages_total_count
+

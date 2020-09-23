@@ -2,7 +2,7 @@ import pytest
 
 from regipy.plugins import NTUserPersistencePlugin, UserAssistPlugin, AmCachePlugin, WordWheelQueryPlugin, \
     UACStatusPlugin, LastLogonPlugin, SoftwareClassesInstallerPlugin, InstalledSoftwarePlugin, RASTracingPlugin, \
-    PrintDemonPlugin
+    PrintDemonPlugin, ServicesPlugin
 from regipy.plugins.ntuser.typed_urls import TypedUrlsPlugin
 from regipy.plugins.software.profilelist import ProfileListPlugin
 from regipy.plugins.software.persistence import SoftwarePersistencePlugin
@@ -380,7 +380,7 @@ def test_printdemon_plugin(software_hive):
     registry_hive = RegistryHive(software_hive)
     plugin_instance = PrintDemonPlugin(registry_hive, as_json=True)
     plugin_instance.run()
-    
+
     assert plugin_instance.entries == [
         {'parameters': ['9600', 'n', '8', '1'],
          'port_name': 'COM1:',
@@ -419,3 +419,37 @@ def test_printdemon_plugin(software_hive):
          'port_name': 'nul:',
          'timestamp': '2010-11-10T10:35:02.448040+00:00'}
     ]
+
+
+def test_services_plugin_on_corrupted_hive(corrupted_system_hive):
+    registry_hive = RegistryHive(corrupted_system_hive)
+    plugin_instance = ServicesPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries['\\ControlSet001\\Services']['services'][0] == {
+        'last_modified': '2008-10-21T17:48:29.328124+00:00',
+        'name': 'Abiosdsk',
+        'parameters': [],
+        'values': [
+            {'is_corrupted': False,
+             'name': 'ErrorControl',
+             'value': 0,
+             'value_type': 'REG_DWORD'},
+            {'is_corrupted': False,
+             'name': 'Group',
+             'value': 'Primary disk',
+             'value_type': 'REG_SZ'},
+            {'is_corrupted': False,
+             'name': 'Start',
+             'value': 4,
+             'value_type': 'REG_DWORD'},
+            {'is_corrupted': False,
+             'name': 'Tag',
+             'value': 3,
+             'value_type': 'REG_DWORD'},
+            {'is_corrupted': False,
+             'name': 'Type',
+             'value': 1,
+             'value_type': 'REG_DWORD'}
+        ]
+    }
