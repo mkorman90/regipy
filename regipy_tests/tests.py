@@ -208,9 +208,9 @@ def test_system_apply_transaction_logs(transaction_system, system_tr_log_1, syst
     assert recovered_dirty_pages_count == 315
 
     found_differences = compare_hives(transaction_system, restored_hive_path)
-    assert len(found_differences) == 2515
-    assert len([x for x in found_differences if x[0] == 'new_subkey']) == 2472
-    assert len([x for x in found_differences if x[0] == 'new_value']) == 42
+    assert len(found_differences) == 2506
+    assert len([x for x in found_differences if x[0] == 'new_subkey']) == 2458
+    assert len([x for x in found_differences if x[0] == 'new_value']) == 48
 
 
 def test_system_apply_transaction_logs_2(transaction_usrclass, usrclass_tr_log_1, usrclass_tr_log_2):
@@ -222,9 +222,9 @@ def test_system_apply_transaction_logs_2(transaction_usrclass, usrclass_tr_log_1
     assert recovered_dirty_pages_count == 158
 
     found_differences = compare_hives(transaction_usrclass, restored_hive_path)
-    assert len(found_differences) == 73
-    assert len([x for x in found_differences if x[0] == 'new_subkey']) == 33
-    assert len([x for x in found_differences if x[0] == 'new_value']) == 40
+    assert len(found_differences) == 225
+    assert len([x for x in found_differences if x[0] == 'new_subkey']) == 93
+    assert len([x for x in found_differences if x[0] == 'new_value']) == 132
 
 
 def test_hive_serialization(ntuser_hive, temp_output_file):

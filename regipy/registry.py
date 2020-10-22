@@ -150,10 +150,14 @@ class RegistryHive:
 
                 values = []
                 if subkey.values_count:
-                    if as_json:
-                        values = [attr.asdict(x) for x in subkey.iter_values(as_json=as_json)]
-                    else:
-                        values = list(subkey.iter_values(as_json=as_json))
+                    try:
+                        if as_json:
+                            values = [attr.asdict(x) for x in subkey.iter_values(as_json=as_json)]
+                        else:
+                            values = list(subkey.iter_values(as_json=as_json))
+                    except RegistryParsingException as ex:
+                        logger.exception(f'Failed to parse hive value at path: {path}')
+                        values = []
 
                 ts = convert_wintime(subkey.header.last_modified)
                 yield Subkey(subkey_name=subkey.name, path=subkey_path,
@@ -164,10 +168,14 @@ class RegistryHive:
         # Get the values of the subkey
         values = []
         if nk_record.values_count:
-            if as_json:
-                values = [attr.asdict(x) for x in nk_record.iter_values(as_json=as_json)]
-            else:
-                values = list(nk_record.iter_values(as_json=as_json))
+            try:
+                if as_json:
+                    values = [attr.asdict(x) for x in nk_record.iter_values(as_json=as_json)]
+                else:
+                    values = list(nk_record.iter_values(as_json=as_json))
+            except RegistryParsingException as ex:
+                logger.exception(f'Failed to parse hive value at path: {path}')
+                values = []
 
         ts = convert_wintime(nk_record.header.last_modified)
         subkey_path = path or '\\'
