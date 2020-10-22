@@ -179,7 +179,9 @@ def apply_transaction_logs(hive_path, primary_log_path, secondary_log_path=None,
     log_size = os.path.getsize(primary_log_path)
     logger.info(f'Log Size: {log_size}')
 
-    restored_hive_buffer, recovered_dirty_pages_count = _parse_transaction_log(registry_hive, restored_hive_path,
+    # If no secondary transaction log was give, apply the first transaction log on the original hive
+    target_hive = restored_hive_path if secondary_log_path else hive_path
+    restored_hive_buffer, recovered_dirty_pages_count = _parse_transaction_log(registry_hive, target_hive,
                                                                                primary_log_path)
     logger.info(f'Recovered {recovered_dirty_pages_count} pages from primary transaction log')
 
