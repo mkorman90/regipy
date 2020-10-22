@@ -151,7 +151,7 @@ def apply_transaction_logs(hive_path, primary_log_path, secondary_log_path=None,
     Apply transactions logs
     :param hive_path: The path to the original hive
     :param primary_log_path: The path to the primary log path
-    :param secondary_transaction_log_path: The path to the secondary log path (optional).
+    :param secondary_log_path: The path to the secondary log path (optional).
     :param restored_hive_path: Path to save the restored hive
     :param verbose: verbosity
     :return:
@@ -163,10 +163,23 @@ def apply_transaction_logs(hive_path, primary_log_path, secondary_log_path=None,
 
     registry_hive = RegistryHive(hive_path)
 
+    if secondary_log_path:
+        registry_hive = RegistryHive(hive_path)
+        restored_hive_buffer, recovered_dirty_pages_count = _parse_transaction_log(registry_hive, hive_path,
+                                                                                   secondary_log_path)
+        # Write to disk the modified registry hive
+        with open(restored_hive_path, 'wb') as f:
+            restored_hive_buffer.seek(0)
+            f.write(restored_hive_buffer.read())
+
+        recovered_dirty_pages_total_count += recovered_dirty_pages_count
+        logger.info(f'Recovered {recovered_dirty_pages_count} pages from secondary transaction log')
+
+    # Parse the primary transaction log
     log_size = os.path.getsize(primary_log_path)
     logger.info(f'Log Size: {log_size}')
 
-    restored_hive_buffer, recovered_dirty_pages_count = _parse_transaction_log(registry_hive, hive_path,
+    restored_hive_buffer, recovered_dirty_pages_count = _parse_transaction_log(registry_hive, restored_hive_path,
                                                                                primary_log_path)
     logger.info(f'Recovered {recovered_dirty_pages_count} pages from primary transaction log')
 
@@ -177,16 +190,4 @@ def apply_transaction_logs(hive_path, primary_log_path, secondary_log_path=None,
         restored_hive_buffer.seek(0)
         f.write(restored_hive_buffer.read())
 
-    if secondary_log_path:
-        registry_hive = RegistryHive(restored_hive_path)
-        restored_hive_buffer, recovered_dirty_pages_count = _parse_transaction_log(registry_hive, restored_hive_path,
-                                                                                   secondary_log_path)
-        # Write to disk the modified registry hive
-        with open(restored_hive_path, 'wb') as f:
-            restored_hive_buffer.seek(0)
-            f.write(restored_hive_buffer.read())
-
-        recovered_dirty_pages_total_count += recovered_dirty_pages_count
-        logger.info(f'Recovered {recovered_dirty_pages_count} pages from secondary transaction log')
     return restored_hive_path, recovered_dirty_pages_total_count
-

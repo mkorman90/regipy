@@ -2,6 +2,7 @@ import os
 from typing import Set
 
 import logbook
+from regipy.exceptions import RegistryKeyNotFoundException
 from tqdm import tqdm
 
 from regipy.registry import RegistryHive, NKRecord
@@ -27,7 +28,11 @@ def get_values_from_tuples(value_tuples, value_name_list):
 
 def get_timestamp_for_subkeys(registry_hive, subkey_list):
     for subkey_path in subkey_list:
-        subkey = registry_hive.get_key(subkey_path)
+        try:
+            subkey = registry_hive.get_key(subkey_path)
+        except RegistryKeyNotFoundException as ex:
+            logger.exception(f'Could not obtain timestamp for subkey {subkey_path}')
+            continue
         yield subkey_path, convert_wintime(subkey.header.last_modified, as_json=True)
 
 
