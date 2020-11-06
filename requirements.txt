@@ -1,5 +1,5 @@
 construct==2.10.56
-attrs==20.2.0
+attrs==20.3.0
 click==7.1.2
 inflection==0.5.1
 jsonlines==1.2.0
