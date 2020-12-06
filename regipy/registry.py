@@ -120,7 +120,7 @@ class RegistryHive:
         if partial_hive_path:
             self.partial_hive_path = partial_hive_path
 
-    def recurse_subkeys(self, nk_record=None, path=None, as_json=False):
+    def recurse_subkeys(self, nk_record=None, path=None, as_json=False, is_init=True):
         """
         Recurse over a subkey, and yield all of its subkeys and values
         :param nk_record: an instance of NKRecord from which to start iterating, if None, will start from Root
@@ -146,8 +146,8 @@ class RegistryHive:
                 if subkey.subkey_count:
                     yield from self.recurse_subkeys(nk_record=subkey,
                                                     path=subkey_path,
-                                                    as_json=as_json)
-
+                                                    as_json=as_json,
+                                                    is_init=False)
                 values = []
                 if subkey.values_count:
                     try:
@@ -165,23 +165,25 @@ class RegistryHive:
                              values_count=len(values),
                              actual_path=f'{self.partial_hive_path}{subkey_path}' if self.partial_hive_path else None)
 
-        # Get the values of the subkey
-        values = []
-        if nk_record.values_count:
-            try:
-                if as_json:
-                    values = [attr.asdict(x) for x in nk_record.iter_values(as_json=as_json)]
-                else:
-                    values = list(nk_record.iter_values(as_json=as_json))
-            except RegistryParsingException as ex:
-                logger.exception(f'Failed to parse hive value at path: {path}')
-                values = []
+        if is_init:
+            # Get the values of the subkey
+            values = []
+            if nk_record.values_count:
+                try:
+                    if as_json:
+                        values = [attr.asdict(x) for x in nk_record.iter_values(as_json=as_json)]
+                    else:
+                        values = list(nk_record.iter_values(as_json=as_json))
+                except RegistryParsingException as ex:
+                    logger.exception(f'Failed to parse hive value at path: {path}')
+                    values = []
 
-        ts = convert_wintime(nk_record.header.last_modified)
-        subkey_path = path or '\\'
-        yield Subkey(subkey_name=nk_record.name, path=subkey_path,
-                     timestamp=ts.isoformat() if as_json else ts, values=values, values_count=len(values),
-                     actual_path=f'{self.partial_hive_path}\\{subkey_path}' if self.partial_hive_path else None)
+            ts = convert_wintime(nk_record.header.last_modified)
+            subkey_path = path or '\\'
+            yield Subkey(subkey_name=nk_record.name, path=subkey_path,
+                         timestamp=ts.isoformat() if as_json else ts, values=values, values_count=len(values),
+                         actual_path=f'{self.partial_hive_path}\\{subkey_path}' if self.partial_hive_path else None)
+
 
     def get_hbin_at_offset(self, offset=0):
         """

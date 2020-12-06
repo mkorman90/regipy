@@ -96,7 +96,7 @@ def test_ntuser_timeline(ntuser_hive):
 
 
 def test_regdiff(ntuser_hive, second_hive_path):
-    found_differences = compare_hives(ntuser_hive, second_hive_path)
+    found_differences = compare_hives(ntuser_hive, second_hive_path, verbose=True)
     assert len(found_differences) == 2
     assert len([x for x in found_differences if x[0] == 'new_subkey']) == 1
     assert len([x for x in found_differences if x[0] == 'new_value']) == 1
@@ -133,16 +133,16 @@ def test_recurse_ntuser(ntuser_hive):
             for x in subkey_values:
                 value_types[x['value_type']] += 1
 
-    assert subkey_count == 2318
-    assert values_count == 4613
+    assert subkey_count == 1807
+    assert values_count == 4088
     assert value_types == {
-        'REG_BINARY': 620,
-        'REG_DWORD': 1516,
-        'REG_EXPAND_SZ': 100,
-        'REG_MULTI_SZ': 309,
+        'REG_BINARY': 531,
+        'REG_DWORD': 1336,
+        'REG_EXPAND_SZ': 93,
+        'REG_MULTI_SZ': 303,
         'REG_NONE': 141,
-        'REG_QWORD': 57,
-        'REG_SZ': 1870
+        'REG_QWORD': 54,
+        'REG_SZ': 1630
     }
 
 
@@ -150,7 +150,7 @@ def test_recurse_partial_ntuser(ntuser_software_partial):
     registry_hive = RegistryHive(ntuser_software_partial, hive_type=NTUSER_HIVE_TYPE, partial_hive_path=r'\Software')
     for subkey_count, subkey in enumerate(registry_hive.recurse_subkeys(as_json=True)):
         assert subkey.actual_path.startswith(registry_hive.partial_hive_path)
-    assert subkey_count == 8110
+    assert subkey_count == 6395
 
 
 def test_recurse_amcache(amcache_hive):
@@ -174,16 +174,16 @@ def test_recurse_amcache(amcache_hive):
         if subkey_values:
             for x in subkey_values:
                 value_types[x.value_type] += 1
-    assert subkey_count == 2118
-    assert values_count == 17546
+    assert subkey_count == 2105
+    assert values_count == 17539
     assert value_types == {
         'REG_BINARY': 56,
         'REG_DWORD': 1656,
         'REG_EXPAND_SZ': 0,
         'REG_MULTI_SZ': 140,
         'REG_NONE': 0,
-        'REG_QWORD': 1255,
-        'REG_SZ': 14439
+        'REG_QWORD': 1254,
+        'REG_SZ': 14433
     }
 
 
@@ -235,4 +235,4 @@ def test_hive_serialization(ntuser_hive, temp_output_file):
         for x in dumped_hive.readlines():
             assert json.loads(x)
             counter += 1
-    assert counter == 2318
+    assert counter == 1807
