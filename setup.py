@@ -38,10 +38,10 @@ def main():
                             'click==7.1.2',
                             'inflection==0.5.1',
                             'jsonlines==1.2.0',
-                            'pytz==2020.4',
+                            'pytz==2020.5',
                             'logbook==1.5.3',
                             'tabulate==0.8.7',
-                            'tqdm==4.51.0'],
+                            'tqdm==4.55.1'],
           tests_require=test_requirements,
           extras_require={
               'test': test_requirements
