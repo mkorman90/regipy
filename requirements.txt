@@ -1,4 +1,4 @@
-construct==2.10.56
+construct==2.10.58
 attrs==20.3.0
 click==7.1.2
 inflection==0.5.1
