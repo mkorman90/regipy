@@ -5,5 +5,5 @@ inflection==0.5.1
 jsonlines==2.0.0
 pytz==2021.1
 logbook==1.5.3
-tabulate==0.8.7
+tabulate==0.8.8
 tqdm==4.56.0
