@@ -33,15 +33,15 @@ def main():
           download_url='https://github.com/mkorman90/regipy/releases/download/1.0.0/regipy-1.0.0.tar.gz',
           license="MIT",
           setup_requires=setup_requirements,
-          install_requires=['construct=~2.10.61',
-                            'attrs=~20.3.0',
+          install_requires=['construct~=2.10.61',
+                            'attrs~=20.3.0',
                             'click==7.1.2',
                             'inflection==0.5.1',
                             'jsonlines==2.0.0',
                             'pytz==2021.1',
                             'logbook==1.5.3',
                             'tabulate==0.8.9',
-                            'tqdm=~4.59.0'],
+                            'tqdm~=4.59.0'],
           tests_require=test_requirements,
           extras_require={
               'test': test_requirements
