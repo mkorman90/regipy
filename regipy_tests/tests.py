@@ -236,3 +236,13 @@ def test_hive_serialization(ntuser_hive, temp_output_file):
             assert json.loads(x)
             counter += 1
     assert counter == 1807
+
+
+def test_get_key(software_hive):
+    """
+    # Refers to https://github.com/mkorman90/regipy/issues/144
+    """
+    registry_hive = RegistryHive(software_hive)
+    # We verify the registry headers are similar, because this is the same subkey.
+    assert registry_hive.get_key('ODBC').header == registry_hive.root.get_subkey('ODBC').header
+    assert registry_hive.root.get_subkey('ODBC').header == registry_hive.get_key('SOFTWARE\ODBC').header

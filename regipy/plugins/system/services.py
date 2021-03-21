@@ -42,7 +42,7 @@ class ServicesPlugin(Plugin):
                         try:
                             service_parameters_path = r'{}\{}'.format(control_set_services_path, service.name)
                             for parameter in self.registry_hive.recurse_subkeys(nk_record=service,
-                                                                                path=service_parameters_path,
+                                                                                path_root=service_parameters_path,
                                                                                 as_json=True):
                                 parameters.append(attr.asdict(parameter))
                         except RegistryParsingException as ex:

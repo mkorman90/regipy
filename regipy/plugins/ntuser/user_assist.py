@@ -71,7 +71,7 @@ class UserAssistPlugin(Plugin):
         for guid in GUIDS:
             try:
                 subkey = self.registry_hive.get_key(r'{}\{}'.format(USER_ASSIST_KEY_PATH, guid))
-                count_subkey = subkey.get_key('Count')
+                count_subkey = subkey.get_subkey('Count')
 
                 if not count_subkey.values_count:
                     logger.debug('Skipping {}'.format(guid))

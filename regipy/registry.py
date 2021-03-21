@@ -120,11 +120,13 @@ class RegistryHive:
         if partial_hive_path:
             self.partial_hive_path = partial_hive_path
 
-    def recurse_subkeys(self, nk_record=None, path=None, as_json=False, is_init=True):
+    def recurse_subkeys(self, nk_record=None, path_root=None, as_json=False, is_init=True):
         """
         Recurse over a subkey, and yield all of its subkeys and values
         :param nk_record: an instance of NKRecord from which to start iterating, if None, will start from Root
-        :param path: The current registry path
+        :param path_root: If we are iterating an incomplete hive, for example a hive tree starting
+                          from ControlSet001 and not SYSTEM, there is no way to know that.
+                          This string will be added as prefix to all paths.
         :param as_json: Whether to normalize the data as JSON or not
         """
         # If None, will start iterating from Root NK entry
@@ -134,8 +136,8 @@ class RegistryHive:
         # Iterate over subkeys
         if nk_record.header.subkey_count:
             for subkey in nk_record.iter_subkeys():
-                if path:
-                    subkey_path = r'{}\{}'.format(path, subkey.name) if path else r'\{}'.format(subkey.name)
+                if path_root:
+                    subkey_path = r'{}\{}'.format(path_root, subkey.name) if path_root else r'\{}'.format(subkey.name)
                 else:
                     subkey_path = f'\\{subkey.name}'
 
@@ -145,7 +147,7 @@ class RegistryHive:
 
                 if subkey.subkey_count:
                     yield from self.recurse_subkeys(nk_record=subkey,
-                                                    path=subkey_path,
+                                                    path_root=subkey_path,
                                                     as_json=as_json,
                                                     is_init=False)
                 values = []
@@ -156,7 +158,7 @@ class RegistryHive:
                         else:
                             values = list(subkey.iter_values(as_json=as_json))
                     except RegistryParsingException as ex:
-                        logger.exception(f'Failed to parse hive value at path: {path}')
+                        logger.exception(f'Failed to parse hive value at path: {path_root}')
                         values = []
 
                 ts = convert_wintime(subkey.header.last_modified)
@@ -175,15 +177,14 @@ class RegistryHive:
                     else:
                         values = list(nk_record.iter_values(as_json=as_json))
                 except RegistryParsingException as ex:
-                    logger.exception(f'Failed to parse hive value at path: {path}')
+                    logger.exception(f'Failed to parse hive value at path: {path_root}')
                     values = []
 
             ts = convert_wintime(nk_record.header.last_modified)
-            subkey_path = path or '\\'
+            subkey_path = path_root or '\\'
             yield Subkey(subkey_name=nk_record.name, path=subkey_path,
                          timestamp=ts.isoformat() if as_json else ts, values=values, values_count=len(values),
                          actual_path=f'{self.partial_hive_path}\\{subkey_path}' if self.partial_hive_path else None)
-
 
     def get_hbin_at_offset(self, offset=0):
         """
@@ -203,13 +204,19 @@ class RegistryHive:
 
         logger.debug('Getting key: {}'.format(key_path))
 
+        # If the key path is \ we are just refering to root
         if key_path == '\\':
             return self.root
 
-        key_path_parts = key_path.split('\\')[1:]
+        # If the path contain slashes, this is a full path. Split it
+        if '\\' in key_path:
+            key_path_parts = key_path.split('\\')[1:]
+        else:
+            key_path_parts = [key_path]
+
         previous_key_name = []
 
-        subkey = self.root.get_key(key_path_parts.pop(0))
+        subkey = self.root.get_subkey(key_path_parts.pop(0))
 
         if not subkey:
             raise RegistryKeyNotFoundException('Did not find subkey at {}'.format(key_path))
@@ -220,7 +227,7 @@ class RegistryHive:
         for path_part in key_path_parts:
             new_path = '\\'.join(previous_key_name)
             previous_key_name.append(subkey.name)
-            subkey = subkey.get_key(path_part)
+            subkey = subkey.get_subkey(path_part)
 
             if not subkey:
                 raise RegistryKeyNotFoundException('Did not find {} at {}'.format(path_part, new_path))
@@ -294,7 +301,7 @@ class NKRecord:
         self.values_count = self.header.values_count
         self.volatile_subkeys_count = self.header.volatile_subkey_count
 
-    def get_key(self, key_name):
+    def get_subkey(self, key_name):
         if not self.subkey_count:
             raise NoRegistrySubkeysException('No subkeys for {}'.format(self.header.key_name_string))
 
