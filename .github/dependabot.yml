@@ -1,0 +1,34 @@
+version: 2
+updates:
+- package-ecosystem: pip
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: construct
+    versions:
+    - 2.10.58
+    - 2.10.60
+    - 2.10.61
+    - 2.10.63
+    - 2.10.64
+    - 2.10.66
+  - dependency-name: tqdm
+    versions:
+    - 4.56.0
+    - 4.56.1
+    - 4.56.2
+    - 4.57.0
+    - 4.58.0
+    - 4.59.0
+  - dependency-name: tabulate
+    versions:
+    - 0.8.8
+    - 0.8.9
+  - dependency-name: pytz
+    versions:
+    - "2021.1"
+  - dependency-name: jsonlines
+    versions:
+    - 2.0.0
