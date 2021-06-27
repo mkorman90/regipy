@@ -1,9 +1,9 @@
-construct~=2.10.61
-attrs~=20.3.0
-click==7.1.2
+construct~=2.10.67
+attrs~=21.2.0
+click~=8.0.1
 inflection==0.5.1
 jsonlines==2.0.0
 pytz==2021.1
 logbook==1.5.3
 tabulate==0.8.9
-tqdm~=4.59.0
+tqdm~=4.61.0
