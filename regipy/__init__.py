@@ -1,4 +1,4 @@
 from .registry import *
 
 __title__ = 'regipy'
-__version__ = '1.9.1'
+__version__ = '1.9.2'
