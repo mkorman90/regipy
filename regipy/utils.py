@@ -130,12 +130,12 @@ def identify_hive_type(name: str) -> str:
         return NTUSER_HIVE_TYPE
     elif hive_name == SYSTEM_HIVE_TYPE:
         return SYSTEM_HIVE_TYPE
-    elif hive_name == '\\appcompat\\programs\\amcache.hve':
-        return AMCACHE_HIVE_TYPE
     elif hive_name.endswith('system32\\config\\software'):
         return SOFTWARE_HIVE_TYPE
     elif hive_name == r'\systemroot\system32\config\sam':
         return SAM_HIVE_TYPE
+    elif 'amcache' in hive_name.lower():
+        return AMCACHE_HIVE_TYPE
     else:
         raise UnidentifiedHiveException(f'Could not identify hive: {name}')
 
