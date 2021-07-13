@@ -1,4 +1,4 @@
-import logbook
+import logging
 
 from inflection import underscore
 
@@ -6,7 +6,7 @@ from regipy import RegistryKeyNotFoundException, convert_wintime
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 LAST_LOGON_KEY_PATH = r'\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'
 

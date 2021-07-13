@@ -1,14 +1,14 @@
 import os
 from typing import Set
 
-import logbook
+import logging
 
 from regipy.exceptions import RegistryKeyNotFoundException
 
 from regipy.registry import RegistryHive, NKRecord
 from regipy.utils import convert_wintime, calculate_sha1
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def get_subkeys_and_timestamps(registry_hive):

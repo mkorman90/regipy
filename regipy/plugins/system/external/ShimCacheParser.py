@@ -23,7 +23,7 @@ import datetime
 import io as sio
 import struct
 
-import logbook
+import logging
 import pytz
 
 CACHE_MAGIC_NT5_2 = 0xbadc0ffe
@@ -62,7 +62,7 @@ G_VERBOSE = False
 G_USE_BOM = False
 OUTPUT_HEADER = ["Last Modified", "Last Update", "Path", "File Size", "Exec Flag"]
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 # Shim Cache format used by Windows 5.2 and 6.0 (Server 2003 through Vista/Server 2008)
 class CacheEntryNt5(object):

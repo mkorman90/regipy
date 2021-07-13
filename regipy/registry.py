@@ -2,7 +2,7 @@ import binascii
 import datetime as dt
 
 
-import logbook
+import logging
 
 import attr
 
@@ -18,7 +18,7 @@ from regipy.structs import REGF_HEADER, HBIN_HEADER, CM_KEY_NODE, LF_LH_SK_ELEME
     BIG_DATA_BLOCK, INDEX_LEAF, DEFAULT_VALUE
 from regipy.utils import boomerang_stream, convert_wintime, identify_hive_type, MAX_LEN, try_decode_binary
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @attr.s

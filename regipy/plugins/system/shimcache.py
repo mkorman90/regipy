@@ -1,10 +1,10 @@
-import logbook
+import logging
 
 from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.plugins.system.external.ShimCacheParser import get_shimcache_entries
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 COMPUTER_NAME_PATH = r'Control\Session Manager'
 

@@ -1,10 +1,10 @@
-import logbook
+import logging
 
 from regipy import RegistryKeyNotFoundException, convert_wintime
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 TRACING_PATH = r'\Microsoft\Tracing'
 X86_TRACING_PATH = r'\Wow6432Node' + TRACING_PATH

@@ -1,4 +1,4 @@
-import logbook
+import logging
 
 from construct import Int64ul
 
@@ -7,7 +7,7 @@ from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 BAM_PATH = r'Services\bam\UserSettings'
 

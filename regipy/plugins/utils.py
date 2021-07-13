@@ -1,13 +1,13 @@
 import jsonlines
 
 import attr
-import logbook
+import logging
 
 from regipy import NKRecord
 from regipy.plugins.plugin import PLUGINS
 
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def dump_hive_to_json(registry_hive, output_path, name_key_entry: NKRecord, verbose=False):
