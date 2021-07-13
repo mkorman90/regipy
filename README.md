@@ -17,12 +17,12 @@ Regipy is a python library for parsing offline registry hives. regipy has a lot 
 Only python 3.6 and up is supported:
 
 ```bash
-pip install regipy
+pip install regipy[cli]
 ```
 
 also, it is possible to install from source by cloning the repository and executing:
 ```bash
-python setup.py install
+pip install --editable .[cli]
 ```
 
 ## CLI
