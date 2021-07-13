@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v2
@@ -36,6 +36,5 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        python setup.py develop
-        pytest regipy_tests/tests.py -vvv
-        pytest regipy_tests/plugin_tests.py -vvv
+        pip install -e .[cli]
+        pytest regipy_tests/tests.py regipy_tests/plugin_tests.py -vvvs
