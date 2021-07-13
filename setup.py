@@ -30,7 +30,6 @@ def main():
           author='Martin G. Korman',
           author_email='martin@centauri.co.il',
           url='https://github.com/mkorman90/regipy/',
-          download_url='https://github.com/mkorman90/regipy/releases/download/1.0.0/regipy-1.0.0.tar.gz',
           license="MIT",
           setup_requires=setup_requirements,
           install_requires=['construct~=2.10.67',
