@@ -14,7 +14,8 @@ Regipy is a python library for parsing offline registry hives. regipy has a lot 
     * Execute plugins from a robust plugin system (i.e: amcache, shimcache, extract computer name...)
 
 ## Installation
-Only python 3.7 is supported:
+Only python 3.6 and up is supported:
+
 ```bash
 pip install regipy
 ```
