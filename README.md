@@ -20,10 +20,21 @@ Only python 3.6 and up is supported:
 pip install regipy[cli]
 ```
 
-also, it is possible to install from source by cloning the repository and executing:
+NOTE: using pip with ``regipy[cli]`` instead of the plain ``regipy`` is a
+significant change from version 1.9.x
+
+For using regipat as a library, install only ``regipy`` which comes with fewer
+dependencies:
+```bash
+pip install regipy
+```
+
+
+Also, it is possible to install from source by cloning the repository and executing:
 ```bash
 pip install --editable .[cli]
 ```
+
 
 ## CLI
 
