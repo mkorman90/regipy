@@ -71,14 +71,15 @@ def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, par
                                                quotechar='"', quoting=csv.QUOTE_MINIMAL,
                                                fieldnames=['timestamp', 'subkey_name', 'values_count'])
                     csvwriter.writeheader()
-                    for entry in progressbar(registry_hive.recurse_subkeys(name_key_entry, as_json=True)):
-                        entry_dict = entry.__dict__
-                        path = entry.path
-                        csvwriter.writerow({
-                            'subkey_name': r'{}\{}'.format(entry.path, path),
-                            'timestamp': entry_dict['timestamp'],
-                            'values_count': entry_dict['values_count']
-                        })
+                    with progressbar(registry_hive.recurse_subkeys(name_key_entry, as_json=True)) as reg_subkeys:
+                        for entry in reg_subkeys:
+                            entry_dict = entry.__dict__
+                            path = entry.path
+                            csvwriter.writerow({
+                                'subkey_name': r'{}\{}'.format(entry.path, path),
+                                'timestamp': entry_dict['timestamp'],
+                                'values_count': entry_dict['values_count']
+                            })
             else:
                 dump_hive_to_json(registry_hive, output_path, name_key_entry, verbose)
         else:

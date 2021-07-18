@@ -2,7 +2,6 @@ import os
 from typing import Set
 
 import logbook
-from click import progressbar
 
 from regipy.exceptions import RegistryKeyNotFoundException
 
@@ -98,8 +97,8 @@ def compare_hives(first_hive_path, second_hive_path, verbose=False):
     second_hive_diff_subkeys = second_hive_subkeys - first_hive_subkeys
 
     # Find subkeys that exist in both hives, but were modified. Look for new values and subkeys
-    for path_1, ts_1 in progressbar(first_hive_diff_subkeys) if verbose else first_hive_diff_subkeys:
-        for path_2, ts_2 in progressbar(second_hive_diff_subkeys) if verbose else second_hive_diff_subkeys:
+    for path_1, ts_1 in first_hive_diff_subkeys:
+        for path_2, ts_2 in second_hive_diff_subkeys:
             if path_1 and path_1 == path_2 and ts_1 != ts_2:
                 first_subkey_nk_record = first_registry_hive.get_key(path_1)
                 second_subkey_nk_record = second_registry_hive.get_key(path_2)
