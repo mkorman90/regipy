@@ -40,8 +40,7 @@ def main():
                             'jsonlines==2.0.0',
                             'pytz==2021.1',
                             'logbook==1.5.3',
-                            'tabulate==0.8.9',
-                            'tqdm~=4.61.0'],
+                            'tabulate==0.8.9'],
           tests_require=test_requirements,
           extras_require={
               'test': test_requirements

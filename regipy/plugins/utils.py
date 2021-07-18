@@ -2,7 +2,6 @@ import jsonlines
 
 import attr
 import logbook
-from tqdm import tqdm
 
 from regipy import NKRecord
 from regipy.plugins.plugin import PLUGINS
@@ -21,7 +20,7 @@ def dump_hive_to_json(registry_hive, output_path, name_key_entry: NKRecord, verb
     :return: The result, as dict
     """
     with jsonlines.open(output_path, mode='w') as writer:
-        for entry in tqdm(registry_hive.recurse_subkeys(name_key_entry, as_json=True), disable=not verbose):
+        for entry in registry_hive.recurse_subkeys(name_key_entry, as_json=True):
             writer.write(attr.asdict(entry))
 
 

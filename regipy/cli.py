@@ -5,9 +5,8 @@ import os
 import attr
 import click
 import logbook
+from click import progressbar
 from tabulate import tabulate
-
-from tqdm import tqdm
 
 from regipy.plugins.plugin import PLUGINS
 from regipy.recovery import apply_transaction_logs
@@ -72,7 +71,7 @@ def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, par
                                                quotechar='"', quoting=csv.QUOTE_MINIMAL,
                                                fieldnames=['timestamp', 'subkey_name', 'values_count'])
                     csvwriter.writeheader()
-                    for entry in tqdm(registry_hive.recurse_subkeys(name_key_entry, as_json=True)):
+                    for entry in progressbar(registry_hive.recurse_subkeys(name_key_entry, as_json=True)):
                         entry_dict = entry.__dict__
                         path = entry.path
                         csvwriter.writerow({
