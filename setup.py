@@ -41,7 +41,6 @@ def main():
               'test': test_requirements,
               'cli': [
                   'click>=7.0.0',
-                  'jsonlines==2.0.0',
                   'tabulate==0.8.9',
               ],
           },

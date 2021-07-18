@@ -1,7 +1,7 @@
-import jsonlines
+import json
+import logging
 
 import attr
-import logging
 
 from regipy import NKRecord
 from regipy.plugins.plugin import PLUGINS
@@ -12,16 +12,17 @@ logger = logging.getLogger(__name__)
 
 def dump_hive_to_json(registry_hive, output_path, name_key_entry: NKRecord, verbose=False):
     """
-    Write the hive subkeys to a JSON file
+    Write the hive subkeys to a JSON-lines file, one line per entry.
     :param registry_hive: a RegistryHive object
     :param output_path: Output path to save the JSON
     :param name_key_entry: The NKRecord to start iterating from
     :param verbose: verbosity
     :return: The result, as dict
     """
-    with jsonlines.open(output_path, mode='w') as writer:
+    with open(output_path, mode='w') as writer:
         for entry in registry_hive.recurse_subkeys(name_key_entry, as_json=True):
-            writer.write(attr.asdict(entry))
+            writer.write(json.dumps(attr.asdict(entry), separators=(',', ':',)))
+            writer.write('\n')
 
 
 def run_relevant_plugins(registry_hive, as_json=False, plugins=None):
@@ -44,5 +45,3 @@ def run_relevant_plugins(registry_hive, as_json=False, plugins=None):
             plugin.run()
             plugin_results[plugin.NAME] = plugin.entries
     return plugin_results
-
-
