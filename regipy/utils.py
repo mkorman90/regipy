@@ -1,14 +1,13 @@
-import pytz
-import attr
 import binascii
+import datetime as dt
 import hashlib
+import logging
 import sys
 
 from contextlib import contextmanager
-import datetime as dt
 from io import TextIOWrapper
 
-import logging
+import attr
 import pytz
 
 from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundException, RegipyGeneralException, \
