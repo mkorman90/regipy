@@ -1,12 +1,12 @@
 import attr
 
-import logbook
+import logging
 
 from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 TZ_DATA_PATH = r'Control\TimeZoneInformation'
 

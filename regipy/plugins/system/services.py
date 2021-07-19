@@ -1,4 +1,4 @@
-import logbook
+import logging
 
 import attr
 from regipy.exceptions import RegistryKeyNotFoundException, NoRegistryValuesException, RegistryParsingException
@@ -6,7 +6,7 @@ from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 SERVICES_PATH = r'Services'
 

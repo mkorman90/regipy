@@ -1,6 +1,6 @@
 import pytz
 import datetime
-import logbook
+import logging
 
 from regipy.exceptions import RegistryKeyNotFoundException, NoRegistryValuesException
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
@@ -9,7 +9,7 @@ from regipy.utils import get_subkey_values_from_list
 from regipy.utils import convert_wintime, convert_filetime
 
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 PROFILE_LIST_KEY_PATH = r"\Microsoft\Windows NT\CurrentVersion\ProfileList"
 

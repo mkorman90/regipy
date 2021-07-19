@@ -8,11 +8,11 @@ from pathlib import Path
 from pstats import SortKey
 from tempfile import mktemp
 
-import logbook
+import logging
 
 from regipy.registry import RegistryHive
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @contextmanager

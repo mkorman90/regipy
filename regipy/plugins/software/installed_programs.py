@@ -1,4 +1,4 @@
-import logbook
+import logging
 from inflection import underscore
 
 from regipy import RegistryKeyNotFoundException
@@ -6,7 +6,7 @@ from regipy.hive_types import SOFTWARE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 X64_INSTALLED_SOFTWARE_PATH = r'\Microsoft\Windows\CurrentVersion\Uninstall'
 X86_INSTALLED_SOFTWARE_PATH = r'\Wow6432Node' + X64_INSTALLED_SOFTWARE_PATH

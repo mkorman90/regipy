@@ -1,7 +1,7 @@
 import binascii
 import codecs
 
-import logbook
+import logging
 
 from construct import *
 
@@ -10,7 +10,7 @@ from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 USER_ASSIST_KEY_PATH = r'\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist'
 

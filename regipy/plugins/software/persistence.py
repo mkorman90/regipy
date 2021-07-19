@@ -1,10 +1,10 @@
-import logbook
+import logging
 
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import get_subkey_values_from_list
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 PERSISTENCE_ENTRIES = [
     r'\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run',

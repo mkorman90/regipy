@@ -1,11 +1,11 @@
-import logbook
+import logging
 import attr
 
 from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 SELECT = r'\Select'
 

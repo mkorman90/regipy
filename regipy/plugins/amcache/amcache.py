@@ -1,4 +1,4 @@
-import logbook
+import logging
 
 from inflection import underscore
 
@@ -7,7 +7,7 @@ from regipy.hive_types import AMCACHE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 AMCACHE_FIELD_NUMERIC_MAPPINGS = {
     '0': 'product_name',

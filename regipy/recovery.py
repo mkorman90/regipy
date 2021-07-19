@@ -1,7 +1,7 @@
 import os
 from io import BytesIO
 
-import logbook
+import logging
 
 from construct import Int32ul
 
@@ -11,7 +11,7 @@ from regipy.hive_types import HVLE_TRANSACTION_LOG_MAGIC, DIRT_TRANSACTION_LOG_M
 from regipy.registry import RegistryHive
 from regipy.structs import TRANSACTION_LOG, REGF_HEADER_SIZE, REGF_HEADER, HBIN_HEADER
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def _parse_hvle_block(hive_path, transaction_log_stream, log_size, expected_sequence_number):

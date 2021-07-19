@@ -245,4 +245,4 @@ def test_get_key(software_hive):
     registry_hive = RegistryHive(software_hive)
     # We verify the registry headers are similar, because this is the same subkey.
     assert registry_hive.get_key('ODBC').header == registry_hive.root.get_subkey('ODBC').header
-    assert registry_hive.root.get_subkey('ODBC').header == registry_hive.get_key('SOFTWARE\ODBC').header
+    assert registry_hive.root.get_subkey('ODBC').header == registry_hive.get_key('SOFTWARE\\ODBC').header

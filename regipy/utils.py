@@ -1,14 +1,13 @@
-import pytz
-import attr
 import binascii
+import datetime as dt
 import hashlib
+import logging
 import sys
 
 from contextlib import contextmanager
-import datetime as dt
 from io import TextIOWrapper
 
-import logbook
+import attr
 import pytz
 
 from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundException, RegipyGeneralException, \
@@ -16,7 +15,7 @@ from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundExc
 from regipy.hive_types import NTUSER_HIVE_TYPE, SYSTEM_HIVE_TYPE, AMCACHE_HIVE_TYPE, SOFTWARE_HIVE_TYPE, \
     SAM_HIVE_TYPE
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 # Max size of string to return when as_json=True
 MAX_LEN = 128
@@ -156,5 +155,8 @@ def try_decode_binary(data, as_json=False, max_len=MAX_LEN):
     return value
 
 
-def _get_log_handlers(verbose):
-    return [logbook.StreamHandler(sys.stdout, level=logbook.DEBUG if verbose else logbook.INFO, bubble=True)]
+def _setup_logging(verbose):
+    logging.basicConfig(
+        fstream=sys.stdout, 
+        level=logging.DEBUG if verbose else logging.INFO,
+    )

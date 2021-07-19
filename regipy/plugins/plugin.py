@@ -1,10 +1,10 @@
-import logbook
+import logging
 
 from regipy.registry import RegistryHive
 
 PLUGINS = set()
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Plugin(object):
