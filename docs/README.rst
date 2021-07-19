@@ -47,4 +47,15 @@ Using as a library:
 
 Install
 ^^^^^^^
+Install regipy and the command line tools dependencies:
+
+``pip install regipy[cli]``
+
+
+NOTE: using pip with ``regipy[cli]`` instead of the plain ``regipy`` is a
+significant change from version 1.9.x
+
+For using regipy as a library, install only ``regipy`` which comes with fewer
+dependencies:
+
 ``pip install regipy``
