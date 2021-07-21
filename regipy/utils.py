@@ -157,6 +157,6 @@ def try_decode_binary(data, as_json=False, max_len=MAX_LEN):
 
 def _setup_logging(verbose):
     logging.basicConfig(
-        fstream=sys.stdout, 
+        stream=sys.stdout,
         level=logging.DEBUG if verbose else logging.INFO,
     )
