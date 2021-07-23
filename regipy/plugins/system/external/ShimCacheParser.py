@@ -235,7 +235,7 @@ def get_shimcache_entries(cachebin, as_json=False):
         yield from read_win10_entries(cachebin, WIN10_MAGIC, creators_update=True, as_json=as_json)
 
     else:
-        raise Exception('Got an unrecognized magic value of 0x%x... bailing'.format(magic))
+        raise Exception('Got an unrecognized magic value of 0x{:x}... bailing'.format(magic))
 
 
 # Read Windows 8/2k12/8.1 Apphelp Cache entry formats.

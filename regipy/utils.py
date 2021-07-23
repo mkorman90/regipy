@@ -4,6 +4,8 @@ import hashlib
 import logging
 import sys
 
+from typing import Generator, Union
+
 from contextlib import contextmanager
 from io import TextIOWrapper
 
@@ -48,7 +50,7 @@ def calculate_xor32_checksum(b: bytes) -> int:
 
 
 @contextmanager
-def boomerang_stream(stream: TextIOWrapper) -> TextIOWrapper:
+def boomerang_stream(stream: TextIOWrapper) -> Generator[TextIOWrapper, None, None]:
     """
     Yield a stream that goes back to the original offset after exiting the "with" context
     :param stream: The stream
@@ -74,7 +76,7 @@ def convert_filetime(dw_low_date_time, dw_high_date_time):
         return None
 
 
-def convert_wintime(wintime: int, as_json=False) -> dt.datetime:
+def convert_wintime(wintime: int, as_json=False) -> Union[dt.datetime, str]:
     """
     Get an integer containing a FILETIME date
     :param wintime: integer representing a FILETIME timestamp
