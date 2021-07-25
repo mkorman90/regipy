@@ -1,12 +1,14 @@
 import binascii
 import datetime as dt
 
+from typing import List, Optional, Union
 
 import logging
 
 import attr
 
-from construct import *
+from construct import Bytes, CString, EnumIntegerString, GreedyRange, Int32sl, Int32ul, Int64ul, \
+    StreamError, ConstError
 from io import BytesIO
 
 
@@ -26,9 +28,9 @@ class Cell:
     """
     Represents a Registry cell header
     """
-    offset = attr.ib(type=int)
-    cell_type = attr.ib(type=str)
-    size = attr.ib(type=int)
+    offset: int = attr.ib()
+    cell_type: str = attr.ib()
+    size: int = attr.ib()
 
 
 @attr.s
@@ -36,36 +38,36 @@ class VKRecord:
     """
     The VK Record contains a value
     """
-    value_type = attr.ib(type=EnumIntegerString)
-    value_type_str = attr.ib(type=str)
-    value = attr.ib(type=bytes)
-    size = attr.ib(type=int, default=0)
-    is_corrupted = attr.ib(type=bool, default=False)
+    value_type: EnumIntegerString = attr.ib()
+    value_type_str: str = attr.ib()
+    value: bytes = attr.ib()
+    size: int = attr.ib(default=0)
+    is_corrupted: bool = attr.ib(default=False)
 
 
 @attr.s
 class LIRecord:
-    data = attr.ib(type=bytes)
-
-
-@attr.s
-class Subkey:
-    subkey_name = attr.ib(type=str)
-    path = attr.ib(type=str)
-    timestamp = attr.ib(type=dt.datetime)
-    values_count = attr.ib(type=int)
-    values = attr.ib(factory=list)
-
-    # This field will be used if a partial hive was given, if not it would be None.
-    actual_path = attr.ib(type=str, default=None)
+    data: bytes = attr.ib()
 
 
 @attr.s
 class Value:
-    name = attr.ib(type=str)
-    value = attr.ib(type=(str or bytes))
-    value_type = attr.ib(type=str)
-    is_corrupted = attr.ib(type=bool, default=False)
+    name: str = attr.ib()
+    value: Union[str, int, bytes] = attr.ib()
+    value_type: str = attr.ib()
+    is_corrupted: bool = attr.ib(default=False)
+
+
+@attr.s
+class Subkey:
+    subkey_name: str = attr.ib()
+    path: str = attr.ib()
+    timestamp: dt.datetime = attr.ib()
+    values_count: int = attr.ib()
+    values: List[Value] = attr.ib(factory=list)
+
+    # This field will be used if a partial hive was given, if not it would be None.
+    actual_path: Optional[str] = attr.ib(default=None)
 
 
 class RIRecord:

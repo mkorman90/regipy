@@ -1,5 +1,5 @@
 import os
-from typing import Set
+from typing import Any, Set, Tuple
 
 import logging
 
@@ -36,13 +36,13 @@ def get_timestamp_for_subkeys(registry_hive, subkey_list):
         yield subkey_path, convert_wintime(subkey.header.last_modified, as_json=True)
 
 
-def _get_name_value_tuples(subkey: NKRecord) -> Set[tuple]:
+def _get_name_value_tuples(subkey: NKRecord) -> Set[Tuple[str, Any]]:
     """
     Iterate over value in a subkey and return a set of tuples containing value names and values
     :param subkey: NKRecord to iterate over
     :return: A set of tuples containing value names and values
     """
-    values_tuple = set()
+    values_tuple: Set[Tuple[str, Any]] = set()
     for value in subkey.iter_values(as_json=True):
         if not value.value:
             continue

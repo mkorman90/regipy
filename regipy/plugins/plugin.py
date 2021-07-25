@@ -1,5 +1,7 @@
 import logging
 
+from typing import Any, Dict, List, Optional
+
 from regipy.registry import RegistryHive
 
 PLUGINS = set()
@@ -9,9 +11,9 @@ logger = logging.getLogger(__name__)
 
 class Plugin(object):
 
-    NAME = None
-    DESCRIPTION = None
-    COMPATIBLE_HIVE = None
+    NAME: Optional[str] = None
+    DESCRIPTION: Optional[str] = None
+    COMPATIBLE_HIVE: Optional[str] = None
 
     def __init_subclass__(cls):
         PLUGINS.add(cls)
@@ -23,7 +25,7 @@ class Plugin(object):
         self.partial_hive_path = registry_hive.partial_hive_path
 
         # This variable should always hold the final result - in order to use it in anomaly detection and timeline gen.
-        self.entries = list()
+        self.entries: List[Dict[str, Any]] = list()
 
     def can_run(self):
         """
