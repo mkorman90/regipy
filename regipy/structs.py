@@ -50,7 +50,7 @@ CM_KEY_NODE = Struct(
     'volatile_subkeys_list_offset' / Int32ul,
     'values_count' / Int32ul,
     'values_list_offset' / Int32ul,
-    'security_list_offset' / Int32ul,
+    'security_key_offset' / Int32ul,
     'class_name_offset' / Int32ul,
     'largest_sk_name' / Int32ul,
     'largest_sk_class_name' / Int32ul,
@@ -189,3 +189,82 @@ BIG_DATA_BLOCK = Struct(
 
 # This is the default name of a registry subkey
 DEFAULT_VALUE = '(default)'
+
+SECURITY_KEY_v1_1 = Struct(
+    'unknown' * Bytes(4),
+    'signature' / Const(b'sk'),
+    'unknown' * Bytes(2),
+    'prev_sk_offset' / Int32ul,
+    'next_sk_offset' / Int32ul,
+    'reference_count' / Int32ul,
+    'security_descriptor_size' / Int32ul,
+    'security_descriptor' / Bytes(this.security_descriptor_size)
+
+)
+
+SECURITY_KEY_v1_2 = Struct(
+    'signature' / Const(b'sk'),
+    'unknown' * Bytes(2),
+    'prev_sk_offset' / Int32ul,
+    'next_sk_offset' / Int32ul,
+    'reference_count' / Int32ul,
+    'security_descriptor_size' / Int32ul,
+    'security_descriptor' / Bytes(this.security_descriptor_size),
+    'ref_count' / Int32ul,
+    'sdlen' / Int32ul
+
+)
+
+# References:
+# https://docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-security_descriptor
+# https://docs.microsoft.com/en-us/windows/win32/secauthz/security-descriptor-control
+SECURITY_DESCRIPTOR = Struct(
+    'revision' / Bytes(1),
+    'sbz1' / Bytes(1),
+    'control' / FlagsEnum(Int16ul,
+                          SE_DACL_AUTO_INHERIT_REQ=0x0100,
+                          SE_DACL_AUTO_INHERITED=0x0400,
+                          SE_DACL_DEFAULTED=0x0008,
+                          SE_DACL_PRESENT=0x0004,
+                          SE_DACL_PROTECTED=0x1000,
+                          SE_GROUP_DEFAULTED=0x0002,
+                          SE_OWNER_DEFAULTED=0x0001,
+                          SE_RM_CONTROL_VALID=0x4000,
+                          SE_SACL_AUTO_INHERIT_REQ=0x0200,
+                          SE_SACL_AUTO_INHERITED=0x0800,
+                          SE_SACL_DEFAULTED=0x0008,
+                          SE_SACL_PRESENT=0x0010,
+                          SE_SACL_PROTECTED=0x2000,
+                          SE_SELF_RELATIVE=0x8000
+                          ),
+    'owner' / Int32ul,
+    'group' / Int32ul,
+    'offset_sacl' / Int32ul,
+    'offset_dacl' / Int32ul,
+
+)
+
+# https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/c6ce4275-3d90-4890-ab3a-514745e4637e
+# https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/f992ad60-0fe4-4b87-9fed-beb478836861
+SID = Struct(
+    'revision' / Int8ul,
+    'sub_authority_count' / Rebuild(Int8ul, len_(this.subauthority)),
+    'identifier_authority' / Int8ul[6],
+    'subauthority' / Int32ul[this.sub_authority_count],
+)
+
+ACL_STRUCT = Struct(
+    "revision" / Int8ul,
+    "sbz1" * Int8ul,
+    "acl_size" / Int16ul,
+    "ace_count" / Int16ul, "sbz2" * Int16ul
+).compile()
+
+ACE_STRUCT = Struct(
+    "type" / Int8ul,
+    "flags" / Int8ul,
+    "size" / Int16ul,
+    "mask" / Int32ul,
+    "sid" / Bytes(this.size - 8)
+).compile()
+

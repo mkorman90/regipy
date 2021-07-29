@@ -246,3 +246,9 @@ def test_get_key(software_hive):
     # We verify the registry headers are similar, because this is the same subkey.
     assert registry_hive.get_key('ODBC').header == registry_hive.root.get_subkey('ODBC').header
     assert registry_hive.root.get_subkey('ODBC').header == registry_hive.get_key('SOFTWARE\\ODBC').header
+
+
+def test_parse_security_info(ntuser_hive):
+    registry_hive = RegistryHive(ntuser_hive)
+    run_key = registry_hive.get_key(r'\Software\Microsoft\Windows\CurrentVersion\Run')
+    assert run_key.get_security_key_info() == {}
