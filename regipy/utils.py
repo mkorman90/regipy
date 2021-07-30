@@ -12,6 +12,7 @@ from io import TextIOWrapper
 import attr
 import pytz
 
+
 from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundException, RegipyGeneralException, \
     UnidentifiedHiveException
 from regipy.hive_types import NTUSER_HIVE_TYPE, SYSTEM_HIVE_TYPE, AMCACHE_HIVE_TYPE, SOFTWARE_HIVE_TYPE, \
@@ -155,7 +156,6 @@ def try_decode_binary(data, as_json=False, max_len=MAX_LEN):
         value = value[:max_len]
 
     return value
-
 
 def _setup_logging(verbose):
     logging.basicConfig(

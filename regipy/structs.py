@@ -253,18 +253,51 @@ SID = Struct(
     'subauthority' / Int32ul[this.sub_authority_count],
 )
 
-ACL_STRUCT = Struct(
+ACL = Struct(
     "revision" / Int8ul,
     "sbz1" * Int8ul,
     "acl_size" / Int16ul,
     "ace_count" / Int16ul, "sbz2" * Int16ul
 ).compile()
 
-ACE_STRUCT = Struct(
-    "type" / Int8ul,
-    "flags" / Int8ul,
+ACE = Struct(
+    "type" / Enum(Int8ul,
+        ACCESS_ALLOWED=0,
+        ACCESS_DENIED=1,
+        SYSTEM_AUDIT=2,
+        SYSTEM_ALARM=3,
+        ACCESS_ALLOWED_COMPOUND=4,
+        ACCESS_ALLOWED_OBJECT=5,
+        ACCESS_DENIED_OBJECT=6,
+        SYSTEM_AUDIT_OBJECT=7,
+        SYSTEM_ALARM_OBJECT=8,
+        ACCESS_ALLOWED_CALLBACK=9,
+        ACCESS_DENIED_CALLBACK=10,
+        ACCESS_ALLOWED_CALLBACK_OBJECT=11,
+        ACCESS_DENIED_CALLBACK_OBJECT=12,
+        SYSTEM_ALARM_CALLBACK=14,
+        SYSTEM_AUDIT_CALLBACK_OBJECT=15,
+        SYSTEM_ALARM_CALLBACK_OBJECT=16
+    ),
+    "flags" / FlagsEnum(Int8ul,
+        OBJECT_INHERIT_ACE=0x1,
+        CONTAINER_INHERIT_ACE = 0x2,
+        NO_PROPAGATE_INHERIT_ACE = 0x4,
+        INHERIT_ONLY_ACE = 0x8
+    ),
     "size" / Int16ul,
-    "mask" / Int32ul,
+    "access_mask" / FlagsEnum(Int32ul,
+        DELETE=0x00010000,
+        READ_CONTROL = 0x00020000,
+        WRITE_DAC = 0x00040000,
+        WRITE_OWNER = 0x00080000,
+        SYNCHRONIZE = 0x00100000,
+        ACCESS_SYSTEM_SECURITY = 0x01000000,
+        MAXIMUM_ALLOWED = 0x02000000,
+        GENERIC_ALL = 0x10000000,
+        GENERIC_EXECUTE = 0x20000000,
+        GENERIC_WRITE = 0x40000000,
+        GENERIC_READ = 0x80000000
+     ),
     "sid" / Bytes(this.size - 8)
 ).compile()
-

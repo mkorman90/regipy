@@ -251,4 +251,27 @@ def test_get_key(software_hive):
 def test_parse_security_info(ntuser_hive):
     registry_hive = RegistryHive(ntuser_hive)
     run_key = registry_hive.get_key(r'\Software\Microsoft\Windows\CurrentVersion\Run')
-    assert run_key.get_security_key_info() == {}
+
+    security_key_info = run_key.get_security_key_info()
+    assert security_key_info['owner'] == 'S-1-5-18'
+    assert security_key_info['group'] == 'S-1-5-18'
+    assert len(security_key_info['dacl']) == 4
+    assert security_key_info['dacl'][0] == {
+        'access_mask': {'ACCESS_SYSTEM_SECURITY': False,
+                        'DELETE': True,
+                        'GENERIC_ALL': False,
+                        'GENERIC_EXECUTE': False,
+                        'GENERIC_READ': False,
+                        'GENERIC_WRITE': False,
+                        'MAXIMUM_ALLOWED': False,
+                        'READ_CONTROL': True,
+                        'SYNCHRONIZE': False,
+                        'WRITE_DAC': True,
+                        'WRITE_OWNER': True},
+        'ace_type': 'ACCESS_ALLOWED',
+        'flags': {'CONTAINER_INHERIT_ACE': True,
+                  'INHERIT_ONLY_ACE': False,
+                  'NO_PROPAGATE_INHERIT_ACE': False,
+                  'OBJECT_INHERIT_ACE': True},
+        'sid': 'S-1-5-21'
+    }
