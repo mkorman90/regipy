@@ -1,11 +1,13 @@
-from regipy.structs import  ACL, ACE, SID
+import struct
 
-def convert_sid(sid) -> str:
-    parsed_sid = f'S-{sid.revision}-{sid.identifier_authority[-1]}-'
-    if sub_auth := '-'.join([str(s) for s in sid.identifier_authority[:-1] if s]):
-        parsed_sid += sub_auth
-    parsed_sid += str(sid.subauthority[0])
-    return parsed_sid
+from regipy.structs import ACL, ACE, SID, Int64ub
+
+
+def convert_sid(sid: SID) -> str:
+    identifier_authority = Int64ub.parse(b'\x00\x00' + sid.identifier_authority)
+    sub_identifier_authorities = '-'.join(str(x) for x in sid.subauthority)
+    return f'S-{sid.revision}-{identifier_authority}-{sub_identifier_authorities}'
+
 
 def get_acls(s):
     aces = []

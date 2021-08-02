@@ -273,5 +273,8 @@ def test_parse_security_info(ntuser_hive):
                   'INHERIT_ONLY_ACE': False,
                   'NO_PROPAGATE_INHERIT_ACE': False,
                   'OBJECT_INHERIT_ACE': True},
-        'sid': 'S-1-5-21'
+        'sid': 'S-1-5-21-2036804247-3058324640-2116585241-1673'
     }
+
+    dacl_sids = [x["sid"] for x in security_key_info['dacl']]
+    assert dacl_sids == ['S-1-5-21-2036804247-3058324640-2116585241-1673', 'S-1-5-18', 'S-1-5-32-544', 'S-1-5-12']

@@ -246,10 +246,11 @@ SECURITY_DESCRIPTOR = Struct(
 
 # https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/c6ce4275-3d90-4890-ab3a-514745e4637e
 # https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/f992ad60-0fe4-4b87-9fed-beb478836861
+# https://flatcap.org/linux-ntfs/ntfs/attributes/security_descriptor.html
 SID = Struct(
     'revision' / Int8ul,
-    'sub_authority_count' / Rebuild(Int8ul, len_(this.subauthority)),
-    'identifier_authority' / Int8ul[6],
+    'sub_authority_count' / Int8ul,
+    'identifier_authority' / Bytes(6),
     'subauthority' / Int32ul[this.sub_authority_count],
 )
 
