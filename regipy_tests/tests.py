@@ -55,7 +55,7 @@ def test_parse_root_key(ntuser_hive):
         'last_modified': 129780243434537497,
         'largest_value_data': 0,
         'parent_key_offset': 1656,
-        'security_list_offset': 1376,
+        'security_key_offset': 1376,
         'subkey_count': 11,
         'subkeys_list_offset': 73760,
         'values_count': 0,
