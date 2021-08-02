@@ -55,7 +55,7 @@ def test_parse_root_key(ntuser_hive):
         'last_modified': 129780243434537497,
         'largest_value_data': 0,
         'parent_key_offset': 1656,
-        'security_list_offset': 1376,
+        'security_key_offset': 1376,
         'subkey_count': 11,
         'subkeys_list_offset': 73760,
         'values_count': 0,
@@ -246,3 +246,35 @@ def test_get_key(software_hive):
     # We verify the registry headers are similar, because this is the same subkey.
     assert registry_hive.get_key('ODBC').header == registry_hive.root.get_subkey('ODBC').header
     assert registry_hive.root.get_subkey('ODBC').header == registry_hive.get_key('SOFTWARE\\ODBC').header
+
+
+def test_parse_security_info(ntuser_hive):
+    registry_hive = RegistryHive(ntuser_hive)
+    run_key = registry_hive.get_key(r'\Software\Microsoft\Windows\CurrentVersion\Run')
+
+    security_key_info = run_key.get_security_key_info()
+    assert security_key_info['owner'] == 'S-1-5-18'
+    assert security_key_info['group'] == 'S-1-5-18'
+    assert len(security_key_info['dacl']) == 4
+    assert security_key_info['dacl'][0] == {
+        'access_mask': {'ACCESS_SYSTEM_SECURITY': False,
+                        'DELETE': True,
+                        'GENERIC_ALL': False,
+                        'GENERIC_EXECUTE': False,
+                        'GENERIC_READ': False,
+                        'GENERIC_WRITE': False,
+                        'MAXIMUM_ALLOWED': False,
+                        'READ_CONTROL': True,
+                        'SYNCHRONIZE': False,
+                        'WRITE_DAC': True,
+                        'WRITE_OWNER': True},
+        'ace_type': 'ACCESS_ALLOWED',
+        'flags': {'CONTAINER_INHERIT_ACE': True,
+                  'INHERIT_ONLY_ACE': False,
+                  'NO_PROPAGATE_INHERIT_ACE': False,
+                  'OBJECT_INHERIT_ACE': True},
+        'sid': 'S-1-5-21-2036804247-3058324640-2116585241-1673'
+    }
+
+    dacl_sids = [x["sid"] for x in security_key_info['dacl']]
+    assert dacl_sids == ['S-1-5-21-2036804247-3058324640-2116585241-1673', 'S-1-5-18', 'S-1-5-32-544', 'S-1-5-12']

@@ -15,9 +15,10 @@ from io import BytesIO
 from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundException, NoRegistryValuesException, \
     RegistryValueNotFoundException, RegipyGeneralException, UnidentifiedHiveException, RegistryParsingException
 from regipy.hive_types import SUPPORTED_HIVE_TYPES
+from regipy.security_utils import convert_sid, get_acls
 from regipy.structs import REGF_HEADER, HBIN_HEADER, CM_KEY_NODE, LF_LH_SK_ELEMENT, VALUE_KEY, INDEX_ROOT, \
     REGF_HEADER_SIZE, INDEX_ROOT_SIGNATURE, LEAF_INDEX_SIGNATURE, FAST_LEAF_SIGNATURE, HASH_LEAF_SIGNATURE, \
-    BIG_DATA_BLOCK, INDEX_LEAF, DEFAULT_VALUE
+    BIG_DATA_BLOCK, INDEX_LEAF, DEFAULT_VALUE, SECURITY_KEY_v1_1, SECURITY_DESCRIPTOR, SID, ACL, ACE
 from regipy.utils import boomerang_stream, convert_wintime, identify_hive_type, MAX_LEN, try_decode_binary
 
 logger = logging.getLogger(__name__)
@@ -526,6 +527,38 @@ class NKRecord:
 
     def get_values(self, as_json=False):
         return [x for x in self.iter_values(as_json=as_json)]
+
+    def get_security_key_info(self):
+        self._stream.seek(REGF_HEADER_SIZE + self.header.security_key_offset)
+        # TODO: If parsing fails, parse with SECURITY_KEY_v1_2
+        security_key = SECURITY_KEY_v1_1.parse_stream(self._stream)
+        security_descriptor = SECURITY_DESCRIPTOR.parse(security_key.security_descriptor)
+
+        with boomerang_stream(self._stream) as s:
+            security_base_offset = REGF_HEADER_SIZE + self.header.security_key_offset + 24
+
+            s.seek(security_base_offset + security_descriptor.owner)
+            owner_sid = convert_sid(SID.parse_stream(s))
+
+            s.seek(security_base_offset + security_descriptor.group)
+            group_sid = convert_sid(SID.parse_stream(s))
+
+            sacl_aces = None
+            if security_descriptor.offset_sacl > 0:
+                s.seek(security_base_offset + security_descriptor.offset_sacl)
+                sacl_aces = get_acls(s)
+
+            dacl_aces = None
+            if security_descriptor.offset_dacl > 0:
+                s.seek(security_base_offset + security_descriptor.offset_dacl)
+                dacl_aces = get_acls(s)
+            return {
+                'owner': owner_sid,
+                'group': group_sid,
+                'dacl': dacl_aces,
+                'sacl': sacl_aces
+            }
+
 
     def __dict__(self):
         return {

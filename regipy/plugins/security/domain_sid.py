@@ -6,7 +6,9 @@ import logging
 
 from regipy.hive_types import SECURITY_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
-from regipy.utils import convert_wintime, decode_binary_sid
+from regipy.structs import SID
+from regipy.utils import convert_wintime
+from regipy.security_utils import convert_sid
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +37,12 @@ class DomainSidPlugin(Plugin):
         if not isinstance(sid_value, bytes):
             return
 
+        parsed_sid = SID.parse(sid_value)
+
         self.entries.append(
             {
-                "domain_sid": decode_binary_sid(sid_value, strip_rid=True),
-                "machine_sid": decode_binary_sid(sid_value),
+                "domain_sid": convert_sid(parsed_sid, strip_rid=True),
+                "machine_sid": convert_sid(parsed_sid),
                 "timestamp": convert_wintime(
                     sid_key.header.last_modified, as_json=self.as_json
                 ),
