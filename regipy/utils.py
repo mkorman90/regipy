@@ -8,14 +8,15 @@ from typing import Generator, Union
 
 from contextlib import contextmanager
 from io import TextIOWrapper
+from struct import unpack
 
 import attr
 import pytz
 
 from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundException, RegipyGeneralException, \
-    UnidentifiedHiveException
+    UnidentifiedHiveException, NtSidDecodingException
 from regipy.hive_types import NTUSER_HIVE_TYPE, SYSTEM_HIVE_TYPE, AMCACHE_HIVE_TYPE, SOFTWARE_HIVE_TYPE, \
-    SAM_HIVE_TYPE
+    SAM_HIVE_TYPE, SECURITY_HIVE_TYPE
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +136,8 @@ def identify_hive_type(name: str) -> str:
         return SOFTWARE_HIVE_TYPE
     elif hive_name == r'\systemroot\system32\config\sam':
         return SAM_HIVE_TYPE
+    elif hive_name == r'emroot\system32\config\security':
+        return SECURITY_HIVE_TYPE
     elif 'amcache' in hive_name.lower():
         return AMCACHE_HIVE_TYPE
     else:
@@ -155,6 +158,44 @@ def try_decode_binary(data, as_json=False, max_len=MAX_LEN):
         value = value[:max_len]
 
     return value
+
+
+def decode_binary_sid(data: bytes, strip_rid: bool = False) -> str:
+    """
+    Decodes raw binary data into a Windows NT SID (Security Identifier) string.
+
+    Re-implements `ConvertSidToStringSid()` function from the Windows API.
+    See `https://devblogs.microsoft.com/oldnewthing/20040315-00/?p=40253`
+
+    Optionally strips the RID (relative ID) component (the last dashed number)
+    from the SID string when the `strip_rid` parameter is set.
+    """
+
+    # S-1-5-...
+    if data[0] != 0x01 or data[2:8] != b'\x00\x00\x00\x00\x00\x05':
+        raise NtSidDecodingException("Not a valid Windows NT SID")
+
+    # N (number of SID dashes minus two)
+    num_words = data[1]
+
+    if len(data) != 4*num_words + 8:
+        raise NtSidDecodingException("Unexpected binary SID length")
+
+    if strip_rid:
+        # The fifth 32-bit component word encodes the RID (relative ID)
+        num_words = 4
+
+    if num_words == 5:
+        # Machine SID + RID
+        components = unpack("<5L", data[8:28])
+        return "S-1-5-%d-%d-%d-%d-%d" % components
+
+    if num_words == 4:
+        # Machine SID only
+        components = unpack("<4L", data[8:24])
+        return "S-1-5-%d-%d-%d-%d" % components
+
+    raise NtSidDecodingException("Unexpected SID component count")
 
 
 def _setup_logging(verbose):
