@@ -40,3 +40,8 @@ class RegistryParsingException(RegipyException):
     Raised when there is a parsing error, most probably a corrupted hive
     """
     pass
+
+class NtSidDecodingException(RegipyException):
+    """
+    Raised when the binary Windows NT SID representation can not be decoded
+    """

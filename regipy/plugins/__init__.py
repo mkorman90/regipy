@@ -23,3 +23,4 @@ from .software.profilelist import ProfileListPlugin
 from .software.printdemon import PrintDemonPlugin
 from .system.timezone_data import TimezoneDataPlugin
 from .system.active_controlset import ActiveControlSetPlugin
+from .security.domain_sid import DomainSidPlugin

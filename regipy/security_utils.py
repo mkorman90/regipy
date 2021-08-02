@@ -1,11 +1,15 @@
 import struct
+from struct import unpack
 
+from regipy.exceptions import NtSidDecodingException
 from regipy.structs import ACL, ACE, SID, Int64ub
 
 
-def convert_sid(sid: SID) -> str:
+def convert_sid(sid: SID, strip_rid: bool = False) -> str:
+    # TODO: Check this function works with the security registry hive
     identifier_authority = Int64ub.parse(b'\x00\x00' + sid.identifier_authority)
-    sub_identifier_authorities = '-'.join(str(x) for x in sid.subauthority)
+    sub_authorities = sid.subauthority[:-1] if strip_rid else sid.subauthority
+    sub_identifier_authorities = '-'.join(str(x) for x in sub_authorities)
     return f'S-{sid.revision}-{identifier_authority}-{sub_identifier_authorities}'
 
 
