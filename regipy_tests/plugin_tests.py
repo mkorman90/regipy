@@ -8,6 +8,7 @@ from regipy.plugins.software.profilelist import ProfileListPlugin
 from regipy.plugins.software.persistence import SoftwarePersistencePlugin
 from regipy.plugins.system.computer_name import ComputerNamePlugin
 from regipy.plugins.system.shimcache import ShimCachePlugin
+from regipy.plugins.sam.local_sid import LocalSidPlugin
 from regipy.registry import RegistryHive
 
 
@@ -453,3 +454,16 @@ def test_services_plugin_on_corrupted_hive(corrupted_system_hive):
              'value_type': 'REG_DWORD'}
         ]
     }
+
+
+def test_local_sid_plugin_sam(sam_hive):
+    registry_hive = RegistryHive(sam_hive)
+    plugin_instance = LocalSidPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == [
+        {
+            "machine_sid": "S-1-5-21-1760460187-1592185332-161725925",
+            "timestamp": "2014-09-24T03:36:43.549302+00:00"
+        }
+    ]

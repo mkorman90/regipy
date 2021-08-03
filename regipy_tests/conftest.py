@@ -50,6 +50,13 @@ def system_hive(test_data_dir):
 
 
 @pytest.fixture(scope='module')
+def sam_hive(test_data_dir):
+    temp_path = extract_lzma(os.path.join(test_data_dir, 'SAM.xz'))
+    yield temp_path
+    os.remove(temp_path)
+
+
+@pytest.fixture(scope='module')
 def amcache_hive(test_data_dir):
     temp_path = extract_lzma(os.path.join(test_data_dir, 'amcache.hve.xz'))
     yield temp_path
