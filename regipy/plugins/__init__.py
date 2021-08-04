@@ -23,5 +23,6 @@ from .software.profilelist import ProfileListPlugin
 from .software.printdemon import PrintDemonPlugin
 from .system.timezone_data import TimezoneDataPlugin
 from .system.active_controlset import ActiveControlSetPlugin
+from .system.bootkey import BootKeyPlugin
 from .security.domain_sid import DomainSidPlugin
 from .sam.local_sid import LocalSidPlugin
