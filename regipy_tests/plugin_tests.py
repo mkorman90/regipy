@@ -8,6 +8,7 @@ from regipy.plugins.software.profilelist import ProfileListPlugin
 from regipy.plugins.software.persistence import SoftwarePersistencePlugin
 from regipy.plugins.system.computer_name import ComputerNamePlugin
 from regipy.plugins.system.shimcache import ShimCachePlugin
+from regipy.plugins.system.bootkey import BootKeyPlugin
 from regipy.plugins.sam.local_sid import LocalSidPlugin
 from regipy.registry import RegistryHive
 
@@ -466,4 +467,21 @@ def test_local_sid_plugin_sam(sam_hive):
             "machine_sid": "S-1-5-21-1760460187-1592185332-161725925",
             "timestamp": "2014-09-24T03:36:43.549302+00:00"
         }
+    ]
+
+
+def test_bootkey_plugin_system(system_hive):
+    registry_hive = RegistryHive(system_hive)
+    plugin_instance = BootKeyPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == [
+        {
+            "key": "e7f28d88f470cfed67dbcdb62ed1275b",
+            "timestamp": "2012-04-04T11:47:46.203124+00:00",
+        },
+        {
+            "key": "e7f28d88f470cfed67dbcdb62ed1275b",
+            "timestamp": "2012-04-04T11:47:46.203124+00:00",
+        },
     ]
