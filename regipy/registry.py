@@ -444,8 +444,13 @@ class NKRecord:
 
                 if vk.name_size == 0:
                     value_name = '(default)'
+                elif vk.flags.VALUE_COMP_NAME:
+                    # Compressed (ASCII) value name
+                    value_name = vk.name.decode('ascii', errors='replace')
                 else:
-                    value_name = vk.name.decode(errors='replace')
+                    # Unicode (UTF-16) value name
+                    value_name = vk.name.decode('utf-16-le', errors='replace')
+                    logger.debug(f'Unicode value name identified: "{value_name}"')
 
                 # If the value is bigger than this value, it means this is a DEVPROP structure
                 # https://doxygen.reactos.org/d0/dba/devpropdef_8h_source.html

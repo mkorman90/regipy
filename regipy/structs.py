@@ -142,7 +142,7 @@ VALUE_KEY = Struct(
     'data_size' / Int32ul,
     'data_offset' / Int32ul,
     'data_type' / VALUE_TYPE_ENUM,
-    'flags' / Int16ul,
+    'flags' / FlagsEnum(Int16ul, VALUE_COMP_NAME=0x0001),
     'padding' * Int16ul,
     'name' / Bytes(this.name_size)
 ).compile()
