@@ -559,6 +559,19 @@ class NKRecord:
                 'sacl': sacl_aces
             }
 
+    def get_class_name(self) -> str:
+        """
+        Gets the key class name as would be returned via
+        the `lpClass` argument of the `RegQueryInfoKey()` function.
+        """
+
+        # Get the offset of the class name string. We skip 4 because of Cell Header
+        read_offset = REGF_HEADER_SIZE + 4 + self.header.class_name_offset
+
+        self._stream.seek(read_offset)
+        class_name = self._stream.read(self.header.class_name_size)
+
+        return class_name.decode('utf-16-le', errors='replace')
 
     def __dict__(self):
         return {
