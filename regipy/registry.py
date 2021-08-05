@@ -293,12 +293,14 @@ class NKRecord:
         self.header = CM_KEY_NODE.parse_stream(stream)
         self._stream = stream
 
-        # Sometime the values are utf-8 and sometimes utf-16 little endian, we attempt both
-        try:
-            decoded_name = self.header.key_name_string.decode()
-        except UnicodeDecodeError:
-            decoded_name = self.header.key_name_string.decode('utf-16-le', errors='replace')
-        self.name = decoded_name
+        # Sometimes the key names are ASCII and sometimes UTF-16 little endian
+        if self.header.flags.KEY_COMP_NAME:
+            # Compressed (ASCII) key name
+            self.name = self.header.key_name_string.decode('ascii', errors='replace')
+        else:
+            # Unicode (UTF-16) key name
+            self.name = self.header.key_name_string.decode('utf-16-le', errors='replace')
+            logger.debug(f'Unicode key name identified: "{self.name}"')
 
         self.subkey_count = self.header.subkey_count
         self.values_count = self.header.values_count
@@ -442,8 +444,13 @@ class NKRecord:
 
                 if vk.name_size == 0:
                     value_name = '(default)'
+                elif vk.flags.VALUE_COMP_NAME:
+                    # Compressed (ASCII) value name
+                    value_name = vk.name.decode('ascii', errors='replace')
                 else:
-                    value_name = vk.name.decode(errors='replace')
+                    # Unicode (UTF-16) value name
+                    value_name = vk.name.decode('utf-16-le', errors='replace')
+                    logger.debug(f'Unicode value name identified: "{value_name}"')
 
                 # If the value is bigger than this value, it means this is a DEVPROP structure
                 # https://doxygen.reactos.org/d0/dba/devpropdef_8h_source.html
