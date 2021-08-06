@@ -11,6 +11,7 @@ from regipy.plugins.system.shimcache import ShimCachePlugin
 from regipy.plugins.system.bootkey import BootKeyPlugin
 from regipy.plugins.system.host_domain_name import HostDomainNamePlugin
 from regipy.plugins.sam.local_sid import LocalSidPlugin
+from regipy.plugins.security.domain_sid import DomainSidPlugin
 from regipy.registry import RegistryHive
 
 
@@ -504,4 +505,19 @@ def test_host_domain_name_plugin_system(system_hive):
             "domain": "shieldbase.local",
             "timestamp": "2011-09-17T13:43:23.770078+00:00"
         },
+    ]
+
+
+def test_domain_sid_plugin_security(security_hive):
+    registry_hive = RegistryHive(security_hive)
+    plugin_instance = DomainSidPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == [
+        {
+            "domain_name": "WORKGROUP",
+            "domain_sid": None,
+            "machine_sid": None,
+            "timestamp": "2021-08-05T10:43:08.911000+00:00"
+        }
     ]
