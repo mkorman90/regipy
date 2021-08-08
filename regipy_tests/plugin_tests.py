@@ -9,6 +9,7 @@ from regipy.plugins.software.persistence import SoftwarePersistencePlugin
 from regipy.plugins.system.computer_name import ComputerNamePlugin
 from regipy.plugins.system.shimcache import ShimCachePlugin
 from regipy.plugins.system.bootkey import BootKeyPlugin
+from regipy.plugins.system.host_domain_name import HostDomainNamePlugin
 from regipy.plugins.sam.local_sid import LocalSidPlugin
 from regipy.registry import RegistryHive
 
@@ -483,5 +484,24 @@ def test_bootkey_plugin_system(system_hive):
         {
             "key": "e7f28d88f470cfed67dbcdb62ed1275b",
             "timestamp": "2012-04-04T11:47:46.203124+00:00",
+        },
+    ]
+
+
+def test_host_domain_name_plugin_system(system_hive):
+    registry_hive = RegistryHive(system_hive)
+    plugin_instance = HostDomainNamePlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == [
+        {
+            "hostname": "WKS-WIN732BITA",
+            "domain": "shieldbase.local",
+            "timestamp": "2011-09-17T13:43:23.770078+00:00"
+        },
+        {
+            "hostname": "WKS-WIN732BITA",
+            "domain": "shieldbase.local",
+            "timestamp": "2011-09-17T13:43:23.770078+00:00"
         },
     ]
