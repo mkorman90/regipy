@@ -136,7 +136,7 @@ def identify_hive_type(name: str) -> str:
         return SOFTWARE_HIVE_TYPE
     elif hive_name == r'\systemroot\system32\config\sam':
         return SAM_HIVE_TYPE
-    elif hive_name == r'emroot\system32\config\security':
+    elif hive_name.endswith(r'\system32\config\security'):
         return SECURITY_HIVE_TYPE
     elif 'amcache' in hive_name.lower():
         return AMCACHE_HIVE_TYPE
