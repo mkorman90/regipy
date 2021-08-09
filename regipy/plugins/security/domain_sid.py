@@ -4,6 +4,8 @@ Windows machine domain name and SID extractor plugin
 
 import logging
 
+from typing import Optional
+
 from regipy.hive_types import SECURITY_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.structs import SID
@@ -41,6 +43,9 @@ class DomainSidPlugin(Plugin):
         # Domain SID value (binary-encoded)
         sid_value = sid_key.get_value()
 
+        domain_sid: Optional[str] = None
+        machine_sid: Optional[str] = None
+
         # The default key value is 0x00000000 (REG_DWORD) when
         # the Windows machine is not in an AD domain.
         # Otherwise, it contains the domain machine SID data
@@ -49,9 +54,6 @@ class DomainSidPlugin(Plugin):
             parsed_sid = SID.parse(sid_value)
             domain_sid = convert_sid(parsed_sid, strip_rid=True)
             machine_sid = convert_sid(parsed_sid)
-        else:
-            domain_sid = None
-            machine_sid = None
 
         self.entries.append(
             {

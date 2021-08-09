@@ -1,11 +1,12 @@
 import struct
 from struct import unpack
 
+from typing import Any
 from regipy.exceptions import NtSidDecodingException
 from regipy.structs import ACL, ACE, SID, Int64ub
 
 
-def convert_sid(sid: SID, strip_rid: bool = False) -> str:
+def convert_sid(sid: Any, strip_rid: bool = False) -> str:
     identifier_authority = Int64ub.parse(b'\x00\x00' + sid.identifier_authority)
     sub_authorities = sid.subauthority[:-1] if strip_rid else sid.subauthority
     sub_identifier_authorities = '-'.join(str(x) for x in sub_authorities)
