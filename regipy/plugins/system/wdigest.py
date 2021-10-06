@@ -17,12 +17,12 @@ class WDIGESTPlugin(Plugin):
 
     def run(self):
         logger.info('Started WDIGEST Plugin...')
-
         for subkey_path in self.registry_hive.get_control_sets(WDIGEST_PATH):
             subkey = self.registry_hive.get_key(subkey_path)
 
             try:
                 self.entries.append({
+                    'subkey': subkey_path,
                     'use_logon_credential': subkey.get_value('UseLogonCredential', as_json=self.as_json),
                     'timestamp': convert_wintime(subkey.header.last_modified, as_json=self.as_json)
                 })
