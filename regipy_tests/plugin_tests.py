@@ -13,6 +13,7 @@ from regipy.plugins.system.host_domain_name import HostDomainNamePlugin
 from regipy.plugins.sam.local_sid import LocalSidPlugin
 from regipy.plugins.security.domain_sid import DomainSidPlugin
 from regipy.plugins.bcd.boot_entry_list import BootEntryListPlugin
+from regipy.plugins.system.wdigest import WDIGESTPlugin
 from regipy.registry import RegistryHive
 
 
@@ -601,5 +602,24 @@ def test_boot_entry_list_plugin_bcd(bcd_hive):
             "gpt_partition": "36be3955-63bf-4068-a6ab-00195cca3a22",
             "image_path": "\\EFI\\Microsoft\\Boot\\memtest.efi",
             "timestamp": "2021-08-09T02:13:30.976970+00:00"
+        }
+    ]
+
+
+def test_wdigest(system_hive):
+    registry_hive = RegistryHive(system_hive)
+    plugin_instance = WDIGESTPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == [
+        {
+            "subkey": r"\ControlSet001\Control\SecurityProviders\WDigest",
+            "timestamp": "2009-07-14T04:37:09.491968+00:00",
+            "use_logon_credential": 1
+        },
+        {
+            "subkey": r"\ControlSet002\Control\SecurityProviders\WDigest",
+            "timestamp": "2009-07-14T04:37:09.491968+00:00",
+            "use_logon_credential": None
         }
     ]
