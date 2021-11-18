@@ -8,9 +8,9 @@ from regipy.utils import convert_wintime
 
 logger = logging.getLogger(__name__)
 
-WINRAR_ARCHIVE_CREATION_HIST = r'Software\WinRAR\DialogEditHistory\ArcName'
-WINRAR_ARCHIVE_EXTRACT_HIST = r'Software\WinRAR\DialogEditHistory\ExtPath'
-WINRAR_ARCHIVE_OPEN_HIST = r'Software\WinRAR\ArcHistory'
+WINRAR_ARCHIVE_CREATION_HIST = r'\SOFTWARE\WinRAR\DialogEditHistory\ArcName'
+WINRAR_ARCHIVE_EXTRACT_HIST = r'\SOFTWARE\WinRAR\DialogEditHistory\ExtrPath'
+WINRAR_ARCHIVE_OPEN_HIST = r'\SOFTWARE\WinRAR\ArcHistory'
 
 
 class WinRARPlugin(Plugin):
@@ -56,7 +56,7 @@ class WinRARPlugin(Plugin):
             for location in extracted_archives:
                 self.entries.append({
                     'last_write': timestamp,
-                    'target_folder': location,
+                    'destination_folder': location,
                     'operation': 'archive_extracted'
                 })
 
