@@ -14,6 +14,7 @@ from regipy.plugins.sam.local_sid import LocalSidPlugin
 from regipy.plugins.security.domain_sid import DomainSidPlugin
 from regipy.plugins.bcd.boot_entry_list import BootEntryListPlugin
 from regipy.plugins.system.wdigest import WDIGESTPlugin
+from regipy.plugins.ntuser.winrar import WinRARPlugin
 from regipy.registry import RegistryHive
 
 
@@ -621,5 +622,44 @@ def test_wdigest(system_hive):
             "subkey": r"\ControlSet002\Control\SecurityProviders\WDigest",
             "timestamp": "2009-07-14T04:37:09.491968+00:00",
             "use_logon_credential": None
+        }
+    ]
+
+
+def test_winrar(ntuser_hive):
+    registry_hive = RegistryHive(ntuser_hive)
+    plugin_instance = WinRARPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == [
+        {
+            "last_write": "2021-11-18T13:59:04.888952+00:00",
+            "archive_path": "C:\\Users\\tony\\Downloads\\RegistryFinder64.zip",
+            "operation": "archive_opened"
+        },
+        {
+            "last_write": "2021-11-18T13:59:04.888952+00:00",
+            "archive_path": "C:\\temp\\token.zip",
+            "operation": "archive_opened"
+        },
+        {
+            "last_write": "2021-11-18T13:59:50.023788+00:00",
+            "archive_name": "Tools.zip",
+            "operation": "archive_created"
+        },
+        {
+            "last_write": "2021-11-18T13:59:50.023788+00:00",
+            "archive_name": "data.zip",
+            "operation": "archive_created"
+        },
+        {
+            "last_write": "2021-11-18T14:00:44.180468+00:00",
+            "destination_folder": "C:\\Users\\tony\\Downloads",
+            "operation": "archive_extracted"
+        },
+        {
+            "last_write": "2021-11-18T14:00:44.180468+00:00",
+            "destination_folder": "C:\\temp",
+            "operation": "archive_extracted"
         }
     ]

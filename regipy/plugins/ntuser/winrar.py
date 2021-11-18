@@ -20,7 +20,6 @@ class WinRARPlugin(Plugin):
 
     def run(self):
         try:
-            logging.info('attempting WinRAR')
             open_subkey = self.registry_hive.get_key(WINRAR_ARCHIVE_OPEN_HIST)
 
             timestamp = convert_wintime(open_subkey.header.last_modified, as_json=self.as_json)
@@ -37,6 +36,7 @@ class WinRARPlugin(Plugin):
 
         try:
             create_subkey = self.registry_hive.get_key(WINRAR_ARCHIVE_CREATION_HIST)
+
             timestamp = convert_wintime(create_subkey.header.last_modified, as_json=self.as_json)
             created_archives = [value.value for value in create_subkey.iter_values(as_json=self.as_json)]
             for archive in created_archives:
@@ -51,6 +51,7 @@ class WinRARPlugin(Plugin):
 
         try:
             extract_subkey = self.registry_hive.get_key(WINRAR_ARCHIVE_EXTRACT_HIST)
+
             timestamp = convert_wintime(extract_subkey.header.last_modified, as_json=self.as_json)
             extracted_archives = [value.value for value in extract_subkey.iter_values(as_json=self.as_json)]
             for location in extracted_archives:
