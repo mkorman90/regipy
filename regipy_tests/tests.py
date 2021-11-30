@@ -15,8 +15,8 @@ def test_parse_header(ntuser_hive):
     registry_hive = RegistryHive(ntuser_hive)
 
     assert isinstance(registry_hive, RegistryHive)
-    assert registry_hive.header.primary_sequence_num == 744
-    assert registry_hive.header.secondary_sequence_num == 744
+    assert registry_hive.header.primary_sequence_num == 749
+    assert registry_hive.header.secondary_sequence_num == 749
     assert registry_hive.header.last_modification_time == 129782982453388850
     assert registry_hive.header.major_version == 1
     assert registry_hive.header.minor_version == 3
@@ -24,7 +24,7 @@ def test_parse_header(ntuser_hive):
     assert registry_hive.header.hive_bins_data_size == 733184
     assert registry_hive.header.minor_version == 3
     assert registry_hive.header.file_name == '?\\C:\\Users\\vibranium\\ntuser.dat'
-    assert registry_hive.header.checksum == 448714443
+    assert registry_hive.header.checksum == 476614345
 
 
 def test_parse_root_key(ntuser_hive):
@@ -35,7 +35,7 @@ def test_parse_root_key(ntuser_hive):
     assert registry_hive.root.name == 'CMI-CreateHive{6A1C4018-979D-4291-A7DC-7AED1C75B67C}'
     assert registry_hive.root.subkey_count == 11
     assert dict(registry_hive.root.header) == {
-        'access_bits': b'\x00\x00\x00\x00',
+        'access_bits': b'\x02\x00\x00\x00',
         'class_name_offset': 4294967295,
         'class_name_size': 0,
         'flags': {
@@ -54,14 +54,14 @@ def test_parse_root_key(ntuser_hive):
         'largest_value_name': 0,
         'last_modified': 129780243434537497,
         'largest_value_data': 0,
-        'parent_key_offset': 1656,
+        'parent_key_offset': 1968,
         'security_key_offset': 1376,
         'subkey_count': 11,
         'subkeys_list_offset': 73760,
         'values_count': 0,
         'values_list_offset': 4294967295,
-        'volatile_subkey_count': 2,
-        'volatile_subkeys_list_offset': 2147486280
+        'volatile_subkey_count': 0,
+        'volatile_subkeys_list_offset': 4294967295
     }
 
 
@@ -97,8 +97,8 @@ def test_ntuser_timeline(ntuser_hive):
 
 def test_regdiff(ntuser_hive, second_hive_path):
     found_differences = compare_hives(ntuser_hive, second_hive_path, verbose=True)
-    assert len(found_differences) == 2
-    assert len([x for x in found_differences if x[0] == 'new_subkey']) == 1
+    assert len(found_differences) == 7
+    assert len([x for x in found_differences if x[0] == 'new_subkey']) == 6
     assert len([x for x in found_differences if x[0] == 'new_value']) == 1
 
 
@@ -133,8 +133,8 @@ def test_recurse_ntuser(ntuser_hive):
             for x in subkey_values:
                 value_types[x['value_type']] += 1
 
-    assert subkey_count == 1807
-    assert values_count == 4088
+    assert subkey_count == 1812
+    assert values_count == 4094
     assert value_types == {
         'REG_BINARY': 531,
         'REG_DWORD': 1336,
@@ -142,7 +142,7 @@ def test_recurse_ntuser(ntuser_hive):
         'REG_MULTI_SZ': 303,
         'REG_NONE': 141,
         'REG_QWORD': 54,
-        'REG_SZ': 1630
+        'REG_SZ': 1636
     }
 
 
@@ -235,7 +235,7 @@ def test_hive_serialization(ntuser_hive, temp_output_file):
         for x in dumped_hive.readlines():
             assert json.loads(x)
             counter += 1
-    assert counter == 1807
+    assert counter == 1812
 
 
 def test_get_key(software_hive):
