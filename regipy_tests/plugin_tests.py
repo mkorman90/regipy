@@ -634,32 +634,32 @@ def test_winrar(ntuser_hive):
     assert plugin_instance.entries == [
         {
             "last_write": "2021-11-18T13:59:04.888952+00:00",
-            "archive_path": "C:\\Users\\tony\\Downloads\\RegistryFinder64.zip",
+            "file_path": "C:\\Users\\tony\\Downloads\\RegistryFinder64.zip",
             "operation": "archive_opened"
         },
         {
             "last_write": "2021-11-18T13:59:04.888952+00:00",
-            "archive_path": "C:\\temp\\token.zip",
+            "file_path": "C:\\temp\\token.zip",
             "operation": "archive_opened"
         },
         {
             "last_write": "2021-11-18T13:59:50.023788+00:00",
-            "archive_name": "Tools.zip",
+            "file_name": "Tools.zip",
             "operation": "archive_created"
         },
         {
             "last_write": "2021-11-18T13:59:50.023788+00:00",
-            "archive_name": "data.zip",
+            "file_name": "data.zip",
             "operation": "archive_created"
         },
         {
             "last_write": "2021-11-18T14:00:44.180468+00:00",
-            "destination_folder": "C:\\Users\\tony\\Downloads",
+            "file_path": "C:\\Users\\tony\\Downloads",
             "operation": "archive_extracted"
         },
         {
             "last_write": "2021-11-18T14:00:44.180468+00:00",
-            "destination_folder": "C:\\temp",
+            "file_path": "C:\\temp",
             "operation": "archive_extracted"
         }
     ]
