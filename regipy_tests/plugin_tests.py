@@ -15,6 +15,7 @@ from regipy.plugins.security.domain_sid import DomainSidPlugin
 from regipy.plugins.bcd.boot_entry_list import BootEntryListPlugin
 from regipy.plugins.system.wdigest import WDIGESTPlugin
 from regipy.plugins.ntuser.winrar import WinRARPlugin
+from regipy.plugins.ntuser.network_drives import NetworkDrivesPlugin
 from regipy.registry import RegistryHive
 
 
@@ -661,5 +662,20 @@ def test_winrar(ntuser_hive):
             "last_write": "2021-11-18T14:00:44.180468+00:00",
             "file_path": "C:\\temp",
             "operation": "archive_extracted"
+        }
+    ]
+
+
+def test_netdrives(ntuser_hive):
+
+    registry_hive = RegistryHive(ntuser_hive)
+    plugin_instance = NetworkDrivesPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == [
+        {
+            "drive_letter": r"\ControlSet001\Control\SecurityProviders\WDigest",
+            "last_write": "2009-07-14T04:37:09.491968+00:00",
+            "network_path": 1
         }
     ]
