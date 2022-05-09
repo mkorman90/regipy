@@ -27,7 +27,7 @@ class WinRARPlugin(Plugin):
             for archive in opened_archives:
                 self.entries.append({
                     'last_write': timestamp,
-                    'archive_path': archive,
+                    'file_path': archive,
                     'operation': 'archive_opened'
                 })
 
@@ -42,7 +42,7 @@ class WinRARPlugin(Plugin):
             for archive in created_archives:
                 self.entries.append({
                     'last_write': timestamp,
-                    'archive_name': archive,
+                    'file_name': archive,
                     'operation': 'archive_created'
                 })
 
@@ -57,7 +57,7 @@ class WinRARPlugin(Plugin):
             for location in extracted_archives:
                 self.entries.append({
                     'last_write': timestamp,
-                    'destination_folder': location,
+                    'file_path': location,
                     'operation': 'archive_extracted'
                 })
 
