@@ -674,8 +674,7 @@ def test_netdrives(ntuser_hive):
 
     assert plugin_instance.entries == [
         {
-            "drive_letter": r"\ControlSet001\Control\SecurityProviders\WDigest",
-            "last_write": "2009-07-14T04:37:09.491968+00:00",
-            "network_path": 1
-        }
-    ]
+            "drive_letter": r"p",
+            "last_write": "2012-04-03T22:08:18.840132+00:00",
+            "network_path": "\\\\controller\\public"
+        }]

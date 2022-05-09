@@ -23,7 +23,7 @@ class NetworkDrivesPlugin(Plugin):
                 timestamp = convert_wintime(mapped_drive.header.last_modified, as_json=self.as_json)
                 self.entries.append({
                     'last_write': timestamp,
-                    'drive_letter': mapped_drive.subkey_name,
+                    'drive_letter': mapped_drive.name,
                     'network_path': mapped_drive.get_value('RemotePath')
                 })
 
