@@ -153,6 +153,7 @@ class RegistryHive:
                                                     path_root=subkey_path,
                                                     as_json=as_json,
                                                     is_init=False)
+
                 values = []
                 if subkey.values_count:
                     try:
@@ -456,16 +457,18 @@ class NKRecord:
                 # https://doxygen.reactos.org/d0/dba/devpropdef_8h_source.html
                 # https://sourceforge.net/p/mingw-w64/mingw-w64/ci/668a1d3e85042c409e0c292e621b3dc0aa26177c/tree/
                 # mingw-w64-headers/include/devpropdef.h?diff=dd86a3b7594dadeef9d6a37c4b6be3ca42ef7e94
-                # We currently do not support these, but also wouldn't like to yield this as binary data
+                # We currently do not support these, We are going to make the best effort to dump as string.
                 # This int casting will always work because the data_type is construct's EnumIntegerString
-                # TODO: Add actual parsing
                 if int(vk.data_type) > 0xffff0000:
+                    logger.info(f"Value at {hex(actual_vk_offset)} contains DEVPROP structure")
+                    # TODO: Add a test for an existing hive with devprop, verify we handle it
                     data_type = int(vk.data_type) & 0xffff
-                    continue
+                    actual_value = try_decode_binary(value.value, as_json=as_json)
 
                 # Skip this unknown data type, research pending :)
                 # TODO: Add actual parsing
-                if int(vk.data_type) == 0x200000:
+                elif int(vk.data_type) == 0x200000:
+                    logger.info(f"Skipped unknown data type value at {actual_vk_offset}")
                     continue
 
                 data_type = str(vk.data_type)

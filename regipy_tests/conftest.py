@@ -152,3 +152,11 @@ def corrupted_system_hive(test_data_dir):
     temp_path = extract_lzma(os.path.join(test_data_dir, 'corrupted_system_hive.xz'))
     yield temp_path
     os.remove(temp_path)
+
+
+@pytest.fixture(scope='module')
+def system_devprop(test_data_dir):
+    temp_path = extract_lzma(os.path.join(test_data_dir, 'SYSTEM_2.xz'))
+    yield temp_path
+    os.remove(temp_path)
+

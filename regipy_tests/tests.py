@@ -208,9 +208,20 @@ def test_system_apply_transaction_logs(transaction_system, system_tr_log_1, syst
     assert recovered_dirty_pages_count == 315
 
     found_differences = compare_hives(transaction_system, restored_hive_path)
-    assert len(found_differences) == 2506
+    assert len(found_differences) == 2508
     assert len([x for x in found_differences if x[0] == 'new_subkey']) == 2458
-    assert len([x for x in found_differences if x[0] == 'new_value']) == 48
+    assert len([x for x in found_differences if x[0] == 'new_value']) == 50
+
+
+def test_system_hive_devprop_structure(system_devprop):
+    registry_hive = RegistryHive(system_devprop)
+    subkey = registry_hive.get_key("\\ControlSet001\\Enum\\ACPI\\ACPI0003\\0\\Properties\\{83da6326-97a6-4088-9453-"
+                                   "a1923f573b29}\\0003")
+    assert subkey.values_count == 1
+    value = subkey.get_values()[0]
+    assert value.name == '(default)'
+    assert value.value == 'cmbatt.inf:db04a16c09a7808a:AcAdapter_Inst:6.3.9600.16384:ACPI\\ACPI0003'
+    assert hex(int(value.value_type)) == '0xffff0012'
 
 
 def test_system_apply_transaction_logs_2(transaction_usrclass, usrclass_tr_log_1, usrclass_tr_log_2):
