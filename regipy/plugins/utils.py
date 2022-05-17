@@ -10,7 +10,7 @@ from regipy.plugins.plugin import PLUGINS
 logger = logging.getLogger(__name__)
 
 
-def dump_hive_to_json(registry_hive, output_path, name_key_entry: NKRecord, verbose=False):
+def dump_hive_to_json(registry_hive, output_path, name_key_entry: NKRecord, verbose=False, fetch_values=True):
     """
     Write the hive subkeys to a JSON-lines file, one line per entry.
     :param registry_hive: a RegistryHive object
@@ -20,7 +20,7 @@ def dump_hive_to_json(registry_hive, output_path, name_key_entry: NKRecord, verb
     :return: The result, as dict
     """
     with open(output_path, mode='w') as writer:
-        for entry in registry_hive.recurse_subkeys(name_key_entry, as_json=True):
+        for entry in registry_hive.recurse_subkeys(name_key_entry, as_json=True, fetch_values=fetch_values):
             writer.write(json.dumps(attr.asdict(entry), separators=(',', ':',)))
             writer.write('\n')
 

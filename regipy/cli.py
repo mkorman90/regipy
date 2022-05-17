@@ -47,7 +47,9 @@ def parse_header(hive_path, verbose):
               help='The path from which the partial hive actually starts, for example: -t ntuser -r "/Software" '
                    'would mean this is actually a HKCU hive, starting from HKCU/Software')
 @click.option('-v', '--verbose', is_flag=True, default=False, help='Verbosity')
-def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, partial_hive_path, verbose):
+@click.option('-d', '--do-not-fetch-values', is_flag=True, default=False, help='Not fetching the values for each subkey '
+                                                                              'makes the iteration way faster')
+def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, partial_hive_path, verbose, do_not_fetch_values):
     _setup_logging(verbose=verbose)
     registry_hive = RegistryHive(hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path)
 
@@ -71,7 +73,7 @@ def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, par
                                            quotechar='"', quoting=csv.QUOTE_MINIMAL,
                                            fieldnames=['timestamp', 'subkey_name', 'values_count'])
                 csvwriter.writeheader()
-                with progressbar(registry_hive.recurse_subkeys(name_key_entry, as_json=True)) as reg_subkeys:
+                with progressbar(registry_hive.recurse_subkeys(name_key_entry, as_json=True, fetch_values=not do_not_fetch_values)) as reg_subkeys:
                     for entry in reg_subkeys:
                         entry_dict = entry.__dict__
                         path = entry.path
@@ -81,9 +83,9 @@ def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, par
                             'values_count': entry_dict['values_count']
                         })
         else:
-            dump_hive_to_json(registry_hive, output_path, name_key_entry, verbose)
+            dump_hive_to_json(registry_hive, output_path, name_key_entry, verbose, fetch_values=not do_not_fetch_values)
     else:
-        for entry in registry_hive.recurse_subkeys(name_key_entry, as_json=True):
+        for entry in registry_hive.recurse_subkeys(name_key_entry, as_json=True, fetch_values=not do_not_fetch_values):
             click.secho(json.dumps(attr.asdict(entry), indent=4))
 
 

@@ -123,7 +123,7 @@ class RegistryHive:
         if partial_hive_path:
             self.partial_hive_path = partial_hive_path
 
-    def recurse_subkeys(self, nk_record=None, path_root=None, as_json=False, is_init=True):
+    def recurse_subkeys(self, nk_record=None, path_root=None, as_json=False, is_init=True, fetch_values=True):
         """
         Recurse over a subkey, and yield all of its subkeys and values
         :param nk_record: an instance of NKRecord from which to start iterating, if None, will start from Root
@@ -131,6 +131,7 @@ class RegistryHive:
                           from ControlSet001 and not SYSTEM, there is no way to know that.
                           This string will be added as prefix to all paths.
         :param as_json: Whether to normalize the data as JSON or not
+        :param fetch_values: If False, subkey values will not be returned, but the iteration will be faster
         """
         # If None, will start iterating from Root NK entry
         if not nk_record:
@@ -152,18 +153,19 @@ class RegistryHive:
                     yield from self.recurse_subkeys(nk_record=subkey,
                                                     path_root=subkey_path,
                                                     as_json=as_json,
-                                                    is_init=False)
+                                                    is_init=False,
+                                                    fetch_values=fetch_values)
 
                 values = []
-                if subkey.values_count:
-                    try:
-                        if as_json:
-                            values = [attr.asdict(x) for x in subkey.iter_values(as_json=as_json)]
-                        else:
-                            values = list(subkey.iter_values(as_json=as_json))
-                    except RegistryParsingException as ex:
-                        logger.exception(f'Failed to parse hive value at path: {path_root}')
-                        values = []
+                if fetch_values:
+                    if subkey.values_count:
+                        try:
+                            if as_json:
+                                values = [attr.asdict(x) for x in subkey.iter_values(as_json=as_json)]
+                            else:
+                                values = list(subkey.iter_values(as_json=as_json))
+                        except RegistryParsingException as ex:
+                            logger.exception(f'Failed to parse hive value at path: {path_root}')
 
                 ts = convert_wintime(subkey.header.last_modified)
                 yield Subkey(subkey_name=subkey.name, path=subkey_path,
@@ -460,7 +462,7 @@ class NKRecord:
                 # We currently do not support these, We are going to make the best effort to dump as string.
                 # This int casting will always work because the data_type is construct's EnumIntegerString
                 if int(vk.data_type) > 0xffff0000:
-                    logger.info(f"Value at {hex(actual_vk_offset)} contains DEVPROP structure")
+                    logger.debug(f"Value at {hex(actual_vk_offset)} contains DEVPROP structure")
                     # TODO: Add a test for an existing hive with devprop, verify we handle it
                     data_type = int(vk.data_type) & 0xffff
                     actual_value = try_decode_binary(value.value, as_json=as_json)
