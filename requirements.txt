@@ -4,4 +4,4 @@ click==8.0.4
 inflection==0.5.1
 pytz==2022.1
 tabulate==0.8.9
-pytest==7.0.1
+pytest==7.1.2
