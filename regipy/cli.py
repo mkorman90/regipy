@@ -2,6 +2,7 @@ import csv
 import json
 import logging
 import os
+import time
 
 import attr
 import click
@@ -49,9 +50,12 @@ def parse_header(hive_path, verbose):
 @click.option('-v', '--verbose', is_flag=True, default=False, help='Verbosity')
 @click.option('-d', '--do-not-fetch-values', is_flag=True, default=False, help='Not fetching the values for each subkey '
                                                                               'makes the iteration way faster')
+# TODO: If `-d` was specified, it should be possible to add a start and/or end date to fetch values for them
 def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, partial_hive_path, verbose, do_not_fetch_values):
     _setup_logging(verbose=verbose)
     registry_hive = RegistryHive(hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path)
+
+    start_time = time.monotonic()
 
     if registry_path:
         try:
@@ -87,6 +91,8 @@ def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, par
     else:
         for entry in registry_hive.recurse_subkeys(name_key_entry, as_json=True, fetch_values=not do_not_fetch_values):
             click.secho(json.dumps(attr.asdict(entry), indent=4))
+
+    click.secho(f"Completed in {time.monotonic() - start_time}s")
 
 
 @click.command()
