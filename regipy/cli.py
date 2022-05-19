@@ -50,8 +50,11 @@ def parse_header(hive_path, verbose):
 @click.option('-v', '--verbose', is_flag=True, default=False, help='Verbosity')
 @click.option('-d', '--do-not-fetch-values', is_flag=True, default=False, help='Not fetching the values for each subkey '
                                                                               'makes the iteration way faster')
-# TODO: If `-d` was specified, it should be possible to add a start and/or end date to fetch values for them
-def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, partial_hive_path, verbose, do_not_fetch_values):
+@click.option('-s', '--start-date', type=click.STRING, required=False,
+              help='If "-d" was specified, fetch only values for subkeys since this timestamp in isoformat')
+@click.option('-e', '--end-date', type=click.STRING, required=False,
+              help='If "-d" was specified, fetch only values for subkeys until this timestamp in isoformat')
+def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, partial_hive_path, verbose, do_not_fetch_values, start_date, end_date):
     _setup_logging(verbose=verbose)
     registry_hive = RegistryHive(hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path)
 
@@ -69,6 +72,11 @@ def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, par
     if timeline and not output_path:
         click.secho('You must provide an output path if choosing timeline output!', fg='red')
         return
+
+    # TODO:
+    #  - Verify dates are valid and end > start
+    #  - Get list of subkeys that fit the time constraints
+    #  - Fetch the values for these subkeys
 
     if output_path:
         if timeline:

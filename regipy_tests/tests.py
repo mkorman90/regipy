@@ -153,6 +153,14 @@ def test_recurse_partial_ntuser(ntuser_software_partial):
     assert subkey_count == 6395
 
 
+def test_recurse__ntuser_without_fetching_values(ntuser_hive):
+    registry_hive = RegistryHive(ntuser_hive)
+    for subkey_count, subkey in enumerate(registry_hive.recurse_subkeys(as_json=True, fetch_values=False)):
+        assert subkey.values == []
+        assert subkey.values_count == 0
+    assert subkey_count == 1811
+
+
 def test_recurse_amcache(amcache_hive):
     registry_hive = RegistryHive(amcache_hive)
 
