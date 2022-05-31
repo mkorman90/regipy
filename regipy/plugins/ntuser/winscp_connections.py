@@ -27,7 +27,6 @@ class WinSCPConnectionsPlugin(Plugin):
             values = {underscore(x.name): x.value for x in
                       winscp_connection.iter_values(as_json=self.as_json)} if winscp_connection.values_count else {}
             self.entries.append({
-                'connection_name': winscp_connection.name,
                 'timestamp': convert_wintime(winscp_connection.header.last_modified, as_json=self.as_json),
                 'hive_name': 'HKEY_CURRENT_USER',
                 'key_path': fr'HKEY_CURRENT_USER{subkey_path}\{winscp_connection.name}',
