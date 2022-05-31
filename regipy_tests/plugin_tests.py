@@ -16,7 +16,7 @@ from regipy.plugins.bcd.boot_entry_list import BootEntryListPlugin
 from regipy.plugins.system.wdigest import WDIGESTPlugin
 from regipy.plugins.ntuser.winrar import WinRARPlugin
 from regipy.plugins.ntuser.network_drives import NetworkDrivesPlugin
-from regipy.plugins.ntuser.winscp_connections import WinSCPConnectionsPlugin
+from regipy.plugins.ntuser.winscp_saved_sessions import WinSCPSavedSessionsPlugin
 from regipy.registry import RegistryHive
 
 
@@ -680,9 +680,9 @@ def test_netdrives(ntuser_hive):
             "network_path": "\\\\controller\\public"
         }]
 
-def test_winscp_connections_plugin(ntuser_hive_2):
+def test_winscp_saved_sessions_plugin(ntuser_hive_2):
     registry_hive = RegistryHive(ntuser_hive_2)
-    plugin_instance = WinSCPConnectionsPlugin(registry_hive, as_json=True)
+    plugin_instance = WinSCPSavedSessionsPlugin(registry_hive, as_json=True)
     plugin_instance.run()
 
     assert len(plugin_instance.entries) == 2
