@@ -8,6 +8,7 @@ from .ntuser.tsclient import TSClientPlugin
 from .ntuser.classes_installer import ClassesInstallerPlugin
 from .ntuser.winrar import WinRARPlugin
 from .ntuser.network_drives import NetworkDrivesPlugin
+from .ntuser.winscp_connections import WinSCPConnectionsPlugin
 from .system.bam import BAMPlugin
 from .system.routes import RoutesPlugin
 from .system.services import ServicesPlugin

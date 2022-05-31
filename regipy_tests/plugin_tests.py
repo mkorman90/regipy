@@ -16,6 +16,7 @@ from regipy.plugins.bcd.boot_entry_list import BootEntryListPlugin
 from regipy.plugins.system.wdigest import WDIGESTPlugin
 from regipy.plugins.ntuser.winrar import WinRARPlugin
 from regipy.plugins.ntuser.network_drives import NetworkDrivesPlugin
+from regipy.plugins.ntuser.winscp_connections import WinSCPConnectionsPlugin
 from regipy.registry import RegistryHive
 
 
@@ -678,3 +679,16 @@ def test_netdrives(ntuser_hive):
             "last_write": "2012-04-03T22:08:18.840132+00:00",
             "network_path": "\\\\controller\\public"
         }]
+
+def test_winscp_connections_plugin(ntuser_hive):
+    registry_hive = RegistryHive(ntuser_hive)
+    plugin_instance = WinSCPConnectionsPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert len(plugin_instance.entries) == 67
+
+    assert plugin_instance.entries[0] == {
+        'registry_path': '\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+        'service_name': 'AddressBook',
+        'timestamp': '2009-07-14T04:41:12.758808+00:00'
+    }
