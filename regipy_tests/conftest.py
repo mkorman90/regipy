@@ -160,3 +160,10 @@ def system_devprop(test_data_dir):
     yield temp_path
     os.remove(temp_path)
 
+@pytest.fixture(scope='module')
+def shellbags_ntuser(test_data_dir):
+    temp_path = extract_lzma(os.path.join(test_data_dir, 'NTUSER_BAGMRU.DAT.xz'))
+    yield temp_path
+    os.remove(temp_path)
+
+

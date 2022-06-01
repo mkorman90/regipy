@@ -1,5 +1,5 @@
 import pytest
-
+import datetime
 from regipy.plugins import NTUserPersistencePlugin, UserAssistPlugin, AmCachePlugin, WordWheelQueryPlugin, \
     UACStatusPlugin, LastLogonPlugin, SoftwareClassesInstallerPlugin, InstalledSoftwarePlugin, RASTracingPlugin, \
     PrintDemonPlugin, ServicesPlugin
@@ -16,6 +16,7 @@ from regipy.plugins.bcd.boot_entry_list import BootEntryListPlugin
 from regipy.plugins.system.wdigest import WDIGESTPlugin
 from regipy.plugins.ntuser.winrar import WinRARPlugin
 from regipy.plugins.ntuser.network_drives import NetworkDrivesPlugin
+from regipy.plugins.ntuser.shellbags_ntuser import ShellBagPlugin
 from regipy.registry import RegistryHive
 
 
@@ -678,3 +679,22 @@ def test_netdrives(ntuser_hive):
             "last_write": "2012-04-03T22:08:18.840132+00:00",
             "network_path": "\\\\controller\\public"
         }]
+def test_shellbags(shellbags_ntuser):
+    registry_hive = RegistryHive(shellbags_ntuser)
+    plugin_instance = ShellBagPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries[-1] == {'value': 'rekall',
+             'slot': '0',
+             'reg_path': '\\Software\\Microsoft\\Windows\\Shell\\BagMRU\\2\\0\\0',
+             'node_slot': 11,
+             'shell_type': 'File Entry',
+             'path': 'root\\<UNKNOWN: 0x1f>\\<UNKNOWN: 0x00>\\<UNKNOWN: 0x00>\\<UNKNOWN: 0x00>\\rekall',
+             'creation_time': datetime.datetime(2021, 8, 16, 9, 41, 32),
+             'access_time': datetime.datetime(2021, 8, 16, 9, 43, 22),
+             'modification_time': datetime.datetime(2021, 8, 16, 9, 41, 32),
+             'last_write': '2021-08-16T09:44:39.333110+00:00',
+             'mru_order': '0'}
+
+    assert len(plugin_instance.entries) == 102
+
