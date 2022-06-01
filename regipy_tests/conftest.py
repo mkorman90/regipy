@@ -160,3 +160,8 @@ def system_devprop(test_data_dir):
     yield temp_path
     os.remove(temp_path)
 
+@pytest.fixture(scope='module')
+def ntuser_hive_2(test_data_dir):
+    temp_path = extract_lzma(os.path.join(test_data_dir, 'NTUSER_with_winscp.DAT.xz'))
+    yield temp_path
+    os.remove(temp_path)

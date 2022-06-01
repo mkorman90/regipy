@@ -16,6 +16,7 @@ from regipy.plugins.bcd.boot_entry_list import BootEntryListPlugin
 from regipy.plugins.system.wdigest import WDIGESTPlugin
 from regipy.plugins.ntuser.winrar import WinRARPlugin
 from regipy.plugins.ntuser.network_drives import NetworkDrivesPlugin
+from regipy.plugins.ntuser.winscp_saved_sessions import WinSCPSavedSessionsPlugin
 from regipy.registry import RegistryHive
 
 
@@ -678,3 +679,24 @@ def test_netdrives(ntuser_hive):
             "last_write": "2012-04-03T22:08:18.840132+00:00",
             "network_path": "\\\\controller\\public"
         }]
+
+def test_winscp_saved_sessions_plugin(ntuser_hive_2):
+    registry_hive = RegistryHive(ntuser_hive_2)
+    plugin_instance = WinSCPSavedSessionsPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert len(plugin_instance.entries) == 2
+
+    assert plugin_instance.entries[1] == {
+        'fs_protocol': 7,
+        'ftps': 1,
+        'hive_name': 'HKEY_CURRENT_USER',
+        'host_name': 's3.amazonaws.com',
+        'is_workspace': 1,
+        'key_path': 'HKEY_CURRENT_USER\\Software\\Martin Prikryl\\WinSCP 2\\Sessions\\personalab/0000',
+        'local_directory': 'C:%5CUsers%5Ctony%5CDocuments',
+        'port_number': 443,
+        'remote_directory': '/dev-personalab-velocityapp-data/uploads/Amnon/Lunar_Memdumps',
+        'timestamp': '2022-04-25T09:53:58.125852+00:00',
+        'user_name': 'AKIAYTYA2O7PWLAQQOCU'
+    }
