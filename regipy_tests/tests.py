@@ -221,7 +221,7 @@ def test_system_hive_devprop_structure(system_devprop):
     value = subkey.get_values()[0]
     assert value.name == '(default)'
     assert value.value == 'cmbatt.inf:db04a16c09a7808a:AcAdapter_Inst:6.3.9600.16384:ACPI\\ACPI0003'
-    assert hex(int(value.value_type)) == '0xffff0012'
+    assert value.value_type == 18
 
 
 def test_system_apply_transaction_logs_2(transaction_usrclass, usrclass_tr_log_1, usrclass_tr_log_2):
