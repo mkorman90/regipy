@@ -9,9 +9,8 @@ from regipy.utils import convert_wintime
 logger = logging.getLogger(__name__)
 
 USBSTOR_KEY_PATH = r'Enum\USBSTOR'
-PARAMETER_NAME_PATH = r'Properties\{540b947e-8b40-45bc-a8a2-6a0b894cbda2}'
-PARAMETER_DATES_PATH = r'Properties\{83da6326-97a6-4088-9453-a1923f573b29}'
-DRIVER_GUID_PATH = r'Device Parameters\Partmgr'
+PROPERTIES_NAME_GUID = r'{540b947e-8b40-45bc-a8a2-6a0b894cbda2}'
+PROPERTIES_DATES_GUID = r'{83da6326-97a6-4088-9453-a1923f573b29}'
 
 
 class USBSTORPlugin(Plugin):
@@ -34,18 +33,28 @@ class USBSTORPlugin(Plugin):
                     for serial_subkey in usbstor_drive.iter_subkeys():
                         timestamp = convert_wintime(serial_subkey.header.last_modified, as_json=self.as_json)
                         serial_number = serial_subkey.name
-                        device_guid_key = serial_subkey.get_subkey(DRIVER_GUID_PATH)
+
+                        device_guid_key = serial_subkey.get_subkey('Device Parameters').get_subkey('Partmgr')
                         disk_guid = device_guid_key.get_value('DiskId')
-                        device_name_key = serial_subkey.get_subkey('\\'.join([PARAMETER_NAME_PATH, '0004']))
-                        device_name = device_name_key.get_value().decode('utf8')
-                        first_installed_key = serial_subkey.get_subkey('\\'.join([PARAMETER_DATES_PATH, '0065']))
+
+                        properties_subkey = serial_subkey.get_subkey('Properties')
+                        device_name_key = properties_subkey.get_subkey(PROPERTIES_NAME_GUID).get_subkey('0004')
+                        device_name = device_name_key.get_value().encode('utf8')
+
+                        dates_subkey = properties_subkey.get_subkey(PROPERTIES_DATES_GUID)
+                        first_installed_key = dates_subkey.get_subkey('0065')
+                        import pdb;pdb.set_trace()
                         first_installed_time = convert_wintime(first_installed_key.get_value(), as_json=self.as_json)
-                        last_connected_key = serial_subkey.get_subkey('\\'.join([PARAMETER_DATES_PATH, '0066']))
+
+                        last_connected_key = dates_subkey.get_subkey('0066')
                         last_connected_time = convert_wintime(last_connected_key.get_value(), as_json=self.as_json)
-                        last_removed_key = serial_subkey.get_subkey('\\'.join([PARAMETER_DATES_PATH, '0067']))
+
+                        last_removed_key = dates_subkey.get_subkey('0067')
                         last_removed_time = convert_wintime(last_removed_key.get_value(), as_json=self.as_json)
-                        last_installed_key = serial_subkey.get_subkey('\\'.join([PARAMETER_DATES_PATH, '0064']))
+
+                        last_installed_key = dates_subkey.get_subkey('0064')
                         last_installed_time = convert_wintime(last_installed_key.get_value(), as_json=self.as_json)
+
                         self.entries.append({
                             'last_write': timestamp,
                             'last_connected': last_connected_time,

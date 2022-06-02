@@ -15,6 +15,7 @@ from .system.services import ServicesPlugin
 from .system.computer_name import ComputerNamePlugin
 from .system.shimcache import ShimCachePlugin
 from .system.safeboot_configuration import SafeBootConfigurationPlugin
+from .system.usbstor import USBSTORPlugin
 from .system.wdigest import WDIGESTPlugin
 from .software.tracing import RASTracingPlugin
 from .software.classes_installer import SoftwareClassesInstallerPlugin

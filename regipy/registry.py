@@ -518,7 +518,7 @@ class NKRecord:
                 yield Value(name=value_name, value_type=str(value.value_type), value=actual_value,
                             is_corrupted=is_corrupted)
 
-    def get_value(self, value_name=DEFAULT_VALUE, as_json=False, raise_on_missing=False):
+    def  get_value(self, value_name=DEFAULT_VALUE, as_json=False, raise_on_missing=False):
         """
         Get a value by name. Will raise if raise_on_missing is set,
         if no value name is given, will return the content of the default value
