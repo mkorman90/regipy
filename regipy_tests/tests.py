@@ -208,9 +208,9 @@ def test_system_apply_transaction_logs(transaction_system, system_tr_log_1, syst
     assert recovered_dirty_pages_count == 315
 
     found_differences = compare_hives(transaction_system, restored_hive_path)
-    assert len(found_differences) == 2508
+    assert len(found_differences) == 2511
     assert len([x for x in found_differences if x[0] == 'new_subkey']) == 2458
-    assert len([x for x in found_differences if x[0] == 'new_value']) == 50
+    assert len([x for x in found_differences if x[0] == 'new_value']) == 53
 
 
 def test_system_hive_devprop_structure(system_devprop):
