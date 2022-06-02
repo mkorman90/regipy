@@ -709,11 +709,10 @@ def test_shellbags(shellbags_ntuser):
     registry_hive = RegistryHive(shellbags_ntuser)
     plugin_instance = ShellBagPlugin(registry_hive, as_json=True)
     plugin_instance.run()
-
     assert plugin_instance.entries[-1] == {'value': 'rekall',
              'slot': '0',
              'reg_path': '\\Software\\Microsoft\\Windows\\Shell\\BagMRU\\2\\0\\0',
-             'node_slot': 11,
+             'node_slot': '11',
              'shell_type': 'File Entry',
              'path': 'root\\<UNKNOWN: 0x1f>\\<UNKNOWN: 0x00>\\<UNKNOWN: 0x00>\\<UNKNOWN: 0x00>\\rekall',
              'creation_time': datetime.datetime(2021, 8, 16, 9, 41, 32),

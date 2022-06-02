@@ -92,7 +92,7 @@ class ShellBagPlugin(Plugin):
         mru_order = self._ParseMRU(mru_val)
 
         if key.get_value('NodeSlot'):
-            node_slot = key.get_value('NodeSlot')
+            node_slot = str(key.get_value('NodeSlot'))
         else:
             node_slot = ''
 
