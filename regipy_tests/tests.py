@@ -208,9 +208,9 @@ def test_system_apply_transaction_logs(transaction_system, system_tr_log_1, syst
     assert recovered_dirty_pages_count == 315
 
     found_differences = compare_hives(transaction_system, restored_hive_path)
-    assert len(found_differences) == 2508
+    assert len(found_differences) == 2511
     assert len([x for x in found_differences if x[0] == 'new_subkey']) == 2458
-    assert len([x for x in found_differences if x[0] == 'new_value']) == 50
+    assert len([x for x in found_differences if x[0] == 'new_value']) == 53
 
 
 def test_system_hive_devprop_structure(system_devprop):
@@ -221,7 +221,7 @@ def test_system_hive_devprop_structure(system_devprop):
     value = subkey.get_values()[0]
     assert value.name == '(default)'
     assert value.value == 'cmbatt.inf:db04a16c09a7808a:AcAdapter_Inst:6.3.9600.16384:ACPI\\ACPI0003'
-    assert hex(int(value.value_type)) == '0xffff0012'
+    assert value.value_type == 18
 
 
 def test_system_apply_transaction_logs_2(transaction_usrclass, usrclass_tr_log_1, usrclass_tr_log_2):
@@ -289,3 +289,10 @@ def test_parse_security_info(ntuser_hive):
 
     dacl_sids = [x["sid"] for x in security_key_info['dacl']]
     assert dacl_sids == ['S-1-5-21-2036804247-3058324640-2116585241-1673', 'S-1-5-18', 'S-1-5-32-544', 'S-1-5-12']
+
+
+def test_parse_filetime_value(system_hive_with_filetime):
+    registry_hive = RegistryHive(system_hive_with_filetime)
+    subkey = registry_hive.get_key(r'\ControlSet001\Enum\USBSTOR\Disk&Ven_SanDisk&Prod_Cruzer&Rev_1.20\200608767007B7C08A6A&0\Properties\{83da6326-97a6-4088-9453-a1923f573b29}\0064')
+    val = subkey.get_value('(default)', as_json=True)
+    assert val == '2020-03-17T14:02:38.955490+00:00'
