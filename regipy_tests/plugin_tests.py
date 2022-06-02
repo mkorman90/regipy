@@ -14,6 +14,7 @@ from regipy.plugins.sam.local_sid import LocalSidPlugin
 from regipy.plugins.security.domain_sid import DomainSidPlugin
 from regipy.plugins.bcd.boot_entry_list import BootEntryListPlugin
 from regipy.plugins.system.wdigest import WDIGESTPlugin
+from regipy.plugins.system.usbstor import USBSTORPlugin
 from regipy.plugins.ntuser.winrar import WinRARPlugin
 from regipy.plugins.ntuser.network_drives import NetworkDrivesPlugin
 from regipy.plugins.ntuser.winscp_saved_sessions import WinSCPSavedSessionsPlugin
@@ -699,4 +700,24 @@ def test_winscp_saved_sessions_plugin(ntuser_hive_2):
         'remote_directory': '/dev-personalab-velocityapp-data/uploads/Amnon/Lunar_Memdumps',
         'timestamp': '2022-04-25T09:53:58.125852+00:00',
         'user_name': 'AKIAYTYA2O7PWLAQQOCU'
+    }
+
+
+def test_usbstor(system_hive_with_filetime):
+    registry_hive = RegistryHive(system_hive_with_filetime)
+    plugin_instance = USBSTORPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries[0] == {
+        'device_name': 'SanDisk Cruzer USB Device',
+        'disk_guid': '{fc416b61-6437-11ea-bd0c-a483e7c21469}',
+        'first_installed': '2020-03-17T14:02:38.955490+00:00',
+        'last_connected': '2020-03-17T14:02:38.946628+00:00',
+        'last_installed': '2020-03-17T14:02:38.955490+00:00',
+        'last_removed': '2020-03-17T14:23:45.504690+00:00',
+        'last_write': '2020-03-17T14:02:38.965050+00:00',
+        'manufacturer': 'Ven_SanDisk',
+        'serial_number': '200608767007B7C08A6A&0',
+        'title': 'Prod_Cruzer',
+        'version': 'Rev_1.20'
     }
