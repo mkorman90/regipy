@@ -39,21 +39,20 @@ class USBSTORPlugin(Plugin):
 
                         properties_subkey = serial_subkey.get_subkey('Properties')
                         device_name_key = properties_subkey.get_subkey(PROPERTIES_NAME_GUID).get_subkey('0004')
-                        device_name = device_name_key.get_value().encode('utf8')
+                        device_name = device_name_key.get_value()
 
                         dates_subkey = properties_subkey.get_subkey(PROPERTIES_DATES_GUID)
                         first_installed_key = dates_subkey.get_subkey('0065')
-                        import pdb;pdb.set_trace()
-                        first_installed_time = convert_wintime(first_installed_key.get_value(), as_json=self.as_json)
+                        first_installed_time = first_installed_key.get_value(as_json=self.as_json)
 
                         last_connected_key = dates_subkey.get_subkey('0066')
-                        last_connected_time = convert_wintime(last_connected_key.get_value(), as_json=self.as_json)
+                        last_connected_time = last_connected_key.get_value(as_json=self.as_json)
 
                         last_removed_key = dates_subkey.get_subkey('0067')
-                        last_removed_time = convert_wintime(last_removed_key.get_value(), as_json=self.as_json)
+                        last_removed_time = last_removed_key.get_value(as_json=self.as_json)
 
                         last_installed_key = dates_subkey.get_subkey('0064')
-                        last_installed_time = convert_wintime(last_installed_key.get_value(), as_json=self.as_json)
+                        last_installed_time = last_installed_key.get_value(as_json=self.as_json)
 
                         self.entries.append({
                             'last_write': timestamp,
