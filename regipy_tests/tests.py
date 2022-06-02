@@ -289,3 +289,10 @@ def test_parse_security_info(ntuser_hive):
 
     dacl_sids = [x["sid"] for x in security_key_info['dacl']]
     assert dacl_sids == ['S-1-5-21-2036804247-3058324640-2116585241-1673', 'S-1-5-18', 'S-1-5-32-544', 'S-1-5-12']
+
+
+def test_parse_filetime_value(system_hive_with_filetime):
+    registry_hive = RegistryHive(system_hive_with_filetime)
+    subkey = registry_hive.get_key(r'\ControlSet001\Enum\USBSTOR\Disk&Ven_SanDisk&Prod_Cruzer&Rev_1.20\200608767007B7C08A6A&0\Properties\{83da6326-97a6-4088-9453-a1923f573b29}\0064')
+    val = subkey.get_value('(default)', as_json=True)
+    assert val == '2020-03-17T14:02:38.955490+00:00'
