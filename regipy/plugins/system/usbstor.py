@@ -11,6 +11,11 @@ logger = logging.getLogger(__name__)
 USBSTOR_KEY_PATH = r'Enum\USBSTOR'
 PROPERTIES_NAME_GUID = r'{540b947e-8b40-45bc-a8a2-6a0b894cbda2}'
 PROPERTIES_DATES_GUID = r'{83da6326-97a6-4088-9453-a1923f573b29}'
+DEVICE_NAME_KEY = '0004'
+FIRST_INSTALLED_TIME_KEY = '0065'
+LAST_CONNECTED_TIME_KEY = '0066'
+LAST_REMOVED_TIME_KEY = '0067'
+LAST_INSTALLED_TIME_KEY = '0064'
 
 
 class USBSTORPlugin(Plugin):
@@ -26,33 +31,61 @@ class USBSTORPlugin(Plugin):
                     try:
                         disk, manufacturer, title, version = usbstor_drive.name.split('&')
                     except ValueError:
-                        manufacturer = ""
-                        title = ""
-                        version = ""
+                        manufacturer, title, version = None, None, None
 
                     for serial_subkey in usbstor_drive.iter_subkeys():
                         timestamp = convert_wintime(serial_subkey.header.last_modified, as_json=self.as_json)
                         serial_number = serial_subkey.name
 
-                        device_guid_key = serial_subkey.get_subkey('Device Parameters').get_subkey('Partmgr')
-                        disk_guid = device_guid_key.get_value('DiskId')
+                        try:
+                            device_params_key = serial_subkey.get_subkey('Device Parameters')
+                            device_guid_key = device_params_key.get_subkey('Partmgr')
+                            disk_guid = device_guid_key.get_value('DiskId')
+                        except RegistryKeyNotFoundException:
+                            disk_guid = None
 
-                        properties_subkey = serial_subkey.get_subkey('Properties')
-                        device_name_key = properties_subkey.get_subkey(PROPERTIES_NAME_GUID).get_subkey('0004')
-                        device_name = device_name_key.get_value()
+                        try:
+                            properties_subkey = serial_subkey.get_subkey('Properties')
+                        except RegistryKeyNotFoundException:
+                            device_name, first_installed_time, last_connected_time, last_removed_time, \
+                                last_installed_time = None, None, None, None, None
+                        else:
+                            try:
+                                device_name_guid_key = properties_subkey.get_subkey(PROPERTIES_NAME_GUID)
+                                device_name_key = device_name_guid_key.get_subkey(DEVICE_NAME_KEY)
+                                device_name = device_name_key.get_value()
+                            except RegistryKeyNotFoundException:
+                                device_name = None
 
-                        dates_subkey = properties_subkey.get_subkey(PROPERTIES_DATES_GUID)
-                        first_installed_key = dates_subkey.get_subkey('0065')
-                        first_installed_time = first_installed_key.get_value(as_json=self.as_json)
+                            try:
+                                dates_subkey = properties_subkey.get_subkey(PROPERTIES_DATES_GUID)
+                            except RegistryKeyNotFoundException:
+                                first_installed_time, last_connected_time, last_removed_time, \
+                                    last_installed_time = None, None, None, None
+                            else:
+                                try:
+                                    first_installed_key = dates_subkey.get_subkey(FIRST_INSTALLED_TIME_KEY)
+                                    first_installed_time = first_installed_key.get_value(as_json=self.as_json)
+                                except RegistryKeyNotFoundException:
+                                    first_installed_time = None
 
-                        last_connected_key = dates_subkey.get_subkey('0066')
-                        last_connected_time = last_connected_key.get_value(as_json=self.as_json)
+                                try:
+                                    last_connected_key = dates_subkey.get_subkey(LAST_CONNECTED_TIME_KEY)
+                                    last_connected_time = last_connected_key.get_value(as_json=self.as_json)
+                                except RegistryKeyNotFoundException:
+                                    last_connected_time = None
 
-                        last_removed_key = dates_subkey.get_subkey('0067')
-                        last_removed_time = last_removed_key.get_value(as_json=self.as_json)
+                                try:
+                                    last_removed_key = dates_subkey.get_subkey(LAST_REMOVED_TIME_KEY)
+                                    last_removed_time = last_removed_key.get_value(as_json=self.as_json)
+                                except RegistryKeyNotFoundException:
+                                    last_removed_time = None
 
-                        last_installed_key = dates_subkey.get_subkey('0064')
-                        last_installed_time = last_installed_key.get_value(as_json=self.as_json)
+                                try:
+                                    last_installed_key = dates_subkey.get_subkey(LAST_INSTALLED_TIME_KEY)
+                                    last_installed_time = last_installed_key.get_value(as_json=self.as_json)
+                                except RegistryKeyNotFoundException:
+                                    last_installed_time = None
 
                         self.entries.append({
                             'last_write': timestamp,
