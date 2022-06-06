@@ -13,7 +13,7 @@ NTUSER_SHELLBAG = '\\Software\\Microsoft\\Windows\\Shell\\BagMRU'
 USRCLASS_SHELLBAG = '\\Local Settings\\Software\\Microsoft\\Windows\\Shell\\BagMRU'
 CODEPAGE = 'cp1252'
 
-class ShellBagPlugin(Plugin):
+class ShellBagNtuserPlugin(Plugin):
     NAME = 'shellbag_plugin'
     DESCRIPTION = 'Parse Shellbag items'
     COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
@@ -112,11 +112,11 @@ class ShellBagPlugin(Plugin):
                     if len(item.extension_blocks) > 0:
                         for extension_block in item.extension_blocks:
                             if isinstance(extension_block, pyfwsi.file_entry_extension):
-                                creation_time = extension_block.get_creation_time()
-                                access_time = extension_block.get_access_time()
+                                creation_time = extension_block.get_creation_time().isoformat()
+                                access_time = extension_block.get_access_time().isoformat()
 
                     if hasattr(item,'modification_time'):
-                        modification_time = item.get_modification_time()
+                        modification_time = item.get_modification_time().isoformat()
                     else:
                         modification_time = ''
 
