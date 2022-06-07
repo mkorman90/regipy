@@ -1,7 +1,6 @@
 import logging
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import NTUSER_HIVE_TYPE
-from regipy.registry import RegistryHive
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
 import pyfwsi
@@ -18,7 +17,7 @@ class ShellBagNtuserPlugin(Plugin):
     DESCRIPTION = 'Parse Shellbag items'
     COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
 
-    def _ParseMRU(self,mru_val):
+    def _parse_MRU(self,mru_val):
         mru_order_string = ''
         if isinstance(mru_val,bytes):
             mru_val = mru_val[:-4]
@@ -29,7 +28,7 @@ class ShellBagNtuserPlugin(Plugin):
         else:
             return mru_order_string
 
-    def _GetShellItemType(self,shell_item):
+    def _get_shell_item_type(self,shell_item):
 
         if isinstance(shell_item, pyfwsi.volume):
             item_type = "Volume"
@@ -41,11 +40,11 @@ class ShellBagNtuserPlugin(Plugin):
             item_type = "Network Location"
 
         else:
-            item_type = 'UNKOWN'
+            item_type = 'unknown'
 
         return item_type
 
-    def _ParseShellItemPathSegment(self,shell_item):
+    def _parse_shell_Item_path_segment(self,shell_item):
         """Parses a shell item path segment.
         Args:
           shell_item (pyfwsi.item): shell item.
@@ -75,9 +74,6 @@ class ShellBagNtuserPlugin(Plugin):
             if shell_item.location:
                 path_segment = shell_item.location
 
-        if path_segment is None and shell_item.class_type == 0x00:
-            pass
-
         if path_segment is None:
             path_segment = '<UNKNOWN: 0x{0:02x}>'.format(shell_item.class_type)
 
@@ -89,7 +85,7 @@ class ShellBagNtuserPlugin(Plugin):
         slot = key.name
 
         mru_val = key.get_value('MRUListEx')
-        mru_order = self._ParseMRU(mru_val)
+        mru_order = self._parse_MRU(mru_val)
 
         if key.get_value('NodeSlot'):
             node_slot = str(key.get_value('NodeSlot'))
@@ -102,8 +98,8 @@ class ShellBagNtuserPlugin(Plugin):
                 shell_items = pyfwsi.item_list()
                 shell_items.copy_from_byte_stream(byte_stream, ascii_codepage=CODEPAGE)
                 for item in shell_items.items:
-                    shell_type = self._GetShellItemType(item)
-                    value = self._ParseShellItemPathSegment(item)
+                    shell_type = self._get_shell_item_type(item)
+                    value = self._parse_shell_Item_path_segment(item)
                     path = f'{path}\\{value}'
 
                     creation_time = ''
@@ -118,7 +114,7 @@ class ShellBagNtuserPlugin(Plugin):
                     if hasattr(item,'modification_time'):
                         modification_time = item.get_modification_time().isoformat()
                     else:
-                        modification_time = ''
+                        modification_time = None
 
                     sk_reg_path = f'{reg_path}\\{v.name}'
                     entry = {'value': value,
@@ -153,17 +149,6 @@ class ShellBagNtuserPlugin(Plugin):
         except RegistryKeyNotFoundException as ex:
             logger.error(f'Could not find {self.NAME} plugin data at: {NTUSER_SHELLBAG}: {ex}')
 
-
-
-        """
-        try:
-            shellbag_ntuser_subkey = self.registry_hive.get_key(USRCLASS_SHELLBAG)
-            self.iter_sk(shellbag_ntuser_subkey, USRCLASS_SHELLBAG)
-
-
-        except RegistryKeyNotFoundException as ex:
-            logger.error(f'Could not find {self.NAME} plugin data at: {USRCLASS_SHELLBAG}: {ex}')
-        """
 
 
 

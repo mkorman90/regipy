@@ -1,5 +1,5 @@
 import pytest
-import datetime
+import datetime as dt
 from regipy.plugins import NTUserPersistencePlugin, UserAssistPlugin, AmCachePlugin, WordWheelQueryPlugin, \
     UACStatusPlugin, LastLogonPlugin, SoftwareClassesInstallerPlugin, InstalledSoftwarePlugin, RASTracingPlugin, \
     PrintDemonPlugin, ServicesPlugin
@@ -716,9 +716,9 @@ def test_shellbags(shellbags_ntuser):
              'node_slot': '11',
              'shell_type': 'File Entry',
              'path': 'root\\<UNKNOWN: 0x1f>\\<UNKNOWN: 0x00>\\<UNKNOWN: 0x00>\\<UNKNOWN: 0x00>\\rekall',
-             'creation_time': datetime.datetime(2021, 8, 16, 9, 41, 32).isoformat(),
-             'access_time': datetime.datetime(2021, 8, 16, 9, 43, 22).isoformat(),
-             'modification_time': datetime.datetime(2021, 8, 16, 9, 41, 32).isoformat(),
+             'creation_time': dt.datetime(2021, 8, 16, 9, 41, 32).isoformat(),
+             'access_time': dt.datetime(2021, 8, 16, 9, 43, 22).isoformat(),
+             'modification_time': dt.datetime(2021, 8, 16, 9, 41, 32).isoformat(),
              'last_write': '2021-08-16T09:44:39.333110+00:00',
              'mru_order': '0'}
 
