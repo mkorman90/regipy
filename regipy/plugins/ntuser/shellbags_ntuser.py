@@ -82,7 +82,7 @@ class ShellBagNtuserPlugin(Plugin):
     def iter_sk(self,key, reg_path, path='root'):
 
         last_write = convert_wintime(key.header.last_modified, as_json=True)
-        slot = key.name
+
 
         mru_val = key.get_value('MRUListEx')
         mru_order = self._parse_MRU(mru_val)
@@ -94,6 +94,7 @@ class ShellBagNtuserPlugin(Plugin):
 
         for v in key.iter_values():
             if re.match("\d+", v.name):
+                slot = v.name
                 byte_stream = v.value
                 shell_items = pyfwsi.item_list()
                 shell_items.copy_from_byte_stream(byte_stream, ascii_codepage=CODEPAGE)
