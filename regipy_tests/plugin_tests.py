@@ -681,6 +681,7 @@ def test_netdrives(ntuser_hive):
             "network_path": "\\\\controller\\public"
         }]
 
+
 def test_winscp_saved_sessions_plugin(ntuser_hive_2):
     registry_hive = RegistryHive(ntuser_hive_2)
     plugin_instance = WinSCPSavedSessionsPlugin(registry_hive, as_json=True)
