@@ -5,4 +5,4 @@ inflection==0.5.1
 pytz==2022.1
 tabulate==0.8.9
 pytest==7.0.1
-libfwsi-python==20210419
+libfwsi-python==20220123
