@@ -220,7 +220,7 @@ class RegistryHive:
 
         previous_key_name = []
 
-        subkey = self.root.get_subkey(key_path_parts.pop(0))
+        subkey = self.root.get_subkey(key_path_parts.pop(0), raise_on_missing=False)
 
         if not subkey:
             raise RegistryKeyNotFoundException('Did not find subkey at {}'.format(key_path))
@@ -231,7 +231,7 @@ class RegistryHive:
         for path_part in key_path_parts:
             new_path = '\\'.join(previous_key_name)
             previous_key_name.append(subkey.name)
-            subkey = subkey.get_subkey(path_part)
+            subkey = subkey.get_subkey(path_part, raise_on_missing=False)
 
             if not subkey:
                 raise RegistryKeyNotFoundException('Did not find {} at {}'.format(path_part, new_path))
@@ -307,8 +307,8 @@ class NKRecord:
         self.values_count = self.header.values_count
         self.volatile_subkeys_count = self.header.volatile_subkey_count
 
-    def get_subkey(self, key_name):
-        if not self.subkey_count:
+    def get_subkey(self, key_name, raise_on_missing=True):
+        if not self.subkey_count and raise_on_missing:
             raise NoRegistrySubkeysException('No subkeys for {}'.format(self.header.key_name_string))
 
         for subkey in self.iter_subkeys():
@@ -318,6 +318,9 @@ class NKRecord:
 
             if subkey.name.upper() == key_name.upper():
                 return subkey
+
+        if raise_on_missing:
+            raise NoRegistrySubkeysException('No subkey {} for {}'.format(key_name, self.header.key_name_string))
 
     def iter_subkeys(self):
 

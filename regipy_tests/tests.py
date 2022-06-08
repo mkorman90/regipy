@@ -3,6 +3,8 @@ import os
 from tempfile import mkdtemp
 
 import pytest
+
+from regipy import NoRegistrySubkeysException
 from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.utils import dump_hive_to_json
 
@@ -259,6 +261,19 @@ def test_get_key(software_hive):
     assert registry_hive.root.get_subkey('ODBC').header == registry_hive.get_key('SOFTWARE\\ODBC').header
 
 
+def test_get_subkey_errors(software_hive):
+    registry_hive = RegistryHive(software_hive)
+    # Tests the NoRegistrySubkeysException that suppose to be raised
+    try:
+        registry_hive.get_key('ODBC').get_subkey('xyz')
+        assert False
+    except NoRegistrySubkeysException:
+        assert True
+
+    # Tests value if raised_on_missing is set to False
+    assert registry_hive.get_key('ODBC').get_subkey('xyz', raise_on_missing=False) is None
+
+
 def test_parse_security_info(ntuser_hive):
     registry_hive = RegistryHive(ntuser_hive)
     run_key = registry_hive.get_key(r'\Software\Microsoft\Windows\CurrentVersion\Run')
@@ -296,3 +311,4 @@ def test_parse_filetime_value(system_hive_with_filetime):
     subkey = registry_hive.get_key(r'\ControlSet001\Enum\USBSTOR\Disk&Ven_SanDisk&Prod_Cruzer&Rev_1.20\200608767007B7C08A6A&0\Properties\{83da6326-97a6-4088-9453-a1923f573b29}\0064')
     val = subkey.get_value('(default)', as_json=True)
     assert val == '2020-03-17T14:02:38.955490+00:00'
+
