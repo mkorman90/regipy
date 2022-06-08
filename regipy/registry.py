@@ -18,7 +18,7 @@ from regipy.hive_types import SUPPORTED_HIVE_TYPES
 from regipy.security_utils import convert_sid, get_acls
 from regipy.structs import REGF_HEADER, HBIN_HEADER, CM_KEY_NODE, LF_LH_SK_ELEMENT, VALUE_KEY, INDEX_ROOT, \
     REGF_HEADER_SIZE, INDEX_ROOT_SIGNATURE, LEAF_INDEX_SIGNATURE, FAST_LEAF_SIGNATURE, HASH_LEAF_SIGNATURE, \
-    BIG_DATA_BLOCK, INDEX_LEAF, DEFAULT_VALUE, SECURITY_KEY_v1_1, SECURITY_DESCRIPTOR, SID, ACL, ACE
+    BIG_DATA_BLOCK, INDEX_LEAF, DEFAULT_VALUE, SECURITY_KEY_v1_1, SECURITY_DESCRIPTOR, SID, ACL, ACE, VALUE_TYPE_ENUM
 from regipy.utils import boomerang_stream, convert_wintime, identify_hive_type, MAX_LEN, try_decode_binary
 
 logger = logging.getLogger(__name__)
@@ -460,18 +460,17 @@ class NKRecord:
                 # We currently do not support these, We are going to make the best effort to dump as string.
                 # This int casting will always work because the data_type is construct's EnumIntegerString
                 if int(vk.data_type) > 0xffff0000:
-                    logger.info(f"Value at {hex(actual_vk_offset)} contains DEVPROP structure")
-                    # TODO: Add a test for an existing hive with devprop, verify we handle it
-                    data_type = int(vk.data_type) & 0xffff
-                    actual_value = try_decode_binary(value.value, as_json=as_json)
+                    data_type = VALUE_TYPE_ENUM.parse(Int32ul.build(int(vk.data_type) & 0xffff))
+                    logger.info(f"Value at {hex(actual_vk_offset)} contains DEVPROP structure of type {data_type}")
 
                 # Skip this unknown data type, research pending :)
                 # TODO: Add actual parsing
                 elif int(vk.data_type) == 0x200000:
                     logger.info(f"Skipped unknown data type value at {actual_vk_offset}")
                     continue
+                else:
+                    data_type = str(vk.data_type)
 
-                data_type = str(vk.data_type)
                 if data_type in ['REG_SZ', 'REG_EXPAND', 'REG_EXPAND_SZ']:
                     if vk.data_size >= 0x80000000:
                         # data is contained in the data_offset field
@@ -513,9 +512,11 @@ class NKRecord:
                 # TODO: Add actual parsing
                 elif data_type in ['REG_RESOURCE_REQUIREMENTS_LIST', 'REG_RESOURCE_LIST']:
                     actual_value = binascii.b2a_hex(value.value).decode()[:max_len] if as_json else value.value
+                elif data_type == 'REG_FILETIME':
+                    actual_value = convert_wintime(Int64ul.parse(value.value), as_json=as_json)
                 else:
                     actual_value = try_decode_binary(value.value, as_json=as_json)
-                yield Value(name=value_name, value_type=str(value.value_type), value=actual_value,
+                yield Value(name=value_name, value_type=data_type, value=actual_value,
                             is_corrupted=is_corrupted)
 
     def get_value(self, value_name=DEFAULT_VALUE, as_json=False, raise_on_missing=False):
