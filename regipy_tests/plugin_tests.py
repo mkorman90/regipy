@@ -1,5 +1,5 @@
 import pytest
-
+import datetime as dt
 from regipy.plugins import NTUserPersistencePlugin, UserAssistPlugin, AmCachePlugin, WordWheelQueryPlugin, \
     UACStatusPlugin, LastLogonPlugin, SoftwareClassesInstallerPlugin, InstalledSoftwarePlugin, RASTracingPlugin, \
     PrintDemonPlugin, ServicesPlugin
@@ -17,6 +17,7 @@ from regipy.plugins.system.wdigest import WDIGESTPlugin
 from regipy.plugins.system.usbstor import USBSTORPlugin
 from regipy.plugins.ntuser.winrar import WinRARPlugin
 from regipy.plugins.ntuser.network_drives import NetworkDrivesPlugin
+from regipy.plugins.ntuser.shellbags_ntuser import ShellBagNtuserPlugin
 from regipy.plugins.ntuser.winscp_saved_sessions import WinSCPSavedSessionsPlugin
 from regipy.registry import RegistryHive
 
@@ -681,7 +682,6 @@ def test_netdrives(ntuser_hive):
             "network_path": "\\\\controller\\public"
         }]
 
-
 def test_winscp_saved_sessions_plugin(ntuser_hive_2):
     registry_hive = RegistryHive(ntuser_hive_2)
     plugin_instance = WinSCPSavedSessionsPlugin(registry_hive, as_json=True)
@@ -703,7 +703,6 @@ def test_winscp_saved_sessions_plugin(ntuser_hive_2):
         'user_name': 'AKIAYTYA2O7PWLAQQOCU'
     }
 
-
 def test_usbstor(system_hive_with_filetime):
     registry_hive = RegistryHive(system_hive_with_filetime)
     plugin_instance = USBSTORPlugin(registry_hive, as_json=True)
@@ -722,3 +721,22 @@ def test_usbstor(system_hive_with_filetime):
         'title': 'Prod_Cruzer',
         'version': 'Rev_1.20'
     }
+
+def test_shellbags(shellbags_ntuser):
+    registry_hive = RegistryHive(shellbags_ntuser)
+    plugin_instance = ShellBagNtuserPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+    assert plugin_instance.entries[-1] == {
+             'value': 'rekall',
+             'slot': '0',
+             'reg_path': '\\Software\\Microsoft\\Windows\\Shell\\BagMRU\\2\\0\\0',
+             'node_slot': '11',
+             'shell_type': 'File Entry',
+             'path': 'root\\<UNKNOWN: 0x1f>\\<UNKNOWN: 0x00>\\<UNKNOWN: 0x00>\\<UNKNOWN: 0x00>\\rekall',
+             'creation_time': dt.datetime(2021, 8, 16, 9, 41, 32).isoformat(),
+             'access_time': dt.datetime(2021, 8, 16, 9, 43, 22).isoformat(),
+             'modification_time': dt.datetime(2021, 8, 16, 9, 41, 32).isoformat(),
+             'last_write': '2021-08-16T09:44:39.333110+00:00',
+             'mru_order': '0'}
+
+    assert len(plugin_instance.entries) == 102

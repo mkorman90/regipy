@@ -33,3 +33,4 @@ from .system.host_domain_name import HostDomainNamePlugin
 from .security.domain_sid import DomainSidPlugin
 from .sam.local_sid import LocalSidPlugin
 from .bcd.boot_entry_list import BootEntryListPlugin
+from .ntuser.shellbags_ntuser import ShellBagNtuserPlugin
