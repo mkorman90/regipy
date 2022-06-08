@@ -1,5 +1,5 @@
 import pytest
-
+import datetime as dt
 from regipy.plugins import NTUserPersistencePlugin, UserAssistPlugin, AmCachePlugin, WordWheelQueryPlugin, \
     UACStatusPlugin, LastLogonPlugin, SoftwareClassesInstallerPlugin, InstalledSoftwarePlugin, RASTracingPlugin, \
     PrintDemonPlugin, ServicesPlugin
@@ -14,8 +14,11 @@ from regipy.plugins.sam.local_sid import LocalSidPlugin
 from regipy.plugins.security.domain_sid import DomainSidPlugin
 from regipy.plugins.bcd.boot_entry_list import BootEntryListPlugin
 from regipy.plugins.system.wdigest import WDIGESTPlugin
+from regipy.plugins.system.usbstor import USBSTORPlugin
 from regipy.plugins.ntuser.winrar import WinRARPlugin
 from regipy.plugins.ntuser.network_drives import NetworkDrivesPlugin
+from regipy.plugins.ntuser.shellbags_ntuser import ShellBagNtuserPlugin
+from regipy.plugins.ntuser.winscp_saved_sessions import WinSCPSavedSessionsPlugin
 from regipy.registry import RegistryHive
 
 
@@ -678,3 +681,62 @@ def test_netdrives(ntuser_hive):
             "last_write": "2012-04-03T22:08:18.840132+00:00",
             "network_path": "\\\\controller\\public"
         }]
+
+def test_winscp_saved_sessions_plugin(ntuser_hive_2):
+    registry_hive = RegistryHive(ntuser_hive_2)
+    plugin_instance = WinSCPSavedSessionsPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert len(plugin_instance.entries) == 2
+
+    assert plugin_instance.entries[1] == {
+        'fs_protocol': 7,
+        'ftps': 1,
+        'hive_name': 'HKEY_CURRENT_USER',
+        'host_name': 's3.amazonaws.com',
+        'is_workspace': 1,
+        'key_path': 'HKEY_CURRENT_USER\\Software\\Martin Prikryl\\WinSCP 2\\Sessions\\personalab/0000',
+        'local_directory': 'C:%5CUsers%5Ctony%5CDocuments',
+        'port_number': 443,
+        'remote_directory': '/dev-personalab-velocityapp-data/uploads/Amnon/Lunar_Memdumps',
+        'timestamp': '2022-04-25T09:53:58.125852+00:00',
+        'user_name': 'AKIAYTYA2O7PWLAQQOCU'
+    }
+
+def test_usbstor(system_hive_with_filetime):
+    registry_hive = RegistryHive(system_hive_with_filetime)
+    plugin_instance = USBSTORPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries[0] == {
+        'device_name': 'SanDisk Cruzer USB Device',
+        'disk_guid': '{fc416b61-6437-11ea-bd0c-a483e7c21469}',
+        'first_installed': '2020-03-17T14:02:38.955490+00:00',
+        'last_connected': '2020-03-17T14:02:38.946628+00:00',
+        'last_installed': '2020-03-17T14:02:38.955490+00:00',
+        'last_removed': '2020-03-17T14:23:45.504690+00:00',
+        'last_write': '2020-03-17T14:02:38.965050+00:00',
+        'manufacturer': 'Ven_SanDisk',
+        'serial_number': '200608767007B7C08A6A&0',
+        'title': 'Prod_Cruzer',
+        'version': 'Rev_1.20'
+    }
+
+def test_shellbags(shellbags_ntuser):
+    registry_hive = RegistryHive(shellbags_ntuser)
+    plugin_instance = ShellBagNtuserPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+    assert plugin_instance.entries[-1] == {
+             'value': 'rekall',
+             'slot': '0',
+             'reg_path': '\\Software\\Microsoft\\Windows\\Shell\\BagMRU\\2\\0\\0',
+             'node_slot': '11',
+             'shell_type': 'File Entry',
+             'path': 'root\\<UNKNOWN: 0x1f>\\<UNKNOWN: 0x00>\\<UNKNOWN: 0x00>\\<UNKNOWN: 0x00>\\rekall',
+             'creation_time': dt.datetime(2021, 8, 16, 9, 41, 32).isoformat(),
+             'access_time': dt.datetime(2021, 8, 16, 9, 43, 22).isoformat(),
+             'modification_time': dt.datetime(2021, 8, 16, 9, 41, 32).isoformat(),
+             'last_write': '2021-08-16T09:44:39.333110+00:00',
+             'mru_order': '0'}
+
+    assert len(plugin_instance.entries) == 102
