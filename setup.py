@@ -34,7 +34,7 @@ def main():
           setup_requires=setup_requirements,
           install_requires=['construct>=2.10',
                             'attrs>=21',
-                            'inflection~===0.5.1',
+                            'inflection~=0.5.1',
                             'pytz==2022.1',
                             'libfwsi-python==20220123'],
           tests_require=test_requirements,
