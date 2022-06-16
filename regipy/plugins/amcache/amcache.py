@@ -2,6 +2,7 @@ import logging
 
 from inflection import underscore
 
+from regipy import NKRecord
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import AMCACHE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
@@ -43,7 +44,10 @@ class AmCachePlugin(Plugin):
     DESCRIPTION = 'Parse Amcache'
     COMPATIBLE_HIVE = AMCACHE_HIVE_TYPE
 
-    def parse_amcache_file_entry(self, subkey):
+    AMCACHE_SUBKEY_PATH = r'\Root\File'
+    AMCACHE_INVENTORY_SUBKEY_PATH = r'\Root\InventoryApplicationFile'
+
+    def parse_amcache_file_entry(self, subkey: NKRecord):
         entry = {underscore(x.name): x.value for x in subkey.iter_values(as_json=self.as_json)}
 
         # Sometimes the value names might be numeric instead. Translate them:
@@ -90,7 +94,7 @@ class AmCachePlugin(Plugin):
         logger.info('Started AmCache Plugin...')
 
         try:
-            amcache_file_subkey = self.registry_hive.get_key(r'\Root\File')
+            amcache_file_subkey = self.registry_hive.get_key(self.AMCACHE_SUBKEY_PATH)
         except RegistryKeyNotFoundException:
             logger.info(r'Could not find \Root\File subkey')
             amcache_file_subkey = None
@@ -102,13 +106,13 @@ class AmCachePlugin(Plugin):
             amcache_inventory_file_subkey = None
 
         if amcache_file_subkey:
-            for subkey in amcache_file_subkey.iter_subkeys():
+            for subkey in amcache_file_subkey.iter_subkeys(subkey_path=self.AMCACHE_SUBKEY_PATH):
                 if subkey.header.subkey_count > 0:
-                    for file_subkey in subkey.iter_subkeys():
+                    for file_subkey in subkey.iter_subkeys(subkey_path=f"{self.AMCACHE_SUBKEY_PATH}\\{subkey.name}"):
                         self.parse_amcache_file_entry(file_subkey)
                 if subkey.header.values_count > 0:
                     self.entries.append(subkey)
 
         if amcache_inventory_file_subkey:
-            for file_subkey in amcache_inventory_file_subkey.iter_subkeys():
+            for file_subkey in amcache_inventory_file_subkey.iter_subkeys(subkey_path=self.AMCACHE_INVENTORY_SUBKEY_PATH):
                 self.parse_amcache_file_entry(file_subkey)

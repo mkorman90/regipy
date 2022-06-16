@@ -289,7 +289,7 @@ class NKRecord:
     The NKRecord represents a Name Key entry
     """
 
-    def __init__(self, cell, stream):
+    def __init__(self, cell, stream, subkey_path=None):
         stream.seek(cell.offset)
         self.header = CM_KEY_NODE.parse_stream(stream)
         self._stream = stream
@@ -307,6 +307,12 @@ class NKRecord:
         self.values_count = self.header.values_count
         self.volatile_subkeys_count = self.header.volatile_subkey_count
 
+        self.offset = cell.offset
+        self.subkey_path = f'{subkey_path}\\{self.name}' if subkey_path else None
+
+    def __repr__(self):
+        return f"NKRecord(cell={self.offset},subkey_path={self.subkey_path or self.name})"
+
     def get_subkey(self, key_name, raise_on_missing=True):
         if not self.subkey_count and raise_on_missing:
             raise NoRegistrySubkeysException('No subkeys for {}'.format(self.header.key_name_string))
@@ -322,7 +328,7 @@ class NKRecord:
         if raise_on_missing:
             raise NoRegistrySubkeysException('No subkey {} for {}'.format(key_name, self.header.key_name_string))
 
-    def iter_subkeys(self):
+    def iter_subkeys(self, subkey_path=None):
 
         if not self.header.subkey_count:
             return None
@@ -339,7 +345,7 @@ class NKRecord:
 
         # LF,  LH and RI contain subkeys
         if signature in [HASH_LEAF_SIGNATURE, FAST_LEAF_SIGNATURE, LEAF_INDEX_SIGNATURE]:
-            yield from self._parse_subkeys(self._stream, signature=signature)
+            yield from self._parse_subkeys(self._stream, signature=signature, subkey_path=subkey_path)
         # RI contains pointers to arrays of subkeys
         elif signature == INDEX_ROOT_SIGNATURE:
             ri_record = RIRecord(self._stream)
@@ -348,10 +354,10 @@ class NKRecord:
                     # We skip 6 because of the signature as well as the cell header
                     element_target_offset = REGF_HEADER_SIZE + 4 + element.subkey_list_offset
                     self._stream.seek(element_target_offset)
-                    yield from self._parse_subkeys(self._stream)
+                    yield from self._parse_subkeys(self._stream, subkey_path=subkey_path)
 
     @staticmethod
-    def _parse_subkeys(stream, signature=None):
+    def _parse_subkeys(stream, signature=None, subkey_path=None):
         """
         Parse an LI , LF or LH Record
         :param stream: A stream at the header of the LH or LF entry, skipping the signature
@@ -375,7 +381,7 @@ class NKRecord:
 
             # We read to this offset and skip 2 bytes, because that is the cell size we just read
             nk_cell = Cell(cell_type='nk', offset=stream.tell() + 2, size=cell_size)
-            nk_record = NKRecord(cell=nk_cell, stream=stream)
+            nk_record = NKRecord(cell=nk_cell, stream=stream, subkey_path=subkey_path)
             yield nk_record
 
     @staticmethod
