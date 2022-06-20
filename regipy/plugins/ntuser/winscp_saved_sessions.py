@@ -24,7 +24,7 @@ class WinSCPSavedSessionsPlugin(Plugin):
             return
 
         for winscp_saved_session in sessions_sk.iter_subkeys():
-            values = {underscore(x.name): x.value for x in
+            values = {x.name: x.value for x in
                       winscp_saved_session.iter_values(as_json=self.as_json)} if winscp_saved_session.values_count else {}
             self.entries.append({
                 'timestamp': convert_wintime(winscp_saved_session.header.last_modified, as_json=self.as_json),
