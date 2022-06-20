@@ -23,11 +23,11 @@ class WinRARPlugin(Plugin):
             open_subkey = self.registry_hive.get_key(WINRAR_ARCHIVE_OPEN_HIST)
 
             timestamp = convert_wintime(open_subkey.header.last_modified, as_json=self.as_json)
-            opened_archives = [value.value for value in open_subkey.iter_values(as_json=self.as_json)]
-            for archive in opened_archives:
+            for value in open_subkey.iter_values(as_json=self.as_json):
                 self.entries.append({
                     'last_write': timestamp,
-                    'file_path': archive,
+                    'file_path': value.value,
+                    'value_name': value.name,
                     'operation': 'archive_opened'
                 })
 
@@ -38,11 +38,11 @@ class WinRARPlugin(Plugin):
             create_subkey = self.registry_hive.get_key(WINRAR_ARCHIVE_CREATION_HIST)
 
             timestamp = convert_wintime(create_subkey.header.last_modified, as_json=self.as_json)
-            created_archives = [value.value for value in create_subkey.iter_values(as_json=self.as_json)]
-            for archive in created_archives:
+            for value in create_subkey.iter_values(as_json=self.as_json):
                 self.entries.append({
                     'last_write': timestamp,
-                    'file_name': archive,
+                    'file_name': value.value,
+                    'value_name': value.name,
                     'operation': 'archive_created'
                 })
 
@@ -53,11 +53,11 @@ class WinRARPlugin(Plugin):
             extract_subkey = self.registry_hive.get_key(WINRAR_ARCHIVE_EXTRACT_HIST)
 
             timestamp = convert_wintime(extract_subkey.header.last_modified, as_json=self.as_json)
-            extracted_archives = [value.value for value in extract_subkey.iter_values(as_json=self.as_json)]
-            for location in extracted_archives:
+            for value in extract_subkey.iter_values(as_json=self.as_json):
                 self.entries.append({
                     'last_write': timestamp,
-                    'file_path': location,
+                    'file_path': value.value,
+                    'value_name': value.name,
                     'operation': 'archive_extracted'
                 })
 
