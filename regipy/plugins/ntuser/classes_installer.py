@@ -6,7 +6,7 @@ from regipy.plugins.plugin import Plugin
 
 logger = logging.getLogger(__name__)
 
-CLASSES_INSTALLER_PATH = r'\Software\Classes\Installer\Product'
+CLASSES_INSTALLER_PATH = r'\Software\Classes\Installer\Products'
 
 
 class ClassesInstallerPlugin(Plugin):
