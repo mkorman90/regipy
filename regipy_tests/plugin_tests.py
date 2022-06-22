@@ -639,32 +639,38 @@ def test_winrar(ntuser_hive):
         {
             "last_write": "2021-11-18T13:59:04.888952+00:00",
             "file_path": "C:\\Users\\tony\\Downloads\\RegistryFinder64.zip",
-            "operation": "archive_opened"
+            "operation": "archive_opened",
+            "value_name": "0"
         },
         {
             "last_write": "2021-11-18T13:59:04.888952+00:00",
             "file_path": "C:\\temp\\token.zip",
-            "operation": "archive_opened"
+            "operation": "archive_opened",
+            "value_name": "1"
         },
         {
             "last_write": "2021-11-18T13:59:50.023788+00:00",
             "file_name": "Tools.zip",
-            "operation": "archive_created"
+            "operation": "archive_created",
+            "value_name": "0"
         },
         {
             "last_write": "2021-11-18T13:59:50.023788+00:00",
             "file_name": "data.zip",
-            "operation": "archive_created"
+            "operation": "archive_created",
+            "value_name": "1"
         },
         {
             "last_write": "2021-11-18T14:00:44.180468+00:00",
             "file_path": "C:\\Users\\tony\\Downloads",
-            "operation": "archive_extracted"
+            "operation": "archive_extracted",
+            "value_name": "0"
         },
         {
             "last_write": "2021-11-18T14:00:44.180468+00:00",
             "file_path": "C:\\temp",
-            "operation": "archive_extracted"
+            "operation": "archive_extracted",
+            "value_name": "1"
         }
     ]
 
@@ -690,17 +696,17 @@ def test_winscp_saved_sessions_plugin(ntuser_hive_2):
     assert len(plugin_instance.entries) == 2
 
     assert plugin_instance.entries[1] == {
-        'fs_protocol': 7,
-        'ftps': 1,
+        'FSProtocol': 7,
+        'Ftps': 1,
         'hive_name': 'HKEY_CURRENT_USER',
-        'host_name': 's3.amazonaws.com',
-        'is_workspace': 1,
+        'HostName': 's3.amazonaws.com',
+        'IsWorkspace': 1,
         'key_path': 'HKEY_CURRENT_USER\\Software\\Martin Prikryl\\WinSCP 2\\Sessions\\personalab/0000',
-        'local_directory': 'C:%5CUsers%5Ctony%5CDocuments',
-        'port_number': 443,
-        'remote_directory': '/dev-personalab-velocityapp-data/uploads/Amnon/Lunar_Memdumps',
+        'LocalDirectory': 'C:%5CUsers%5Ctony%5CDocuments',
+        'PortNumber': 443,
+        'RemoteDirectory': '/dev-personalab-velocityapp-data/uploads/Amnon/Lunar_Memdumps',
         'timestamp': '2022-04-25T09:53:58.125852+00:00',
-        'user_name': 'AKIAYTYA2O7PWLAQQOCU'
+        'UserName': 'AKIAYTYA2O7PWLAQQOCU'
     }
 
 def test_usbstor(system_hive_with_filetime):
