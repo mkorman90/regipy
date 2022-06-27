@@ -12,7 +12,7 @@ REGF_HEADER = Struct(
     'root_key_offset' / Int32ul,
     'hive_bins_data_size' / Int32ul,
     'clustering_factor' / Int32ul,
-    'file_name' / CString('utf-16-le'),
+    'file_name' / PaddedString(64,'utf-16-le'),
     'padding' * Bytes(396),
     'checksum' / Int32ul
 

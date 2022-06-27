@@ -31,7 +31,7 @@ def parse_header(hive_path, verbose):
     if registry_hive.header.primary_sequence_num != registry_hive.header.secondary_sequence_num:
         click.secho('Hive is not clean! You should apply transaction logs', fg='red')
 
-    calculated_checksum = calculate_xor32_checksum(registry_hive._stream.read(4096))
+    calculated_checksum = calculate_xor32_checksum(registry_hive._stream.read(508))
     if registry_hive.header.checksum != calculated_checksum:
         click.secho('Hive is not clean! Header checksum does not match', fg='red')
 
