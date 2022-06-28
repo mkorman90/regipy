@@ -37,6 +37,7 @@ class USBSTORPlugin(Plugin):
                     for serial_subkey in usbstor_drive.iter_subkeys():
                         timestamp = convert_wintime(serial_subkey.header.last_modified, as_json=self.as_json)
                         serial_number = serial_subkey.name
+                        key_path = rf'{subkey_path}\{usbstor_drive.name}\{serial_number}'
 
                         try:
                             device_guid_key = self.registry_hive.get_key(
@@ -84,6 +85,7 @@ class USBSTORPlugin(Plugin):
 
                         self.entries.append({
                             'last_write': timestamp,
+                            'key_path': key_path,
                             'last_connected': last_connected_time,
                             'last_removed': last_removed_time,
                             'first_installed': first_installed_time,
