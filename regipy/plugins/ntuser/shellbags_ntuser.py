@@ -150,7 +150,7 @@ class ShellBagNtuserPlugin(Plugin):
                     self.entries.append(entry)
 
                     sk = self.registry_hive.get_key(sk_reg_path)
-                    self.iter_sk(sk, sk_reg_path, base_path)
+                    self.iter_sk(sk, sk_reg_path,  f'{base_path}\\{key.name}')
 
     def run(self):
         try:
