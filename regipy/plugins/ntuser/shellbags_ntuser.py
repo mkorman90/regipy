@@ -114,17 +114,23 @@ class ShellBagNtuserPlugin(Plugin):
                         for extension_block in item.extension_blocks:
                             if isinstance(extension_block, pyfwsi.file_entry_extension):
                                 try:
-                                    creation_time = extension_block.get_creation_time().isoformat()
+                                    creation_time = extension_block.get_creation_time()
+                                    if self.as_json:
+                                        creation_time = creation_time.isoformat()
                                 except OSError:
                                     logger.exception(f'Malformed creation time for {path}')
                                 try:
-                                    access_time = extension_block.get_access_time().isoformat()
+                                    access_time = extension_block.get_access_time()
+                                    if self.as_json:
+                                        access_time = access_time.isoformat()
                                 except OSError:
                                     logger.exception(f'Malformed access time for {path}')
 
                     try:
                         if hasattr(item, 'modification_time'):
-                            modification_time = item.get_modification_time().isoformat()
+                            modification_time = item.get_modification_time()
+                            if self.as_json:
+                                modification_time = modification_time.isoformat()
                     except OSError:
                         logger.exception(f'Malformed modification time for {path}')
 
