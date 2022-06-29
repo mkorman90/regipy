@@ -522,7 +522,7 @@ class NKRecord:
                 yield Value(name=value_name, value_type=data_type, value=actual_value,
                             is_corrupted=is_corrupted)
 
-    def get_value(self, value_name=DEFAULT_VALUE, as_json=False, raise_on_missing=False):
+    def get_value(self, value_name=DEFAULT_VALUE, as_json=False, raise_on_missing=False, case_sensitive=True):
         """
         Get a value by name. Will raise if raise_on_missing is set,
         if no value name is given, will return the content of the default value
@@ -531,8 +531,10 @@ class NKRecord:
         :param raise_on_missing: Will raise exception if value is missing, else will return None
         :return:
         """
+        value_name = value_name if case_sensitive else value_name.lower()
         for value in self.iter_values(as_json=as_json):
-            if value.name == value_name:
+            v = value.name if case_sensitive else value.name.lower()
+            if v == value_name:
                 return value.value
 
         if raise_on_missing:

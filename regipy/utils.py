@@ -16,7 +16,7 @@ import pytz
 from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundException, RegipyGeneralException, \
     UnidentifiedHiveException
 from regipy.hive_types import NTUSER_HIVE_TYPE, SYSTEM_HIVE_TYPE, AMCACHE_HIVE_TYPE, SOFTWARE_HIVE_TYPE, \
-    SAM_HIVE_TYPE, SECURITY_HIVE_TYPE, BCD_HIVE_TYPE
+    SAM_HIVE_TYPE, SECURITY_HIVE_TYPE, BCD_HIVE_TYPE, USRCLASS_HIVE_TYPE
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +140,8 @@ def identify_hive_type(name: str) -> str:
         return SECURITY_HIVE_TYPE
     elif hive_name.endswith(r'\boot\bcd'):
         return BCD_HIVE_TYPE
+    elif hive_name == r'\microsoft\windows\usrclass.dat':
+        return USRCLASS_HIVE_TYPE
     elif 'amcache' in hive_name.lower():
         return AMCACHE_HIVE_TYPE
     else:
