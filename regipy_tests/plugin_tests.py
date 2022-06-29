@@ -739,7 +739,7 @@ def test_shellbags(shellbags_ntuser):
              'reg_path': '\\Software\\Microsoft\\Windows\\Shell\\BagMRU\\2\\0\\0',
              'node_slot': '11',
              'shell_type': 'File Entry',
-             'path': 'root\\<UNKNOWN: 0x1f>\\<UNKNOWN: 0x00>\\<UNKNOWN: 0x00>\\<UNKNOWN: 0x00>\\rekall',
+             'path': 'root\\rekall',
              'creation_time': dt.datetime(2021, 8, 16, 9, 41, 32).isoformat(),
              'access_time': dt.datetime(2021, 8, 16, 9, 43, 22).isoformat(),
              'modification_time': dt.datetime(2021, 8, 16, 9, 41, 32).isoformat(),

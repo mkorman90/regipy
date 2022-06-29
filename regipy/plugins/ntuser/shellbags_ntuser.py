@@ -83,7 +83,7 @@ class ShellBagNtuserPlugin(Plugin):
 
         return path_segment
 
-    def iter_sk(self, key, reg_path, path='root'):
+    def iter_sk(self, key, reg_path, base_path='root'):
 
         last_write = convert_wintime(key.header.last_modified, as_json=True)
 
@@ -104,21 +104,29 @@ class ShellBagNtuserPlugin(Plugin):
                 for item in shell_items.items:
                     shell_type = self._get_shell_item_type(item)
                     value = self._parse_shell_item_path_segment(item)
-                    path = f'{path}\\{value}'
+                    path = f'{base_path}\\{value}'
 
                     creation_time = None
                     access_time = None
+                    modification_time = None
 
                     if len(item.extension_blocks) > 0:
                         for extension_block in item.extension_blocks:
                             if isinstance(extension_block, pyfwsi.file_entry_extension):
-                                creation_time = extension_block.get_creation_time().isoformat()
-                                access_time = extension_block.get_access_time().isoformat()
+                                try:
+                                    creation_time = extension_block.get_creation_time().isoformat()
+                                except OSError:
+                                    logger.exception(f'Malformed creation time for {path}')
+                                try:
+                                    access_time = extension_block.get_access_time().isoformat()
+                                except OSError:
+                                    logger.exception(f'Malformed access time for {path}')
 
-                    if hasattr(item, 'modification_time'):
-                        modification_time = item.get_modification_time().isoformat()
-                    else:
-                        modification_time = None
+                    try:
+                        if hasattr(item, 'modification_time'):
+                            modification_time = item.get_modification_time().isoformat()
+                    except OSError:
+                        logger.exception(f'Malformed modification time for {path}')
 
                     sk_reg_path = f'{reg_path}\\{v.name}'
                     entry = {'value': value,
@@ -136,7 +144,7 @@ class ShellBagNtuserPlugin(Plugin):
                     self.entries.append(entry)
 
                     sk = self.registry_hive.get_key(sk_reg_path)
-                    self.iter_sk(sk, sk_reg_path, path)
+                    self.iter_sk(sk, sk_reg_path, base_path)
 
     def run(self):
         try:
