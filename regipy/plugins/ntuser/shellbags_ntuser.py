@@ -37,7 +37,7 @@ class ShellBagNtuserPlugin(Plugin):
             item_type = "Volume"
 
         elif isinstance(shell_item, pyfwsi.file_entry):
-            item_type = "File Entry"
+            item_type = "Directory"
 
         elif isinstance(shell_item, pyfwsi.network_location):
             item_type = "Network Location"
@@ -83,12 +83,13 @@ class ShellBagNtuserPlugin(Plugin):
 
         return path_segment
 
-    def iter_sk(self, key, reg_path, base_path='root'):
+    def iter_sk(self, key, reg_path, base_path='', path=''):
 
         last_write = convert_wintime(key.header.last_modified, as_json=True)
 
         mru_val = key.get_value('MRUListEx')
         mru_order = self._parse_mru(mru_val)
+        base_path = path
 
         if key.get_value('NodeSlot'):
             node_slot = str(key.get_value('NodeSlot'))
@@ -104,7 +105,12 @@ class ShellBagNtuserPlugin(Plugin):
                 for item in shell_items.items:
                     shell_type = self._get_shell_item_type(item)
                     value = self._parse_shell_item_path_segment(item)
-                    path = f'{base_path}\\{value}'
+                    if shell_type != 'unknown':
+                        if not path:
+                            path = value
+                            base_path += f'\\{value}' if base_path else value
+                        else:
+                            path += f'\\{value}'
 
                     creation_time = None
                     access_time = None
@@ -134,10 +140,12 @@ class ShellBagNtuserPlugin(Plugin):
                     except OSError:
                         logger.exception(f'Malformed modification time for {path}')
 
-                    sk_reg_path = f'{reg_path}\\{v.name}'
+                    value_name = v.name
+                    mru_order_location = mru_order.split('-').index(value_name)
                     entry = {'value': value,
                              'slot': slot,
-                             'reg_path': sk_reg_path,
+                             'reg_path': reg_path,
+                             'value_name': value_name,
                              'node_slot': node_slot,
                              'shell_type': shell_type,
                              'path': path,
@@ -145,12 +153,15 @@ class ShellBagNtuserPlugin(Plugin):
                              'access_time': access_time,
                              'modification_time': modification_time,
                              'last_write': last_write,
-                             'mru_order': mru_order}
+                             'mru_order': mru_order,
+                             'mru_order_location': mru_order_location,
+                             }
 
                     self.entries.append(entry)
-
+                    sk_reg_path = f'{reg_path}\\{value_name}'
                     sk = self.registry_hive.get_key(sk_reg_path)
-                    self.iter_sk(sk, sk_reg_path,  f'{base_path}\\{key.name}')
+                    self.iter_sk(sk, sk_reg_path, base_path, path)
+                    path = base_path
 
     def run(self):
         try:
