@@ -737,14 +737,16 @@ def test_shellbags(shellbags_ntuser):
     assert plugin_instance.entries[-1] == {
              'value': 'rekall',
              'slot': '0',
-             'reg_path': '\\Software\\Microsoft\\Windows\\Shell\\BagMRU\\2\\0\\0',
+             'reg_path': '\\Software\\Microsoft\\Windows\\Shell\\BagMRU\\2\\0',
+             'value_name': '0',
              'node_slot': '11',
-             'shell_type': 'File Entry',
-             'path': 'root\\BagMRU\\2\\rekall',
+             'shell_type': 'Directory',
+             'path': 'rekall',
              'creation_time': dt.datetime(2021, 8, 16, 9, 41, 32).isoformat(),
              'access_time': dt.datetime(2021, 8, 16, 9, 43, 22).isoformat(),
              'modification_time': dt.datetime(2021, 8, 16, 9, 41, 32).isoformat(),
              'last_write': '2021-08-16T09:44:39.333110+00:00',
-             'mru_order': '0'}
+             'mru_order': '0',
+             'mru_order_location': 0}
 
     assert len(plugin_instance.entries) == 102
