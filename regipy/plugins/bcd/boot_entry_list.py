@@ -36,11 +36,11 @@ def _get_element_by_type(obj_key: NKRecord, datatype: int) -> Union[str, bytes, 
     """
 
     # The BCD object attributes are stored as "elements" instead of normal values
-    elements_key = obj_key.get_subkey("Elements")
+    elements_key = obj_key.get_subkey("Elements", raise_on_missing=False)
     if elements_key.subkey_count == 0:
         return None
 
-    elem_key = elements_key.get_subkey("%08X" % datatype)
+    elem_key = elements_key.get_subkey("%08X" % datatype, raise_on_missing=False)
     if elem_key is None:
         return None
 

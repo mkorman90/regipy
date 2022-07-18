@@ -33,9 +33,10 @@ def main():
           license="MIT",
           setup_requires=setup_requirements,
           install_requires=['construct>=2.10',
-                            'attrs>=20',
-                            'inflection',
-                            'pytz'],
+                            'attrs>=21',
+                            'inflection~=0.5.1',
+                            'pytz',
+                            'libfwsi-python==20220123'],
           tests_require=test_requirements,
           extras_require={
               'test': test_requirements,
