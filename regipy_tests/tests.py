@@ -161,7 +161,7 @@ def test_recurse_ntuser_without_fetching_values(ntuser_hive):
     for subkey_count, subkey in enumerate(registry_hive.recurse_subkeys(as_json=True, fetch_values=False)):
         assert subkey.values == []
         assert subkey.values_count >= 0
-    assert subkey_count == 18111
+    assert subkey_count == 1811
 
 
 def test_recurse_amcache(amcache_hive):
