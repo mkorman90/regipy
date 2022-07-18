@@ -8,9 +8,11 @@ import time
 from datetime import datetime as dt
 from typing import Generator, Iterator 
 
+
 import attr
 import click
 import pytz 
+import tabulate
 
 from regipy.plugins.plugin import PLUGINS
 from regipy.recovery import apply_transaction_logs
