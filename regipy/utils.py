@@ -21,7 +21,7 @@ from regipy.hive_types import NTUSER_HIVE_TYPE, SYSTEM_HIVE_TYPE, AMCACHE_HIVE_T
 logger = logging.getLogger(__name__)
 
 # Max size of string to return when as_json=True
-MAX_LEN = 128
+MAX_LEN = 256
 
 
 def calculate_sha1(file_path):
@@ -94,12 +94,13 @@ def convert_wintime(wintime: int, as_json=False) -> Union[dt.datetime, str]:
     return date.isoformat() if as_json else date
 
 
-def get_subkey_values_from_list(registry_hive, entries_list, as_json=False):
+def get_subkey_values_from_list(registry_hive, entries_list, as_json=False, trim_values=True):
     """
     Return a list of registry subkeys given a list of paths
     :param registry_hive: A RegistryHive object
     :param entries_list: A list of paths as strings
-    :param as_json: Whether to return the subkey as json
+    :param as_json: whether to return the subkey as json
+    :param trim_values: Wether to trim values to MAX_LEN
     :return: A dict with each subkey and its values
     """
     result = {}
@@ -114,9 +115,9 @@ def get_subkey_values_from_list(registry_hive, entries_list, as_json=False):
         values = []
         if subkey.values_count:
             if as_json:
-                values = [attr.asdict(x) for x in subkey.iter_values(as_json=as_json)]
+                values = [attr.asdict(x) for x in subkey.iter_values(as_json=as_json, trim_values=trim_values)]
             else:
-                values = list(subkey.iter_values(as_json=as_json))
+                values = list(subkey.iter_values(as_json=as_json, trim_values=trim_values))
 
         if subkey.values_count:
             result[path] = {
@@ -148,7 +149,7 @@ def identify_hive_type(name: str) -> str:
         raise UnidentifiedHiveException(f'Could not identify hive: {name}')
 
 
-def try_decode_binary(data, as_json=False, max_len=MAX_LEN):
+def try_decode_binary(data, as_json=False, max_len=MAX_LEN, trim_values=True):
     try:
         value = data.decode('utf-16-le').rstrip('\x00')
     except UnicodeDecodeError:
@@ -157,8 +158,7 @@ def try_decode_binary(data, as_json=False, max_len=MAX_LEN):
         except:
             value = binascii.b2a_hex(data).decode() if as_json else data
 
-    # If we the data should be exported as json, trim the value length
-    if as_json:
+    if trim_values:
         value = value[:max_len]
 
     return value

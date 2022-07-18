@@ -32,5 +32,4 @@ class NTUserPersistencePlugin(Plugin):
     COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
 
     def run(self):
-        # TODO: Allow an higher MAX_LEN, or maybe do not limit the value size for this plugin and other persistence plugins
-        self.entries = get_subkey_values_from_list(self.registry_hive, PERSISTENCE_ENTRIES, as_json=self.as_json)
+        self.entries = get_subkey_values_from_list(self.registry_hive, PERSISTENCE_ENTRIES, as_json=self.as_json, trim_values=False)

@@ -415,11 +415,12 @@ class NKRecord:
         buffer.seek(0)
         return buffer.read()
 
-    def iter_values(self, as_json=False, max_len=MAX_LEN):
+    def iter_values(self, as_json=False, max_len=MAX_LEN, trim_values=True):
         """
         Get the values of a subkey. Will raise if no values exist
         :param as_json: Whether to normalize the data as JSON or not
         :param max_len: Max length of value to return
+        :param trim_values: whether to trim values to MAX_LEN
         :return: List of values for the subkey
         """
         if not self.values_count:
@@ -483,9 +484,9 @@ class NKRecord:
                         actual_value = vk.data_offset
                     elif vk.data_size > 0x3fd8 and value.value[:2] == b'db':
                         data = self._parse_indirect_block(substream, value)
-                        actual_value = try_decode_binary(data, as_json=as_json)
+                        actual_value = try_decode_binary(data, as_json=as_json, trim_values=trim_values)
                     else:
-                        actual_value = try_decode_binary(value.value, as_json=as_json)
+                        actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 elif data_type in ['REG_BINARY', 'REG_NONE']:
                     if vk.data_size >= 0x80000000:
                         # data is contained in the data_offset field
@@ -494,15 +495,15 @@ class NKRecord:
                         try:
                             actual_value = self._parse_indirect_block(substream, value)
 
-                            actual_value = try_decode_binary(actual_value, as_json=True) if as_json else actual_value
+                            actual_value = try_decode_binary(actual_value, as_json=True, trim_values=trim_values) if as_json else actual_value
                         except ConstError:
                             logger.error(f'Bad value at {actual_vk_offset}')
                             continue
                     else:
                         # Return the actual data
-                        actual_value = binascii.b2a_hex(value.value).decode()[:max_len] if as_json else value.value
+                        actual_value = binascii.b2a_hex(value.value).decode()[:max_len] if trim_values else value.value
                 elif data_type == 'REG_SZ':
-                    actual_value = try_decode_binary(value.value, as_json=as_json)
+                    actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 elif data_type == 'REG_DWORD':
                     # If the data size is bigger than 0x80000000, data is actually stored in the VK data offset.
                     actual_value = vk.data_offset if vk.data_size >= 0x80000000 else Int32ul.parse(value.value)
@@ -516,11 +517,11 @@ class NKRecord:
                 # We currently dumps this as hex string or raw
                 # TODO: Add actual parsing
                 elif data_type in ['REG_RESOURCE_REQUIREMENTS_LIST', 'REG_RESOURCE_LIST']:
-                    actual_value = binascii.b2a_hex(value.value).decode()[:max_len] if as_json else value.value
+                    actual_value = binascii.b2a_hex(value.value).decode()[:max_len] if trim_values else value.value
                 elif data_type == 'REG_FILETIME':
                     actual_value = convert_wintime(Int64ul.parse(value.value), as_json=as_json)
                 else:
-                    actual_value = try_decode_binary(value.value, as_json=as_json)
+                    actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 yield Value(name=value_name, value_type=data_type, value=actual_value,
                             is_corrupted=is_corrupted)
 
