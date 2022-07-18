@@ -123,7 +123,7 @@ class RegistryHive:
         if partial_hive_path:
             self.partial_hive_path = partial_hive_path
 
-    def recurse_subkeys(self, nk_record=None, path_root=None, as_json=False, is_init=True):
+    def recurse_subkeys(self, nk_record=None, path_root=None, as_json=False, is_init=True, fetch_values=True):
         """
         Recurse over a subkey, and yield all of its subkeys and values
         :param nk_record: an instance of NKRecord from which to start iterating, if None, will start from Root
@@ -131,6 +131,7 @@ class RegistryHive:
                           from ControlSet001 and not SYSTEM, there is no way to know that.
                           This string will be added as prefix to all paths.
         :param as_json: Whether to normalize the data as JSON or not
+        :param fetch_values: If False, subkey values will not be returned, but the iteration will be faster
         """
         # If None, will start iterating from Root NK entry
         if not nk_record:
@@ -152,23 +153,24 @@ class RegistryHive:
                     yield from self.recurse_subkeys(nk_record=subkey,
                                                     path_root=subkey_path,
                                                     as_json=as_json,
-                                                    is_init=False)
+                                                    is_init=False,
+                                                    fetch_values=fetch_values)
 
                 values = []
-                if subkey.values_count:
-                    try:
-                        if as_json:
-                            values = [attr.asdict(x) for x in subkey.iter_values(as_json=as_json)]
-                        else:
-                            values = list(subkey.iter_values(as_json=as_json))
-                    except RegistryParsingException as ex:
-                        logger.exception(f'Failed to parse hive value at path: {path_root}')
-                        values = []
+                if fetch_values:
+                    if subkey.values_count:
+                        try:
+                            if as_json:
+                                values = [attr.asdict(x) for x in subkey.iter_values(as_json=as_json)]
+                            else:
+                                values = list(subkey.iter_values(as_json=as_json))
+                        except RegistryParsingException as ex:
+                            logger.exception(f'Failed to parse hive value at path: {path_root}')
 
                 ts = convert_wintime(subkey.header.last_modified)
                 yield Subkey(subkey_name=subkey.name, path=subkey_path,
                              timestamp=ts.isoformat() if as_json else ts, values=values,
-                             values_count=len(values),
+                             values_count=subkey.values_count,
                              actual_path=f'{self.partial_hive_path}{subkey_path}' if self.partial_hive_path else None)
 
         if is_init:
@@ -413,11 +415,12 @@ class NKRecord:
         buffer.seek(0)
         return buffer.read()
 
-    def iter_values(self, as_json=False, max_len=MAX_LEN):
+    def iter_values(self, as_json=False, max_len=MAX_LEN, trim_values=True):
         """
         Get the values of a subkey. Will raise if no values exist
         :param as_json: Whether to normalize the data as JSON or not
         :param max_len: Max length of value to return
+        :param trim_values: whether to trim values to MAX_LEN
         :return: List of values for the subkey
         """
         if not self.values_count:
@@ -481,9 +484,9 @@ class NKRecord:
                         actual_value = vk.data_offset
                     elif vk.data_size > 0x3fd8 and value.value[:2] == b'db':
                         data = self._parse_indirect_block(substream, value)
-                        actual_value = try_decode_binary(data, as_json=as_json)
+                        actual_value = try_decode_binary(data, as_json=as_json, trim_values=trim_values)
                     else:
-                        actual_value = try_decode_binary(value.value, as_json=as_json)
+                        actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 elif data_type in ['REG_BINARY', 'REG_NONE']:
                     if vk.data_size >= 0x80000000:
                         # data is contained in the data_offset field
@@ -492,15 +495,15 @@ class NKRecord:
                         try:
                             actual_value = self._parse_indirect_block(substream, value)
 
-                            actual_value = try_decode_binary(actual_value, as_json=True) if as_json else actual_value
+                            actual_value = try_decode_binary(actual_value, as_json=True, trim_values=trim_values) if as_json else actual_value
                         except ConstError:
                             logger.error(f'Bad value at {actual_vk_offset}')
                             continue
                     else:
                         # Return the actual data
-                        actual_value = binascii.b2a_hex(value.value).decode()[:max_len] if as_json else value.value
+                        actual_value = binascii.b2a_hex(value.value).decode()[:max_len] if trim_values else value.value
                 elif data_type == 'REG_SZ':
-                    actual_value = try_decode_binary(value.value, as_json=as_json)
+                    actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 elif data_type == 'REG_DWORD':
                     # If the data size is bigger than 0x80000000, data is actually stored in the VK data offset.
                     actual_value = vk.data_offset if vk.data_size >= 0x80000000 else Int32ul.parse(value.value)
@@ -514,11 +517,11 @@ class NKRecord:
                 # We currently dumps this as hex string or raw
                 # TODO: Add actual parsing
                 elif data_type in ['REG_RESOURCE_REQUIREMENTS_LIST', 'REG_RESOURCE_LIST']:
-                    actual_value = binascii.b2a_hex(value.value).decode()[:max_len] if as_json else value.value
+                    actual_value = binascii.b2a_hex(value.value).decode()[:max_len] if trim_values else value.value
                 elif data_type == 'REG_FILETIME':
                     actual_value = convert_wintime(Int64ul.parse(value.value), as_json=as_json)
                 else:
-                    actual_value = try_decode_binary(value.value, as_json=as_json)
+                    actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 yield Value(name=value_name, value_type=data_type, value=actual_value,
                             is_corrupted=is_corrupted)
 
@@ -532,7 +535,7 @@ class NKRecord:
         :return:
         """
         value_name = value_name if case_sensitive else value_name.lower()
-        for value in self.iter_values(as_json=as_json):
+        for value in self.iter_values(as_json=as_json, trim_values=False):
             v = value.name if case_sensitive else value.name.lower()
             if v == value_name:
                 return value.value

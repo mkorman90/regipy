@@ -1,20 +1,26 @@
+import binascii
+from build.lib.regipy.registry import Subkey
 import csv
 import json
 import logging
 import os
+import time
+from typing import Generator, Iterator 
+
 
 import attr
 import click
-from click import progressbar
-from tabulate import tabulate
+import pytz 
+import tabulate
 
 from regipy.plugins.plugin import PLUGINS
 from regipy.recovery import apply_transaction_logs
 from regipy.regdiff import compare_hives
-from regipy.plugins.utils import run_relevant_plugins, dump_hive_to_json
-from regipy.registry import RegistryHive
+from regipy.plugins.utils import run_relevant_plugins
+from regipy.registry import NKRecord, RegistryHive
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.utils import calculate_xor32_checksum, _setup_logging
+from regipy.cli_utils import get_filtered_subkeys, _normalize_subkey_fields
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +42,8 @@ def parse_header(hive_path, verbose):
         click.secho('Hive is not clean! Header checksum does not match', fg='red')
 
 
+
+
 @click.command()
 @click.argument('hive_path', type=click.Path(exists=True, dir_okay=False, resolve_path=True), required=True)
 @click.option('-o', 'output_path', type=click.Path(exists=False, dir_okay=False, resolve_path=True), required=False)
@@ -47,9 +55,17 @@ def parse_header(hive_path, verbose):
               help='The path from which the partial hive actually starts, for example: -t ntuser -r "/Software" '
                    'would mean this is actually a HKCU hive, starting from HKCU/Software')
 @click.option('-v', '--verbose', is_flag=True, default=False, help='Verbosity')
-def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, partial_hive_path, verbose):
+@click.option('-d', '--do-not-fetch-values', is_flag=True, default=False, help='Not fetching the values for each subkey '
+                                                                              'makes the iteration way faster. Values count will still be returned')
+@click.option('-s', '--start-date', type=click.STRING, required=False,
+              help='If "-s" was specified, fetch only values for subkeys starting this timestamp in isoformat')
+@click.option('-e', '--end-date', type=click.STRING, required=False,
+              help='If "-e" was specified, fetch only values for subkeys until this timestamp in isoformat')
+def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, partial_hive_path, verbose, do_not_fetch_values, start_date, end_date):
     _setup_logging(verbose=verbose)
     registry_hive = RegistryHive(hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path)
+
+    start_time = time.monotonic()
 
     if registry_path:
         try:
@@ -65,26 +81,29 @@ def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, par
         return
 
     if output_path:
-        if timeline:
-            with open(output_path, 'w') as csvfile:
-                csvwriter = csv.DictWriter(csvfile, delimiter=',',
+        with open(output_path, 'w') as output_file:
+            if timeline:
+                csvwriter = csv.DictWriter(output_file, delimiter=',',
                                            quotechar='"', quoting=csv.QUOTE_MINIMAL,
-                                           fieldnames=['timestamp', 'subkey_name', 'values_count'])
+                                           fieldnames=['timestamp', 'subkey_name', 'values_count', 'values'])
                 csvwriter.writeheader()
-                with progressbar(registry_hive.recurse_subkeys(name_key_entry, as_json=True)) as reg_subkeys:
-                    for entry in reg_subkeys:
-                        entry_dict = entry.__dict__
-                        path = entry.path
-                        csvwriter.writerow({
-                            'subkey_name': r'{}\{}'.format(entry.path, path),
-                            'timestamp': entry_dict['timestamp'],
-                            'values_count': entry_dict['values_count']
-                        })
-        else:
-            dump_hive_to_json(registry_hive, output_path, name_key_entry, verbose)
+
+            for subkey_count, entry in enumerate(get_filtered_subkeys(registry_hive, name_key_entry, fetch_values=not do_not_fetch_values, start_date=start_date, end_date=end_date)):
+                if timeline:
+                    csvwriter.writerow({
+                        'subkey_name': entry.path,
+                        'timestamp': entry.timestamp,
+                        'values_count': entry.values_count,
+                        'values': entry.values
+                    })
+                else:
+                    output_file.write(json.dumps(attr.asdict(entry,), separators=(',', ':',), default=_normalize_subkey_fields))
+                    output_file.write('\n')
     else:
-        for entry in registry_hive.recurse_subkeys(name_key_entry, as_json=True):
+        for subkey_count, entry in enumerate(registry_hive.recurse_subkeys(name_key_entry, as_json=True, fetch_values=not do_not_fetch_values)):
             click.secho(json.dumps(attr.asdict(entry), indent=4))
+
+    click.secho(f"Completed in {time.monotonic() - start_time}s ({subkey_count} subkeys enumerated)")
 
 
 @click.command()

@@ -32,4 +32,4 @@ class NTUserPersistencePlugin(Plugin):
     COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
 
     def run(self):
-        self.entries = get_subkey_values_from_list(self.registry_hive, PERSISTENCE_ENTRIES, as_json=self.as_json)
+        self.entries = get_subkey_values_from_list(self.registry_hive, PERSISTENCE_ENTRIES, as_json=self.as_json, trim_values=False)

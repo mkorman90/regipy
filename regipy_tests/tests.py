@@ -11,6 +11,7 @@ from regipy.plugins.utils import dump_hive_to_json
 from regipy.recovery import apply_transaction_logs
 from regipy.regdiff import compare_hives
 from regipy.registry import RegistryHive, NKRecord
+from regipy.cli_utils import get_filtered_subkeys
 
 
 def test_parse_header(ntuser_hive):
@@ -153,6 +154,14 @@ def test_recurse_partial_ntuser(ntuser_software_partial):
     for subkey_count, subkey in enumerate(registry_hive.recurse_subkeys(as_json=True)):
         assert subkey.actual_path.startswith(registry_hive.partial_hive_path)
     assert subkey_count == 6395
+
+
+def test_recurse_ntuser_without_fetching_values(ntuser_hive):
+    registry_hive = RegistryHive(ntuser_hive)
+    for subkey_count, subkey in enumerate(registry_hive.recurse_subkeys(as_json=True, fetch_values=False)):
+        assert subkey.values == []
+        assert subkey.values_count >= 0
+    assert subkey_count == 1811
 
 
 def test_recurse_amcache(amcache_hive):
@@ -312,3 +321,38 @@ def test_parse_filetime_value(system_hive_with_filetime):
     val = subkey.get_value('(default)', as_json=True)
     assert val == '2020-03-17T14:02:38.955490+00:00'
 
+
+def test_ntuser_filtered_timestamps_do_not_fetch_values(ntuser_hive):
+    registry_hive = RegistryHive(ntuser_hive)
+    for subkey_count, entry in enumerate(get_filtered_subkeys(
+        registry_hive,
+        registry_hive.root,
+        fetch_values=False,
+        start_date="2012-04-03T00:00:00.000000", 
+        end_date="2012-04-03T23:59:59.999999")):
+
+        assert entry.values == []
+    assert subkey_count == 1489
+
+def test_ntuser_filtered_timestamps_fetch_values(ntuser_hive):
+    registry_hive = RegistryHive(ntuser_hive)
+    for subkey_count, entry in enumerate(get_filtered_subkeys(
+        registry_hive,
+        registry_hive.root,
+        fetch_values=True,
+        start_date="2012-04-03T00:00:00.000000", 
+        end_date="2012-04-03T23:59:59.999999")):
+
+        # values_count is parsed from the subkey header, so this test if effective.
+        if entry.values_count > 0:
+            assert len(entry.values) == entry.values_count
+    assert subkey_count == 1489
+
+def test_ntuser_filtered_timestamps_no_filter(ntuser_hive):
+    registry_hive = RegistryHive(ntuser_hive)
+    for subkey_count, entry in enumerate(get_filtered_subkeys(
+        registry_hive,
+        registry_hive.root,
+        fetch_values=False)):
+        assert entry.values == []
+    assert subkey_count == 1811
