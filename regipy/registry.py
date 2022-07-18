@@ -535,7 +535,7 @@ class NKRecord:
         :return:
         """
         value_name = value_name if case_sensitive else value_name.lower()
-        for value in self.iter_values(as_json=as_json):
+        for value in self.iter_values(as_json=as_json, trim_values=False):
             v = value.name if case_sensitive else value.name.lower()
             if v == value_name:
                 return value.value

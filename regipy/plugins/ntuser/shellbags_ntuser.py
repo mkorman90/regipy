@@ -96,7 +96,7 @@ class ShellBagNtuserPlugin(Plugin):
         else:
             node_slot = ''
 
-        for v in key.iter_values():
+        for v in key.iter_values(trim_values=False):
             if re.match("\d+", v.name):
                 slot = v.name
                 byte_stream = v.value

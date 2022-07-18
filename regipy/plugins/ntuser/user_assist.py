@@ -77,7 +77,7 @@ class UserAssistPlugin(Plugin):
                     logger.debug('Skipping {}'.format(guid))
                     continue
 
-                for value in count_subkey.iter_values():
+                for value in count_subkey.iter_values(trim_values=False):
                     name = codecs.decode(value.name, encoding='rot-13')
 
                     if name in WHITELISTED_NAMES:
