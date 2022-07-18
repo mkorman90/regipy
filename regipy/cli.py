@@ -3,16 +3,17 @@ import json
 import logging
 import os
 import time
+from datetime import datetime as dt 
 
 import attr
 import click
 from click import progressbar
-from tabulate import tabulate
+import pytz 
 
 from regipy.plugins.plugin import PLUGINS
 from regipy.recovery import apply_transaction_logs
 from regipy.regdiff import compare_hives
-from regipy.plugins.utils import run_relevant_plugins, dump_hive_to_json
+from regipy.plugins.utils import run_relevant_plugins
 from regipy.registry import RegistryHive
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.utils import calculate_xor32_checksum, _setup_logging
@@ -49,11 +50,11 @@ def parse_header(hive_path, verbose):
                    'would mean this is actually a HKCU hive, starting from HKCU/Software')
 @click.option('-v', '--verbose', is_flag=True, default=False, help='Verbosity')
 @click.option('-d', '--do-not-fetch-values', is_flag=True, default=False, help='Not fetching the values for each subkey '
-                                                                              'makes the iteration way faster')
+                                                                              'makes the iteration way faster. Values count will still be returned')
 @click.option('-s', '--start-date', type=click.STRING, required=False,
-              help='If "-d" was specified, fetch only values for subkeys since this timestamp in isoformat')
+              help='If "-s" was specified, fetch only values for subkeys starting this timestamp in isoformat')
 @click.option('-e', '--end-date', type=click.STRING, required=False,
-              help='If "-d" was specified, fetch only values for subkeys until this timestamp in isoformat')
+              help='If "-e" was specified, fetch only values for subkeys until this timestamp in isoformat')
 def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, partial_hive_path, verbose, do_not_fetch_values, start_date, end_date):
     _setup_logging(verbose=verbose)
     registry_hive = RegistryHive(hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path)
@@ -75,32 +76,52 @@ def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, par
 
     # TODO:
     #  - Verify dates are valid and end > start
-    #  - Get list of subkeys that fit the time constraints
+    #  - Get list of subkeys that fit the time constrains
     #  - Fetch the values for these subkeys
 
+    if start_date:
+        start_date = pytz.utc.localize(dt.fromisoformat(start_date))
+    
+    if end_date:
+        end_date = pytz.utc.localize(dt.fromisoformat(end_date))
+
     if output_path:
-        if timeline:
-            with open(output_path, 'w') as csvfile:
-                csvwriter = csv.DictWriter(csvfile, delimiter=',',
+        skipped_subkeys_count = 0
+        with open(output_path, 'w') as output_file:
+            if timeline:
+                csvwriter = csv.DictWriter(output_file, delimiter=',',
                                            quotechar='"', quoting=csv.QUOTE_MINIMAL,
                                            fieldnames=['timestamp', 'subkey_name', 'values_count'])
                 csvwriter.writeheader()
-                with progressbar(registry_hive.recurse_subkeys(name_key_entry, as_json=True, fetch_values=not do_not_fetch_values)) as reg_subkeys:
-                    for entry in reg_subkeys:
-                        entry_dict = entry.__dict__
-                        path = entry.path
+            
+            with progressbar(registry_hive.recurse_subkeys(name_key_entry, as_json=True, fetch_values=not do_not_fetch_values)) as reg_subkeys:
+                for subkey_count, entry in enumerate(reg_subkeys):
+                    if start_date:
+                        if dt.fromisoformat(entry.timestamp) < start_date:
+                            skipped_subkeys_count += 1
+                            logger.debug(f"Skipping entry {entry} which has a timestamp prior to start_date")
+                            continue
+
+                    if end_date:
+                        if dt.fromisoformat(entry.timestamp) > end_date:
+                            skipped_subkeys_count += 1
+                            logger.debug(f"Skipping entry {entry} which has a timestamp after the end_date")
+                            continue
+
+                    if timeline:
                         csvwriter.writerow({
-                            'subkey_name': r'{}\{}'.format(entry.path, path),
-                            'timestamp': entry_dict['timestamp'],
-                            'values_count': entry_dict['values_count']
+                            'subkey_name': entry.path,
+                            'timestamp': entry.timestamp,
+                            'values_count': entry.values_count
                         })
-        else:
-            dump_hive_to_json(registry_hive, output_path, name_key_entry, verbose, fetch_values=not do_not_fetch_values)
+                    else:
+                        output_file.write(json.dumps(attr.asdict(entry), separators=(',', ':',)))
+                        output_file.write('\n')
     else:
-        for entry in registry_hive.recurse_subkeys(name_key_entry, as_json=True, fetch_values=not do_not_fetch_values):
+        for subkey_count, entry in enumerate(registry_hive.recurse_subkeys(name_key_entry, as_json=True, fetch_values=not do_not_fetch_values)):
             click.secho(json.dumps(attr.asdict(entry), indent=4))
 
-    click.secho(f"Completed in {time.monotonic() - start_time}s")
+    click.secho(f"Completed in {time.monotonic() - start_time}s ({subkey_count} subkeys enumerated, {skipped_subkeys_count} skipped because of timestamp filters)")
 
 
 @click.command()

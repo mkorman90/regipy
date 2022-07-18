@@ -20,9 +20,10 @@ def dump_hive_to_json(registry_hive, output_path, name_key_entry: NKRecord, verb
     :return: The result, as dict
     """
     with open(output_path, mode='w') as writer:
-        for entry in registry_hive.recurse_subkeys(name_key_entry, as_json=True, fetch_values=fetch_values):
+        for subkey_count, entry in enumerate(registry_hive.recurse_subkeys(name_key_entry, as_json=True, fetch_values=fetch_values)):
             writer.write(json.dumps(attr.asdict(entry), separators=(',', ':',)))
             writer.write('\n')
+        return subkey_count
 
 
 def run_relevant_plugins(registry_hive, as_json=False, plugins=None):

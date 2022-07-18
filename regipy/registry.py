@@ -170,7 +170,7 @@ class RegistryHive:
                 ts = convert_wintime(subkey.header.last_modified)
                 yield Subkey(subkey_name=subkey.name, path=subkey_path,
                              timestamp=ts.isoformat() if as_json else ts, values=values,
-                             values_count=len(values),
+                             values_count=subkey.values_count,
                              actual_path=f'{self.partial_hive_path}{subkey_path}' if self.partial_hive_path else None)
 
         if is_init:
