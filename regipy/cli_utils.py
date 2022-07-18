@@ -1,6 +1,6 @@
 import binascii
 import logging
-from datetime import datetime as dt
+import datetime as dt
 
 import pytz
 from click import progressbar
@@ -22,10 +22,10 @@ def get_filtered_subkeys(registry_hive: RegistryHive, name_key_entry: NKRecord, 
     """
     skipped_entries_count = 0
     if start_date:
-        start_date = pytz.utc.localize(dt.fromisoformat(start_date))
+        start_date = pytz.utc.localize(dt.datetime.fromisoformat(start_date))
     
     if end_date:
-        end_date = pytz.utc.localize(dt.fromisoformat(end_date))
+        end_date = pytz.utc.localize(dt.datetime.fromisoformat(end_date))
 
 
     with progressbar(registry_hive.recurse_subkeys(name_key_entry, fetch_values=False)) as reg_subkeys:
