@@ -51,6 +51,6 @@ def get_filtered_subkeys(registry_hive: RegistryHive, name_key_entry: NKRecord, 
 def _normalize_subkey_fields(field) -> str:
     if isinstance(field, bytes):
         return binascii.b2a_hex(field[:MAX_LEN])
-    elif isinstance(field, dt):
+    elif isinstance(field, dt.datetime):
         return field.isoformat()
     return field

@@ -1,5 +1,4 @@
 import binascii
-from build.lib.regipy.registry import Subkey
 import csv
 import json
 import logging
