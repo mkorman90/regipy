@@ -10,7 +10,7 @@ from typing import Generator, Iterator
 import attr
 import click
 import pytz 
-import tabulate
+from tabulate import tabulate
 
 from regipy.plugins.plugin import PLUGINS
 from regipy.recovery import apply_transaction_logs
@@ -41,8 +41,6 @@ def parse_header(hive_path, verbose):
         click.secho('Hive is not clean! Header checksum does not match', fg='red')
 
 
-
-
 @click.command()
 @click.argument('hive_path', type=click.Path(exists=True, dir_okay=False, resolve_path=True), required=True)
 @click.option('-o', 'output_path', type=click.Path(exists=False, dir_okay=False, resolve_path=True), required=False)
@@ -60,7 +58,7 @@ def parse_header(hive_path, verbose):
               help='If "-s" was specified, fetch only values for subkeys starting this timestamp in isoformat')
 @click.option('-e', '--end-date', type=click.STRING, required=False,
               help='If "-e" was specified, fetch only values for subkeys until this timestamp in isoformat')
-def hive_to_json(hive_path, output_path, registry_path, timeline, hive_type, partial_hive_path, verbose, do_not_fetch_values, start_date, end_date):
+def registry_dump(hive_path, output_path, registry_path, timeline, hive_type, partial_hive_path, verbose, do_not_fetch_values, start_date, end_date):
     _setup_logging(verbose=verbose)
     registry_hive = RegistryHive(hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path)
 
