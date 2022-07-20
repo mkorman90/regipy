@@ -61,7 +61,7 @@ def main():
           entry_points={
               'console_scripts': [
                   'registry-parse-header = regipy.cli:parse_header',
-                  'registry-dump = regipy.cli:hive_to_json',
+                  'registry-dump = regipy.cli:registry_dump',
                   'registry-plugins-run = regipy.cli:run_plugins',
                   'registry-plugins-list = regipy.cli:list_plugins',
                   'registry-diff = regipy.cli:reg_diff',
