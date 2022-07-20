@@ -2,7 +2,7 @@
 
 [![CircleCI](https://circleci.com/gh/mkorman90/regipy.svg?style=shield)](https://circleci.com/gh/mkorman90/regipy)
 
-Regipy is a python library for parsing offline registry hives. regipy has a lot of capabilities:
+Regipy is a python library for parsing offline registry hives (Hive files with REGF header). regipy has a lot of capabilities:
 * Use as a library:
     * Recurse over the registry hive, from root or a given path and get all subkeys and values
     * Read specific subkeys and values
