@@ -125,7 +125,6 @@ class ShellBagNtuserPlugin(Plugin):
                 shell_items = pyfwsi.item_list()
                 shell_items.copy_from_byte_stream(byte_stream, ascii_codepage=CODEPAGE)
                 for item in shell_items.items:
-                    import ipdb; ipdb.set_trace()
                     shell_type = self._get_shell_item_type(item)
                     value = self._parse_shell_item_path_segment(item)
                     if shell_type != 'unknown':
