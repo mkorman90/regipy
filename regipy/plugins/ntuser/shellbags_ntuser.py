@@ -31,6 +31,13 @@ class ShellBagNtuserPlugin(Plugin):
 
     @staticmethod
     def _get_shell_item_type(shell_item):
+        try:
+            import pyfwsi
+        except ModuleNotFoundError as ex:
+            logger.exception(f"Plugin `{self.NAME}` has missing modules, install regipy using"
+                             f" `pip install regipy[full]` in order to install plugin dependencies. "
+                             f"This might take some time... ")
+            raise ex
 
         if isinstance(shell_item, pyfwsi.volume):
             item_type = "Volume"
@@ -83,6 +90,14 @@ class ShellBagNtuserPlugin(Plugin):
         return path_segment
 
     def iter_sk(self, key, reg_path, base_path='', path=''):
+        try:
+            import pyfwsi
+        except ModuleNotFoundError as ex:
+            logger.exception(f"Plugin `{self.NAME}` has missing modules, install regipy using"
+                             f" `pip install regipy[full]` in order to install plugin dependencies. "
+                             f"This might take some time... ")
+            raise ex
+
         last_write = convert_wintime(key.header.last_modified, as_json=True)
 
         mru_val = key.get_value('MRUListEx')
