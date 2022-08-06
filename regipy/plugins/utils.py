@@ -47,7 +47,5 @@ def run_relevant_plugins(registry_hive, as_json=False, plugins=None):
                 plugin.run()
                 plugin_results[plugin.NAME] = plugin.entries
             except ModuleNotFoundError:
-                logger.exception(f"Plugin {plugin.NAME} has missing modules, install regipy using"
-                                 f" `pip install regipy[full]` in order to install plugin dependencies. "
-                                 f"This might take some time... ")
+                logger.error(f"Plugin {plugin.NAME} has missing dependencies")
     return plugin_results

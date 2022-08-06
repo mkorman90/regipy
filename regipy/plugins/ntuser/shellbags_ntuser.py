@@ -83,7 +83,6 @@ class ShellBagNtuserPlugin(Plugin):
         return path_segment
 
     def iter_sk(self, key, reg_path, base_path='', path=''):
-
         last_write = convert_wintime(key.header.last_modified, as_json=True)
 
         mru_val = key.get_value('MRUListEx')
@@ -102,6 +101,7 @@ class ShellBagNtuserPlugin(Plugin):
                 shell_items = pyfwsi.item_list()
                 shell_items.copy_from_byte_stream(byte_stream, ascii_codepage=CODEPAGE)
                 for item in shell_items.items:
+                    import ipdb; ipdb.set_trace()
                     shell_type = self._get_shell_item_type(item)
                     value = self._parse_shell_item_path_segment(item)
                     if shell_type != 'unknown':
@@ -163,7 +163,14 @@ class ShellBagNtuserPlugin(Plugin):
                     path = base_path
 
     def run(self):
-        import pyfwsi
+
+        try:
+            import pyfwsi
+        except ModuleNotFoundError as ex:
+            logger.exception(f"Plugin `{self.NAME}` has missing modules, install regipy using"
+                             f" `pip install regipy[full]` in order to install plugin dependencies. "
+                             f"This might take some time... ")
+            raise ex
 
         try:
             shellbag_ntuser_subkey = self.registry_hive.get_key(NTUSER_SHELLBAG)
