@@ -61,6 +61,15 @@ class ShellBagNtuserPlugin(Plugin):
         Returns:
           str: shell item path segment.
         """
+
+        try:
+            import pyfwsi
+        except ModuleNotFoundError as ex:
+            logger.exception(f"Plugin `shellbag_plugin` has missing modules, install regipy using"
+                             f" `pip install regipy[full]` in order to install plugin dependencies. "
+                             f"This might take some time... ")
+            raise ex
+
         path_segment = None
 
         if isinstance(shell_item, pyfwsi.volume):
