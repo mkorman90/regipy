@@ -3,7 +3,6 @@ from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
-import pyfwsi
 import re
 
 logger = logging.getLogger(__name__)
@@ -164,6 +163,8 @@ class ShellBagNtuserPlugin(Plugin):
                     path = base_path
 
     def run(self):
+        import pyfwsi
+
         try:
             shellbag_ntuser_subkey = self.registry_hive.get_key(NTUSER_SHELLBAG)
             self.iter_sk(shellbag_ntuser_subkey, NTUSER_SHELLBAG)
