@@ -43,6 +43,9 @@ def run_relevant_plugins(registry_hive, as_json=False, plugins=None):
             continue
 
         if plugin.can_run():
-            plugin.run()
-            plugin_results[plugin.NAME] = plugin.entries
+            try:
+                plugin.run()
+                plugin_results[plugin.NAME] = plugin.entries
+            except ModuleNotFoundError:
+                logger.error(f"Plugin {plugin.NAME} has missing dependencies")
     return plugin_results

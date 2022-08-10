@@ -3,7 +3,6 @@ from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
-import pyfwsi
 import re
 
 logger = logging.getLogger(__name__)
@@ -32,6 +31,13 @@ class ShellBagNtuserPlugin(Plugin):
 
     @staticmethod
     def _get_shell_item_type(shell_item):
+        try:
+            import pyfwsi
+        except ModuleNotFoundError as ex:
+            logger.exception(f"Plugin `shellbag_plugin` has missing modules, install regipy using"
+                             f" `pip install regipy[full]` in order to install plugin dependencies. "
+                             f"This might take some time... ")
+            raise ex
 
         if isinstance(shell_item, pyfwsi.volume):
             item_type = "Volume"
@@ -55,6 +61,15 @@ class ShellBagNtuserPlugin(Plugin):
         Returns:
           str: shell item path segment.
         """
+
+        try:
+            import pyfwsi
+        except ModuleNotFoundError as ex:
+            logger.exception(f"Plugin `shellbag_plugin` has missing modules, install regipy using"
+                             f" `pip install regipy[full]` in order to install plugin dependencies. "
+                             f"This might take some time... ")
+            raise ex
+
         path_segment = None
 
         if isinstance(shell_item, pyfwsi.volume):
@@ -84,6 +99,13 @@ class ShellBagNtuserPlugin(Plugin):
         return path_segment
 
     def iter_sk(self, key, reg_path, base_path='', path=''):
+        try:
+            import pyfwsi
+        except ModuleNotFoundError as ex:
+            logger.exception(f"Plugin `shellbag_plugin` has missing modules, install regipy using"
+                             f" `pip install regipy[full]` in order to install plugin dependencies. "
+                             f"This might take some time... ")
+            raise ex
 
         last_write = convert_wintime(key.header.last_modified, as_json=True)
 
@@ -164,6 +186,15 @@ class ShellBagNtuserPlugin(Plugin):
                     path = base_path
 
     def run(self):
+
+        try:
+            import pyfwsi
+        except ModuleNotFoundError as ex:
+            logger.exception(f"Plugin `shellbag_plugin` has missing modules, install regipy using"
+                             f" `pip install regipy[full]` in order to install plugin dependencies. "
+                             f"This might take some time... ")
+            raise ex
+
         try:
             shellbag_ntuser_subkey = self.registry_hive.get_key(NTUSER_SHELLBAG)
             self.iter_sk(shellbag_ntuser_subkey, NTUSER_SHELLBAG)

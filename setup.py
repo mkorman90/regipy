@@ -34,15 +34,17 @@ def main():
           setup_requires=setup_requirements,
           install_requires=['construct>=2.10',
                             'attrs>=21',
-                            'inflection~=0.5.1',
-                            'pytz',
-                            'libfwsi-python==20220123'],
+                            'inflection>=0.5.1',
+                            'pytz'
+                            ],
           tests_require=test_requirements,
           extras_require={
               'test': test_requirements,
-              'cli': [
-                  'click>=7.0.0',
-                  'tabulate',
+              'cli': ['click>=7.0.0', 'tabulate'],
+              'full': [
+                 'click>=7.0.0',
+                 'tabulate'
+                 'libfwsi-python>=20220123'
               ],
           },
           include_package_data=True,
