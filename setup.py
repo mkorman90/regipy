@@ -21,9 +21,6 @@ def _find_version(file_path):
     raise RuntimeError('Unable to find version string.')
 
 
-CLI_DEPS = ['click>=7.0.0', 'tabulate']
-
-
 def main():
     setup(name='regipy',
           packages=find_packages(),
@@ -43,10 +40,12 @@ def main():
           tests_require=test_requirements,
           extras_require={
               'test': test_requirements,
-              'cli': CLI_DEPS,
+              'cli': ['click>=7.0.0', 'tabulate'],
               'full': [
-                'libfwsi-python>=20220123'
-              ] + CLI_DEPS,
+                 'click>=7.0.0',
+                 'tabulate'
+                 'libfwsi-python>=20220123'
+              ],
           },
           include_package_data=True,
           keywords='Python, Python3, registry, windows registry, registry parser',
