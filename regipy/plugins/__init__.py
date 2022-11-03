@@ -6,6 +6,7 @@ from .ntuser.persistence import NTUserPersistencePlugin
 from .ntuser.shellbags_ntuser import ShellBagNtuserPlugin
 from .ntuser.tsclient import TSClientPlugin
 from .ntuser.typed_urls import TypedUrlsPlugin
+from .ntuser.typed_paths import TypedPathsPlugin
 from .ntuser.user_assist import UserAssistPlugin
 from .ntuser.winrar import WinRARPlugin
 from .ntuser.winscp_saved_sessions import WinSCPSavedSessionsPlugin
