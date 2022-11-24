@@ -730,16 +730,62 @@ def test_usbstor(system_hive_with_filetime):
         'version': 'Rev_1.20'
     }
     
-def test_typed_paths_plugin_ntuser(ntuser_hive):
-    registry_hive = RegistryHive(ntuser_hive)
+def test_typed_paths_plugin_ntuser(shellbags_ntuser):
+    registry_hive = RegistryHive(shellbags_ntuser)
     plugin_instance = TypedPathsPlugin(registry_hive, as_json=True)
     plugin_instance.run()
 
     assert plugin_instance.entries == {
         'last_write': '2022-02-06T13:46:04.945080+00:00',
         'entries': [
-            {'url15": "C:\\ProgramData\\chocolatey\\lib\\yara\\tools'},
-            {'url16": "C:\\Training\\MT01\\exercise'}
+             {
+                "url1": "cmd"
+            },
+            {
+                "url2": "C:\\Offline\\AD"
+            },
+            {
+                "url3": "git"
+            },
+            {
+                "url4": "powershell"
+            },
+            {
+                "url5": "C:\\Program Files"
+            },
+            {
+                "url6": "Network"
+            },
+            {
+                "url7": "\\\\wsl$\\Ubuntu\\projects\\CAD316_001\\partition_p1"
+            },
+            {
+                "url8": "\\\\wsl$\\Ubuntu\\projects"
+            },
+            {
+                "url9": "\\\\wsl$\\Ubuntu"
+            },
+            {
+                "url10": "C:\\Users\\tony\\Github"
+            },
+            {
+                "url11": "C:\\Users\\tony\\Github\\velocity-client-master"
+            },
+            {
+                "url12": "C:\\Users\\tony\\Github\\cogz"
+            },
+            {
+                "url13": "C:\\Users\\tony\\Github\\cogz\\cogz"
+            },
+            {
+                "url14": "Quick access"
+            },
+            {
+                "url15": "C:\\ProgramData\\chocolatey\\lib\\yara\\tools"
+            },
+            {
+                "url16": "C:\\Training\\MT01\\exercise"
+            }
         ]
     }
 
