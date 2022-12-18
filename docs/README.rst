@@ -28,7 +28,7 @@ Using as a library:
     reg = RegistryHive('/Users/martinkorman/Documents/TestEvidence/Registry/Vibranium-NTUSER.DAT')
 
     # Iterate over a registry hive recursively:
-    for entry in reg.rec_subkeys(as_json=True):
+    for entry in reg.recurse_subkeys(as_json=True):
         print(entry)
 
     # Iterate over a key and get all subkeys and their modification time:
