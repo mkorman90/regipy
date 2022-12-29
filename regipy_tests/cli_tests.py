@@ -56,7 +56,7 @@ def test_cli_run_plugins(ntuser_hive):
     result = runner.invoke(run_plugins, [ntuser_hive, "-o", output_file_path])
     assert result.exit_code == 0
 
-    assert result.output.strip() == 'Loaded 36 plugins\nFinished: 10/36 plugins matched the hive type'
+    assert result.output.strip() == 'Loaded 37 plugins\nFinished: 11/37 plugins matched the hive type'
 
     with open(output_file_path, 'r') as f:
         output = json.loads(f.read())
@@ -68,6 +68,7 @@ def test_cli_run_plugins(ntuser_hive):
         'user_assist',
         'ntuser_persistence',
         'terminal_services_history',
+        'typed_paths',
         'network_drives_plugin',
         'typed_urls',
         'winscp_saved_sessions',
