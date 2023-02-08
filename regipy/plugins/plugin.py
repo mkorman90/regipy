@@ -18,9 +18,10 @@ class Plugin(object):
     def __init_subclass__(cls):
         PLUGINS.add(cls)
 
-    def __init__(self, registry_hive: RegistryHive, as_json=False):
+    def __init__(self, registry_hive: RegistryHive, as_json=False, trim_values=True):
         self.registry_hive = registry_hive
         self.as_json = as_json
+        self.trim_values = trim_values
 
         self.partial_hive_path = registry_hive.partial_hive_path
 
