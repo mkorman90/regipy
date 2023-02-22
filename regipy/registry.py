@@ -544,8 +544,8 @@ class NKRecord:
             raise RegistryValueNotFoundException('Did not find the value {} on subkey {}'.format(value_name, self.name))
         return None
 
-    def get_values(self, as_json=False):
-        return [x for x in self.iter_values(as_json=as_json)]
+    def get_values(self, as_json=False, trim_values=False):
+        return [x for x in self.iter_values(as_json=as_json, trim_values=trim_values)]
 
     def get_security_key_info(self):
         self._stream.seek(REGF_HEADER_SIZE + self.header.security_key_offset)
