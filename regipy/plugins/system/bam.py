@@ -31,7 +31,7 @@ class BAMPlugin(Plugin):
                     version = None
                     entries = []
 
-                    for value in sid_subkey.get_values(trim_values=True):
+                    for value in sid_subkey.get_values(trim_values=self.trim_values):
                         if value.name == 'SequenceNumber':
                             sequence_number = value.value
                         elif value.name == 'Version':
