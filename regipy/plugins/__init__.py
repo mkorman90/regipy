@@ -35,3 +35,4 @@ from .system.timezone_data import TimezoneDataPlugin
 from .system.usbstor import USBSTORPlugin
 from .system.wdigest import WDIGESTPlugin
 from .usrclass.classes_installer import ClassesInstallerPlugin
+from .system.network_data import NetworkDataPlugin
