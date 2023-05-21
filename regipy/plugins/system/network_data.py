@@ -23,11 +23,11 @@ class NetworkDataPlugin(Plugin):
         for interface in subkey.iter_subkeys():
             entries = {
                 "interface_name": interface.name,
-                'last_modified': convert_wintime(interface.header.last_modified, as_json=self.as_json),
-                "dhcp": "enable" if interface.get_value("EnableDHCP") == 1 else "disable",
+                "last_modified": convert_wintime(interface.header.last_modified, as_json=self.as_json),
+                "dhcp_enabled": interface.get_value("EnableDHCP") == 1,  # Boolean value
             }
 
-            if entries["dhcp"] == "enable":
+            if entries["dhcp_enabled"]:
                 entries.update({
                     "dhcp_server": interface.get_value("DhcpServer"),
                     "dhcp_ip_address": interface.get_value("DhcpIPAddress"),
