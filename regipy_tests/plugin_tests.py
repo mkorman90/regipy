@@ -816,12 +816,12 @@ def test_network_info_plugin(system_hive):
     plugin_instance = NetworkInfoPlugin(registry_hive, as_json=True)
     plugin_instance.run()
     assert plugin_instance.entries['\\ControlSet001\\Services\\Tcpip\\Parameters\\Interfaces']['interfaces'][0] == {
-        "interface_name": "{698E50A9-4F58-4D86-B61D-F42E58DCACF6}",
-        "last_modified": "2011-09-17T13:43:23.770078+00:00",
-        "dhcp": "false",
-        "ip_address": ["10.3.58.5"],
-        "subnet_mask": ["255.255.255.0"],
-        "default_gateway": ["10.3.58.1"],
-        "name_server": "10.3.58.4",
-        "domain": 0
-    }
+            "interface_name": "{698E50A9-4F58-4D86-B61D-F42E58DCACF6}",
+            "last_modified": "2011-09-17T13:43:23.770078+00:00",
+            "dhcp_enabled": False,
+            "ip_address": ["10.3.58.5"],
+            "subnet_mask": ["255.255.255.0"],
+            "default_gateway": ["10.3.58.1"],
+            "name_server": "10.3.58.4",
+            "domain": 0
+        }
