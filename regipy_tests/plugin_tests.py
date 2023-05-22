@@ -20,8 +20,8 @@ from regipy.plugins.ntuser.winrar import WinRARPlugin
 from regipy.plugins.ntuser.network_drives import NetworkDrivesPlugin
 from regipy.plugins.ntuser.shellbags_ntuser import ShellBagNtuserPlugin
 from regipy.plugins.ntuser.winscp_saved_sessions import WinSCPSavedSessionsPlugin
+from regipy.plugins.system.network_info import NetworkInfoPlugin
 from regipy.registry import RegistryHive
-from regipy.plugins.system.system.network_info import NetworkInfoPlugin
 
 
 def test_shimcache_plugin(system_hive):
