@@ -20,7 +20,7 @@ from regipy.plugins.ntuser.winrar import WinRARPlugin
 from regipy.plugins.ntuser.network_drives import NetworkDrivesPlugin
 from regipy.plugins.ntuser.shellbags_ntuser import ShellBagNtuserPlugin
 from regipy.plugins.ntuser.winscp_saved_sessions import WinSCPSavedSessionsPlugin
-from regipy.plugins.system.network_info import NetworkInfoPlugin
+from regipy.plugins.system.network_data import NetworkDataPlugin
 from regipy.registry import RegistryHive
 
 
@@ -811,9 +811,9 @@ def test_shellbags(shellbags_ntuser):
 
     assert len(plugin_instance.entries) == 102
 
-def test_network_info_plugin(system_hive):
+def test_network_data_plugin(system_hive):
     registry_hive = RegistryHive(system_hive)
-    plugin_instance = NetworkInfoPlugin(registry_hive, as_json=True)
+    plugin_instance = NetworkDataPlugin(registry_hive, as_json=True)
     plugin_instance.run()
     assert plugin_instance.entries['\\ControlSet001\\Services\\Tcpip\\Parameters\\Interfaces']['interfaces'][0] == {
             "interface_name": "{698E50A9-4F58-4D86-B61D-F42E58DCACF6}",
