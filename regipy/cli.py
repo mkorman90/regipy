@@ -183,7 +183,7 @@ def parse_transaction_log(hive_path, primary_log_path, secondary_log_path, outpu
     _setup_logging(verbose=verbose)
     logger.info(f'Processing hive {hive_path} with transaction log {primary_log_path}')
     if secondary_log_path:
-        logger.info(f'Processing hive {hive_path} with secondary transaction log {primary_log_path}')
+        logger.info(f'Processing hive {hive_path} with secondary transaction log {secondary_log_path}')
 
     restored_hive_path, recovered_dirty_pages_count = apply_transaction_logs(hive_path, primary_log_path,
                                                                              secondary_log_path=secondary_log_path,
