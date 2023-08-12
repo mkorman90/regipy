@@ -4,6 +4,7 @@ from tempfile import mktemp
 from click.testing import CliRunner
 
 from regipy.cli import parse_header, registry_dump, run_plugins
+from regipy.plugins.plugin import PLUGINS
 
 
 def test_cli_registry_parse_header(ntuser_hive):
@@ -56,7 +57,8 @@ def test_cli_run_plugins(ntuser_hive):
     result = runner.invoke(run_plugins, [ntuser_hive, "-o", output_file_path])
     assert result.exit_code == 0
 
-    assert result.output.strip() == 'Loaded 38 plugins\nFinished: 11/38 plugins matched the hive type'
+    plugin_count = len(PLUGINS)
+    assert result.output.strip() == f'Loaded {plugin_count} plugins\nFinished: 11/{plugin_count} plugins matched the hive type'
 
     with open(output_file_path, 'r') as f:
         output = json.loads(f.read())
