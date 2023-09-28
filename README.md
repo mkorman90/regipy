@@ -1,6 +1,6 @@
 ## regipy
 
-[![CircleCI](https://circleci.com/gh/mkorman90/regipy.svg?style=shield)](https://circleci.com/gh/mkorman90/regipy)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/mkorman90/regipy/badge)](https://securityscorecards.dev/viewer/?uri=github.com/mkorman90/regipy)
 
 Regipy is a python library for parsing offline registry hives (Hive files with REGF header). regipy has a lot of capabilities:
 * Use as a library:
