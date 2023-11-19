@@ -253,7 +253,7 @@ class RegistryHive:
             except RegistryKeyNotFoundException:
                 continue
         result = [r'\{}\{}'.format(subkey.name, registry_path) for subkey in found_control_sets]
-        logger.info('Found control sets: {}'.format(result))
+        logger.debug('Found control sets: {}'.format(result))
         return result
 
 

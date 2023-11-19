@@ -15,7 +15,7 @@ class ShimCachePlugin(Plugin):
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
     def run(self):
-        logger.info('Started Shim Cache Plugin...')
+        logger.debug('Started Shim Cache Plugin...')
 
         for subkey_path in self.registry_hive.get_control_sets(COMPUTER_NAME_PATH):
             appcompat_cache = self.registry_hive.get_key(subkey_path).get_subkey('AppCompatCache')

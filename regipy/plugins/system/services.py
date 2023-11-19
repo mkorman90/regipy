@@ -18,7 +18,7 @@ class ServicesPlugin(Plugin):
 
     def run(self):
         self.entries = {}
-        logger.info('Started Services enumeration Plugin...')
+        logger.debug('Started Services enumeration Plugin...')
         for control_set_services_path in self.registry_hive.get_control_sets(SERVICES_PATH):
             try:
                 subkey = self.registry_hive.get_key(control_set_services_path)
@@ -36,7 +36,7 @@ class ServicesPlugin(Plugin):
                     try:
                         values = [attr.asdict(x) for x in service.iter_values(as_json=True)]
                     except RegistryParsingException as ex:
-                        logger.info(f'Exception while parsing data for service {service.name}: {ex}')
+                        logger.error(f'Exception while parsing data for service {service.name}: {ex}')
 
                     if service.subkey_count:
                         try:

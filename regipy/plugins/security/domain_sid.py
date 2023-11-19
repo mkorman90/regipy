@@ -28,7 +28,7 @@ class DomainSidPlugin(Plugin):
     COMPATIBLE_HIVE = SECURITY_HIVE_TYPE
 
     def run(self) -> None:
-        logger.info("Started Machine Domain SID Plugin...")
+        logger.debug("Started Machine Domain SID Plugin...")
 
         name_key = self.registry_hive.get_key(DOMAIN_NAME_PATH)
 
