@@ -36,3 +36,4 @@ from .system.usbstor import USBSTORPlugin
 from .system.wdigest import WDIGESTPlugin
 from .usrclass.classes_installer import ClassesInstallerPlugin
 from .system.network_data import NetworkDataPlugin
+from .usrclass.shellbags_usrclass import ShellBagUsrclassPlugin

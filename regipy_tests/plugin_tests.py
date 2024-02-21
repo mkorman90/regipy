@@ -21,6 +21,7 @@ from regipy.plugins.ntuser.network_drives import NetworkDrivesPlugin
 from regipy.plugins.ntuser.shellbags_ntuser import ShellBagNtuserPlugin
 from regipy.plugins.ntuser.winscp_saved_sessions import WinSCPSavedSessionsPlugin
 from regipy.plugins.system.network_data import NetworkDataPlugin
+from regipy.plugins.usrclass.shellbags_usrclass import ShellBagUsrclassPlugin
 from regipy.registry import RegistryHive
 
 
@@ -790,7 +791,7 @@ def test_typed_paths_plugin_ntuser(shellbags_ntuser):
         ]
     }
 
-def test_shellbags(shellbags_ntuser):
+def test_shellbags_plugin_ntuser(shellbags_ntuser):
     registry_hive = RegistryHive(shellbags_ntuser)
     plugin_instance = ShellBagNtuserPlugin(registry_hive, as_json=True)
     plugin_instance.run()
@@ -801,7 +802,7 @@ def test_shellbags(shellbags_ntuser):
              'value_name': '0',
              'node_slot': '11',
              'shell_type': 'Directory',
-             'path': 'rekall',
+             'path': '<UNKNOWN: 0x00>\\<UNKNOWN: 0x00>\\rekall',
              'creation_time': dt.datetime(2021, 8, 16, 9, 41, 32).isoformat(),
              'access_time': dt.datetime(2021, 8, 16, 9, 43, 22).isoformat(),
              'modification_time': dt.datetime(2021, 8, 16, 9, 41, 32).isoformat(),
@@ -810,6 +811,27 @@ def test_shellbags(shellbags_ntuser):
              'mru_order_location': 0}
 
     assert len(plugin_instance.entries) == 102
+
+def test_shellbags_plugin_usrclass(shellbags_usrclass):
+    registry_hive = RegistryHive(shellbags_usrclass)
+    plugin_instance = ShellBagUsrclassPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+    assert plugin_instance.entries[-1] == {
+             'value': 'Dropbox',
+             'slot': '9',
+             'reg_path': '\\Local Settings\\Software\\Microsoft\\Windows\\Shell\\BagMRU',
+             'value_name': '9',
+             'node_slot': '20',
+             'shell_type': 'Root Folder',
+             'path': 'Dropbox',
+             'creation_time': None,
+             'access_time': None,
+             'modification_time': None,
+             'last_write': '2018-04-05T02:13:26.843024+00:00',
+             'mru_order': '4-8-7-6-9-0-1-5-3-2',
+             'mru_order_location': 4}
+
+    assert len(plugin_instance.entries) == 29
 
 def test_network_data_plugin(system_hive):
     registry_hive = RegistryHive(system_hive)

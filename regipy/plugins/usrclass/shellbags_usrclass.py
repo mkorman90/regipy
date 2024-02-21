@@ -1,6 +1,6 @@
 import logging
 from regipy.exceptions import RegistryKeyNotFoundException
-from regipy.hive_types import NTUSER_HIVE_TYPE
+from regipy.hive_types import USRCLASS_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
 from plaso.helpers.windows import shell_folders
@@ -8,7 +8,7 @@ import re
 
 logger = logging.getLogger(__name__)
 
-NTUSER_SHELLBAG = '\\Software\\Microsoft\\Windows\\Shell\\BagMRU'
+USRCLASS_SHELLBAG = '\\Local Settings\\Software\\Microsoft\\Windows\\Shell\\BagMRU'
 CODEPAGE = 'cp1252'
 
 known_guids = {
@@ -395,15 +395,15 @@ known_guids = {
     "24ad3ad4-a569-4530-98e1-ab02f9417aa8": "Pictures",
     "f86fa3ab-70d2-4fc7-9c99-fcbf05467f3a": "Videos",
     "3dfdf296-dbec-4fb4-81d1-6a3438bcf4de": "Music",
-    "e31ea727-12ed-4702-820c-4b6445f28e1a": "DropBox",
+    "e31ea727-12ed-4702-820c-4b6445f28e1a": "Dropbox",
     "4a8fcd9f-623c-4283-96f0-10f41846a98a": "Box Sync",
 }
 
 
-class ShellBagNtuserPlugin(Plugin):
-    NAME = 'ntuser_shellbag_plugin'
-    DESCRIPTION = 'Parse NTUSER Shellbag items'
-    COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
+class ShellBagUsrclassPlugin(Plugin):
+    NAME = 'usrclass_shellbag_plugin'
+    DESCRIPTION = 'Parse USRCLASS Shellbag items'
+    COMPATIBLE_HIVE = USRCLASS_HIVE_TYPE
 
     @staticmethod
     def _parse_mru(mru_val):
@@ -610,7 +610,7 @@ class ShellBagNtuserPlugin(Plugin):
             raise ex
 
         try:
-            shellbag_ntuser_subkey = self.registry_hive.get_key(NTUSER_SHELLBAG)
-            self.iter_sk(shellbag_ntuser_subkey, NTUSER_SHELLBAG)
+            shellbag_usrclass_subkey = self.registry_hive.get_key(USRCLASS_SHELLBAG)
+            self.iter_sk(shellbag_usrclass_subkey, USRCLASS_SHELLBAG)
         except RegistryKeyNotFoundException as ex:
-            logger.error(f'Could not find {self.NAME} plugin data at: {NTUSER_SHELLBAG}: {ex}')
+            logger.error(f'Could not find {self.NAME} plugin data at: {USRCLASS_SHELLBAG}: {ex}')
