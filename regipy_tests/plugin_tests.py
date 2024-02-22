@@ -812,8 +812,8 @@ def test_shellbags_plugin_ntuser(shellbags_ntuser):
 
     assert len(plugin_instance.entries) == 102
 
-def test_shellbags_plugin_usrclass(shellbags_usrclass):
-    registry_hive = RegistryHive(shellbags_usrclass)
+def test_shellbags_plugin_usrclass(transaction_usrclass):
+    registry_hive = RegistryHive(transaction_usrclass)
     plugin_instance = ShellBagUsrclassPlugin(registry_hive, as_json=True)
     plugin_instance.run()
     assert plugin_instance.entries[-1] == {

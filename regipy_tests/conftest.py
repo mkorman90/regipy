@@ -173,12 +173,6 @@ def shellbags_ntuser(test_data_dir):
     os.remove(temp_path)
 
 @pytest.fixture(scope='module')
-def shellbags_usrclass(test_data_dir):
-    temp_path = extract_lzma(os.path.join(test_data_dir, 'UsrClass.dat.xz'))
-    yield temp_path
-    os.remove(temp_path)
-
-@pytest.fixture(scope='module')
 def system_hive_with_filetime(test_data_dir):
     temp_path = extract_lzma(os.path.join(test_data_dir, 'SYSTEM_WIN_10_1709.xz'))
     yield temp_path
