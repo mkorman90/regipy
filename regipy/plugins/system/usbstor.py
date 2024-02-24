@@ -1,7 +1,7 @@
 
 import logging
 
-from regipy.exceptions import RegistryKeyNotFoundException
+from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
@@ -56,7 +56,7 @@ class USBSTORPlugin(Plugin):
                                 device_name_guid_key = properties_subkey.get_subkey(PROPERTIES_NAME_GUID)
                                 device_name_key = device_name_guid_key.get_subkey(DEVICE_NAME_KEY)
                                 device_name = device_name_key.get_value()
-                            except RegistryKeyNotFoundException:
+                            except (RegistryKeyNotFoundException, NoRegistrySubkeysException):
                                 device_name = None
 
                             first_installed_time, last_connected_time, last_removed_time, \
@@ -64,7 +64,7 @@ class USBSTORPlugin(Plugin):
 
                             dates_subkey = properties_subkey.get_subkey(PROPERTIES_DATES_GUID, raise_on_missing=False)
                             if dates_subkey:
-                                first_installed_key = dates_subkey.get_subkey(FIRST_INSTALLED_TIME_KEY)
+                                first_installed_key = dates_subkey.get_subkey(FIRST_INSTALLED_TIME_KEY, raise_on_missing=False)
                                 if first_installed_key:
                                     first_installed_time = first_installed_key.get_value(as_json=self.as_json)
 

@@ -180,13 +180,13 @@ def get_shimcache_entries(cachebin, as_json=False):
         test_max_size = struct.unpack("<H", cachebin[10:12])[0]
         if (test_max_size - test_size == 2 and
                 struct.unpack("<L", cachebin[12:16])[0]) == 0:
-            logger.info("[+] Found 64bit Windows 2k3/Vista/2k8 Shim Cache data...")
+            logger.debug("[+] Found 64bit Windows 2k3/Vista/2k8 Shim Cache data...")
             entry = CacheEntryNt5(False)
             yield from read_nt5_entries(cachebin, entry, as_json=as_json)
 
         # Otherwise it's 32-bit data.
         else:
-            logger.info("[+] Found 32bit Windows 2k3/Vista/2k8 Shim Cache data...")
+            logger.debug("[+] Found 32bit Windows 2k3/Vista/2k8 Shim Cache data...")
             entry = CacheEntryNt5(True)
             yield from read_nt5_entries(cachebin, entry, as_json=as_json)
 
@@ -201,37 +201,37 @@ def get_shimcache_entries(cachebin, as_json=False):
         # UNICODE_STRING sizes are followed by a NULL DWORD. Check for this here.
         if (test_max_size - test_size == 2 and
                 struct.unpack("<L", cachebin[CACHE_HEADER_SIZE_NT6_1 + 4:CACHE_HEADER_SIZE_NT6_1 + 8])[0]) == 0:
-            logger.info("[+] Found 64bit Windows 7/2k8-R2 Shim Cache data...")
+            logger.debug("[+] Found 64bit Windows 7/2k8-R2 Shim Cache data...")
             entry = CacheEntryNt6(False)
             yield from read_nt6_entries(cachebin, entry, as_json=as_json)
         else:
-            logger.info("[+] Found 32bit Windows 7/2k8-R2 Shim Cache data...")
+            logger.debug("[+] Found 32bit Windows 7/2k8-R2 Shim Cache data...")
             entry = CacheEntryNt6(True)
             yield from read_nt6_entries(cachebin, entry, as_json=as_json)
 
     # This is WinXP cache data
     elif magic == WINXP_MAGIC32:
-        logger.info("[+] Found 32bit Windows XP Shim Cache data...")
+        logger.debug("[+] Found 32bit Windows XP Shim Cache data...")
         yield from read_winxp_entries(cachebin, as_json=as_json)
 
     # Check the data set to see if it matches the Windows 8 format.
     elif len(cachebin) > WIN8_STATS_SIZE and cachebin[WIN8_STATS_SIZE:WIN8_STATS_SIZE + 4] == WIN8_MAGIC:
-        logger.info("[+] Found Windows 8/2k12 Apphelp Cache data...")
+        logger.debug("[+] Found Windows 8/2k12 Apphelp Cache data...")
         yield from read_win8_entries(cachebin, WIN8_MAGIC, as_json=as_json)
 
     # Windows 8.1 will use a different magic dword, check for it
     elif len(cachebin) > WIN8_STATS_SIZE and cachebin[WIN8_STATS_SIZE:WIN8_STATS_SIZE + 4] == WIN81_MAGIC:
-        logger.info("[+] Found Windows 8.1 Apphelp Cache data...")
+        logger.debug("[+] Found Windows 8.1 Apphelp Cache data...")
         yield from read_win8_entries(cachebin, WIN81_MAGIC, as_json=as_json)
 
     # Windows 10 will use a different magic dword, check for it
     elif len(cachebin) > WIN10_STATS_SIZE and cachebin[WIN10_STATS_SIZE:WIN10_STATS_SIZE + 4] == WIN10_MAGIC:
-        logger.info("[+] Found Windows 10 Apphelp Cache data...")
+        logger.debug("[+] Found Windows 10 Apphelp Cache data...")
         yield from read_win10_entries(cachebin, WIN10_MAGIC, as_json=as_json)
 
     # Windows 10 creators update moved the damn magic 4 bytes forward...
     elif len(cachebin) > WIN10_STATS_SIZE and cachebin[WIN10_STATS_SIZE + 4:WIN10_STATS_SIZE + 8] == WIN10_MAGIC:
-        logger.info("[+] Found Windows 10 Apphelp Cache data... (creators update)")
+        logger.debug("[+] Found Windows 10 Apphelp Cache data... (creators update)")
         yield from read_win10_entries(cachebin, WIN10_MAGIC, creators_update=True, as_json=as_json)
 
     else:

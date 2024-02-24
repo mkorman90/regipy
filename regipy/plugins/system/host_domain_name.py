@@ -15,7 +15,7 @@ class HostDomainNamePlugin(Plugin):
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
     def run(self):
-        logger.info('Started Host and Domain Name Plugin...')
+        logger.debug('Started Host and Domain Name Plugin...')
 
         for subkey_path in self.registry_hive.get_control_sets(HOST_PARAMETERS_PATH):
             subkey = self.registry_hive.get_key(subkey_path)

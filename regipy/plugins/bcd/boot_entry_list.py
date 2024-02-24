@@ -57,7 +57,7 @@ class BootEntryListPlugin(Plugin):
     COMPATIBLE_HIVE = BCD_HIVE_TYPE
 
     def run(self) -> None:
-        logger.info("Started Boot Entry List Plugin...")
+        logger.debug("Started Boot Entry List Plugin...")
 
         objects_key = self.registry_hive.get_key(BCD_OBJECTS_PATH)
 
