@@ -11,7 +11,7 @@ CLASSES_INSTALLER_PATH = r'\Classes\Installer\Products'
 
 class SoftwareClassesInstallerPlugin(Plugin):
     NAME = 'software_classes_installer'
-    DESCRIPTION = 'List of installed software'
+    DESCRIPTION = 'List of installed software from SOFTWARE hive'
     COMPATIBLE_HIVE = SOFTWARE_HIVE_TYPE
 
     def run(self):
