@@ -34,7 +34,7 @@ pip install --editable .[full]
 
 #### Parse the header:
 ```bash
-registry-parse-header ~/Documents/TestEvidence/Registry/SYSTEM
+regipy-parse-header ~/Documents/TestEvidence/Registry/SYSTEM
 ```
 Example output:
 ```
@@ -72,14 +72,14 @@ Example output:
 
 #### Dump entire hive to disk (this might take some time)
 ```bash
-registry-dump ~/Documents/TestEvidence/Registry/NTUSER-CCLEANER.DAT -o /tmp/output.json
+regipy-dump ~/Documents/TestEvidence/Registry/NTUSER-CCLEANER.DAT -o /tmp/output.json
 ```
-registry-dump util can also output a timeline instead of a JSON, by adding the `-t` flag
+regipy-dump util can also output a timeline instead of a JSON, by adding the `-t` flag
 
 
 #### Run relevant plugins on Hive
 ```bash
-registry-plugins-run ~/Documents/TestEvidence/Registry/SYSTEM -o /tmp/plugins_output.json
+regipy-plugins-run ~/Documents/TestEvidence/Registry/SYSTEM -o /tmp/plugins_output.json
 ```
 The hive type will be detected automatically and the relevant plugins will be executed. 
 [**See the plugins section for more information**](docs/PLUGINS.md)
@@ -87,7 +87,7 @@ The hive type will be detected automatically and the relevant plugins will be ex
 #### Compare registry hives
 Compare registry hives of the same type and output to CSV (if `-o` is not specified output will be printed to screen)
 ```bash
-registry-diff NTUSER.dat NTUSER_modified.dat -o /tmp/diff.csv
+regipy-diff NTUSER.dat NTUSER_modified.dat -o /tmp/diff.csv
 ```
 Example output:
 ```
@@ -104,7 +104,7 @@ Example output:
 
 ## Recover a registry hive, using transaction logs:
 ```bash
-registry-transaction-logs NTUSER.DAT -p ntuser.dat.log1 -s ntuser.dat.log2 -o recovered_NTUSER.dat 
+regipy-transaction-logs NTUSER.DAT -p ntuser.dat.log1 -s ntuser.dat.log2 -o recovered_NTUSER.dat 
 ```
 After recovering, compare the hives with registry-diff to see what changed
 

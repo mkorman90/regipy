@@ -87,12 +87,12 @@ class AmCachePlugin(Plugin):
         self.entries.append(entry)
 
     def run(self):
-        logger.info('Started AmCache Plugin...')
+        logger.debug('Started AmCache Plugin...')
 
         try:
             amcache_file_subkey = self.registry_hive.get_key(r'\Root\File')
         except RegistryKeyNotFoundException:
-            logger.info(r'Could not find \Root\File subkey')
+            logger.error(r'Could not find \Root\File subkey')
             amcache_file_subkey = None
 
         try:

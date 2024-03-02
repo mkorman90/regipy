@@ -16,7 +16,7 @@ class WDIGESTPlugin(Plugin):
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
     def run(self):
-        logger.info('Started WDIGEST Plugin...')
+        logger.debug('Started WDIGEST Plugin...')
         for subkey_path in self.registry_hive.get_control_sets(WDIGEST_PATH):
             subkey = self.registry_hive.get_key(subkey_path)
 

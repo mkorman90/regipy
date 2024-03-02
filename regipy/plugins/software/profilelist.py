@@ -19,7 +19,7 @@ class ProfileListPlugin(Plugin):
     COMPATIBLE_HIVE = SOFTWARE_HIVE_TYPE
 
     def run(self):
-        logger.info('Started profile list plugin...')
+        logger.debug('Started profile list plugin...')
         try:
             subkey = self.registry_hive.get_key(PROFILE_LIST_KEY_PATH)
         except RegistryKeyNotFoundException as ex:

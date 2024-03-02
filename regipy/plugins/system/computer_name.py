@@ -17,7 +17,7 @@ class ComputerNamePlugin(Plugin):
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
     def run(self):
-        logger.info('Started Computer Name Plugin...')
+        logger.debug('Started Computer Name Plugin...')
 
         for subkey_path in self.registry_hive.get_control_sets(COMPUTER_NAME_PATH):
             subkey = self.registry_hive.get_key(subkey_path)

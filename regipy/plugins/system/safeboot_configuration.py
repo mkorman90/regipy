@@ -37,7 +37,7 @@ class SafeBootConfigurationPlugin(Plugin):
         return entries
 
     def run(self):
-        logger.info('Started Safeboot Configuration Plugin...')
+        logger.debug('Started Safeboot Configuration Plugin...')
 
         self.entries = {
             'network': self._get_safeboot_entries(SAFEBOOT_NETWORK_PATH),

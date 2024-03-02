@@ -2,7 +2,7 @@ import pytest
 import datetime as dt
 from regipy.plugins import NTUserPersistencePlugin, UserAssistPlugin, AmCachePlugin, WordWheelQueryPlugin, \
     UACStatusPlugin, LastLogonPlugin, SoftwareClassesInstallerPlugin, InstalledSoftwarePlugin, RASTracingPlugin, \
-    PrintDemonPlugin, ServicesPlugin
+    PrintDemonPlugin, ServicesPlugin, NtuserClassesInstallerPlugin
 from regipy.plugins.ntuser.typed_urls import TypedUrlsPlugin
 from regipy.plugins.ntuser.typed_paths import TypedPathsPlugin
 from regipy.plugins.software.profilelist import ProfileListPlugin
@@ -209,6 +209,19 @@ def test_classes_installer_plugin_software(software_hive):
     }
 
     assert not any([x['is_hidden'] for x in plugin_instance.entries])
+
+
+def test_classes_installer_plugin_ntuser(ntuser_hive_2):
+    registry_hive = RegistryHive(ntuser_hive_2)
+    plugin_instance = NtuserClassesInstallerPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries[0] == {
+        'identifier': '8A4152964845CF540BEAEBD27F7A8519',
+        'is_hidden': False,
+        'product_name': 'Microsoft Visual C++ Compiler Package for Python 2.7',
+        'timestamp': '2022-02-15T07:00:07.245646+00:00'
+    }
 
 
 def test_ras_tracing_plugin_software(software_hive):

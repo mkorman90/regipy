@@ -77,7 +77,7 @@ class BootKeyPlugin(Plugin):
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
     def run(self):
-        logger.info("Started BootKey Plugin...")
+        logger.debug("Started BootKey Plugin...")
 
         for subkey_path in self.registry_hive.get_control_sets(LSA_KEY_PATH):
             lsa_key = self.registry_hive.get_key(subkey_path)

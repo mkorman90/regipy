@@ -62,12 +62,12 @@ def main():
                        'Topic :: Utilities'],
           entry_points={
               'console_scripts': [
-                  'registry-parse-header = regipy.cli:parse_header',
-                  'registry-dump = regipy.cli:registry_dump',
-                  'registry-plugins-run = regipy.cli:run_plugins',
-                  'registry-plugins-list = regipy.cli:list_plugins',
-                  'registry-diff = regipy.cli:reg_diff',
-                  'registry-transaction-logs = regipy.cli:parse_transaction_log'
+                  'regipy-parse-header = regipy.cli:parse_header',
+                  'regipy-dump = regipy.cli:registry_dump',
+                  'regipy-plugins-run = regipy.cli:run_plugins',
+                  'regipy-plugins-list = regipy.cli:list_plugins',
+                  'regipy-diff = regipy.cli:reg_diff',
+                  'regipy-process-transaction-logs = regipy.cli:parse_transaction_log'
               ]
           })
 

@@ -18,7 +18,7 @@ class BAMPlugin(Plugin):
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
     def run(self):
-        logger.info('Started Computer Name Plugin...')
+        logger.debug('Started Computer Name Plugin...')
 
         try:
             for subkey_path in self.registry_hive.get_control_sets(BAM_PATH):
@@ -26,7 +26,7 @@ class BAMPlugin(Plugin):
                 for sid_subkey in subkey.iter_subkeys():
 
                     sid = sid_subkey.name
-                    logger.info(f'Parsing BAM for {sid}')
+                    logger.debug(f'Parsing BAM for {sid}')
                     sequence_number = None
                     version = None
                     entries = []

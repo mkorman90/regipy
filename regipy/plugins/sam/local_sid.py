@@ -25,7 +25,7 @@ class LocalSidPlugin(Plugin):
     COMPATIBLE_HIVE = SAM_HIVE_TYPE
 
     def run(self) -> None:
-        logger.info("Started Machine Local SID Plugin...")
+        logger.debug("Started Machine Local SID Plugin...")
 
         account_key = self.registry_hive.get_key(ACCOUNT_PATH)
 
