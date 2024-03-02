@@ -34,5 +34,5 @@ from .system.shimcache import ShimCachePlugin
 from .system.timezone_data import TimezoneDataPlugin
 from .system.usbstor import USBSTORPlugin
 from .system.wdigest import WDIGESTPlugin
-from .usrclass.classes_installer import ClassesInstallerPlugin
+from .ntuser.classes_installer import NtuserClassesInstallerPlugin
 from .system.network_data import NetworkDataPlugin

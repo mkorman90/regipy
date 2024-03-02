@@ -1,18 +1,18 @@
 import logging
 
 from regipy import RegistryKeyNotFoundException, convert_wintime
-from regipy.hive_types import USRCLASS_HIVE_TYPE
+from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 
 logger = logging.getLogger(__name__)
 
-CLASSES_INSTALLER_PATH = r'\Installer\Products'
+CLASSES_INSTALLER_PATH = r'\Software\Microsoft\Installer\Products'
 
 
-class ClassesInstallerPlugin(Plugin):
-    NAME = 'ntuser_installer_classes'
-    DESCRIPTION = 'List of installed software'
-    COMPATIBLE_HIVE = USRCLASS_HIVE_TYPE
+class NtuserClassesInstallerPlugin(Plugin):
+    NAME = 'ntuser_classes_installer'
+    DESCRIPTION = 'List of installed software from NTUSER hive'
+    COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
 
     def run(self):
         try:
