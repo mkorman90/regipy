@@ -1,6 +1,6 @@
 import logging
 from regipy.exceptions import RegistryKeyNotFoundException
-from regipy.hive_types import NTUSER_HIVE_TYPE
+from regipy.hive_types import USRCLASS_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
 from regipy.constants import KNOWN_GUIDS
@@ -8,14 +8,14 @@ import re
 
 logger = logging.getLogger(__name__)
 
-NTUSER_SHELLBAG = '\\Software\\Microsoft\\Windows\\Shell\\BagMRU'
+USRCLASS_SHELLBAG = '\\Local Settings\\Software\\Microsoft\\Windows\\Shell\\BagMRU'
 CODEPAGE = 'cp1252'
 
 
-class ShellBagNtuserPlugin(Plugin):
-    NAME = 'ntuser_shellbag_plugin'
-    DESCRIPTION = 'Parse NTUSER Shellbag items'
-    COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
+class ShellBagUsrclassPlugin(Plugin):
+    NAME = 'usrclass_shellbag_plugin'
+    DESCRIPTION = 'Parse USRCLASS Shellbag items'
+    COMPATIBLE_HIVE = USRCLASS_HIVE_TYPE
 
     @staticmethod
     def _parse_mru(mru_val):
@@ -209,7 +209,7 @@ class ShellBagNtuserPlugin(Plugin):
             raise ex
 
         try:
-            shellbag_ntuser_subkey = self.registry_hive.get_key(NTUSER_SHELLBAG)
-            self.iter_sk(shellbag_ntuser_subkey, NTUSER_SHELLBAG)
+            shellbag_usrclass_subkey = self.registry_hive.get_key(USRCLASS_SHELLBAG)
+            self.iter_sk(shellbag_usrclass_subkey, USRCLASS_SHELLBAG)
         except RegistryKeyNotFoundException as ex:
-            logger.error(f'Could not find {self.NAME} plugin data at: {NTUSER_SHELLBAG}: {ex}')
+            logger.error(f'Could not find {self.NAME} plugin data at: {USRCLASS_SHELLBAG}: {ex}')
