@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 INSTALLED_SOFTWARE_PATH = r'\Software\Microsoft\Windows\CurrentVersion\Uninstall'
 
 
-class InstalledSoftwareNTUserPlugin(Plugin):
-    NAME = 'installed_software_ntuser'
-    DESCRIPTION = 'Retrieve list of installed programs and their install date'
+class InstalledProgramsNTUserPlugin(Plugin):
+    NAME = 'installed_programs_ntuser'
+    DESCRIPTION = 'Retrieve list of installed programs and their install date from the NTUSER Hive'
     COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
 
     def _get_installed_software(self, subkey_path):

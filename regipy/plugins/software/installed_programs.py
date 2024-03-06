@@ -11,9 +11,9 @@ X64_INSTALLED_SOFTWARE_PATH = r'\Microsoft\Windows\CurrentVersion\Uninstall'
 X86_INSTALLED_SOFTWARE_PATH = r'\Wow6432Node' + X64_INSTALLED_SOFTWARE_PATH
 
 
-class InstalledSoftwarePlugin(Plugin):
-    NAME = 'installed_software'
-    DESCRIPTION = 'Retrieve list of installed programs and their install date'
+class InstalledProgramsSoftwarePlugin(Plugin):
+    NAME = 'installed_programs_software'
+    DESCRIPTION = 'Retrieve list of installed programs and their install date from the SOFTWARE Hive'
     COMPATIBLE_HIVE = SOFTWARE_HIVE_TYPE
 
     def _get_installed_software(self, subkey_path):
