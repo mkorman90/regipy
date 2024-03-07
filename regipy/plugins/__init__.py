@@ -1,6 +1,6 @@
 from .amcache.amcache import AmCachePlugin
 from .bcd.boot_entry_list import BootEntryListPlugin
-from .ntuser.installed_programs_ntuser import InstalledSoftwareNTUserPlugin
+from .ntuser.installed_programs_ntuser import InstalledProgramsNTUserPlugin
 from .ntuser.network_drives import NetworkDrivesPlugin
 from .ntuser.persistence import NTUserPersistencePlugin
 from .ntuser.shellbags_ntuser import ShellBagNtuserPlugin
@@ -15,7 +15,7 @@ from .sam.local_sid import LocalSidPlugin
 from .security.domain_sid import DomainSidPlugin
 from .software.classes_installer import SoftwareClassesInstallerPlugin
 from .software.image_file_execution_options import ImageFileExecutionOptions
-from .software.installed_programs import InstalledSoftwarePlugin
+from .software.installed_programs import InstalledProgramsSoftwarePlugin
 from .software.last_logon import LastLogonPlugin
 from .software.persistence import SoftwarePersistencePlugin
 from .software.printdemon import PrintDemonPlugin

@@ -1,7 +1,5 @@
 import logging
 
-from inflection import underscore
-
 from regipy import RegistryKeyNotFoundException
 from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
@@ -12,9 +10,9 @@ logger = logging.getLogger(__name__)
 INSTALLED_SOFTWARE_PATH = r'\Software\Microsoft\Windows\CurrentVersion\Uninstall'
 
 
-class InstalledSoftwareNTUserPlugin(Plugin):
-    NAME = 'installed_software_ntuser'
-    DESCRIPTION = 'Retrieve list of installed programs and their install date'
+class InstalledProgramsNTUserPlugin(Plugin):
+    NAME = 'installed_programs_ntuser'
+    DESCRIPTION = 'Retrieve list of installed programs and their install date from the NTUSER Hive'
     COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
 
     def _get_installed_software(self, subkey_path):
@@ -25,7 +23,7 @@ class InstalledSoftwareNTUserPlugin(Plugin):
             return
 
         for installed_program in uninstall_sk.iter_subkeys():
-            values = {underscore(x.name): x.value for x in
+            values = {x.name: x.value for x in
                       installed_program.iter_values(as_json=self.as_json)} if installed_program.values_count else {}
             self.entries.append({
                 'service_name': installed_program.name,

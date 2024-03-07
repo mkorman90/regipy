@@ -1,7 +1,7 @@
 import pytest
 import datetime as dt
 from regipy.plugins import NTUserPersistencePlugin, UserAssistPlugin, AmCachePlugin, WordWheelQueryPlugin, \
-    UACStatusPlugin, LastLogonPlugin, SoftwareClassesInstallerPlugin, InstalledSoftwarePlugin, RASTracingPlugin, \
+    UACStatusPlugin, LastLogonPlugin, SoftwareClassesInstallerPlugin, InstalledProgramsSoftwarePlugin, RASTracingPlugin, \
     PrintDemonPlugin, ServicesPlugin, NtuserClassesInstallerPlugin
 from regipy.plugins.ntuser.typed_urls import TypedUrlsPlugin
 from regipy.plugins.ntuser.typed_paths import TypedPathsPlugin
@@ -246,7 +246,7 @@ def test_ras_tracing_plugin_software(software_hive):
 
 def test_installed_programs_plugin_software(software_hive):
     registry_hive = RegistryHive(software_hive)
-    plugin_instance = InstalledSoftwarePlugin(registry_hive, as_json=True)
+    plugin_instance = InstalledProgramsSoftwarePlugin(registry_hive, as_json=True)
     plugin_instance.run()
 
     assert len(plugin_instance.entries) == 67
@@ -261,9 +261,9 @@ def test_installed_programs_plugin_software(software_hive):
         'service_name': '{FE2F6A2C-196E-4210-9C04-2B1BC21F07EF}',
         'timestamp': '2011-07-05T22:58:57.996094+00:00',
         'registry_path': '\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
-        'uninstall_string': 'MsiExec.exe /X{FE2F6A2C-196E-4210-9C04-2B1BC21F07EF}',
-        'url_info_about': 'http://www.vmware.com',
-        'display_name': 'VMware Tools'
+        'UninstallString': 'MsiExec.exe /X{FE2F6A2C-196E-4210-9C04-2B1BC21F07EF}',
+        'URLInfoAbout': 'http://www.vmware.com',
+        'DisplayName': 'VMware Tools'
     }.items()
 
 
