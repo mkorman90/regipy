@@ -43,7 +43,7 @@ def main():
               'cli': ['click>=7.0.0', 'tabulate'],
               'full': [
                  'click>=7.0.0',
-                 'tabulate'
+                 'tabulate',
                  'libfwsi-python>=20220123'
               ],
           },
