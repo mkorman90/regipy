@@ -5,3 +5,5 @@ inflection==0.5.1
 pytz
 tabulate==0.8.9
 pytest==7.0.1
+libfwsi-python==20240315
+libfwps-python==20240310
