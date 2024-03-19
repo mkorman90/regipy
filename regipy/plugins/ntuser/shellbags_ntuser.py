@@ -51,6 +51,15 @@ class ShellBagNtuserPlugin(Plugin):
         elif isinstance(shell_item, pyfwsi.root_folder):
             item_type = "Root Folder"
 
+        elif isinstance(shell_item, pyfwsi.control_panel_category):
+            item_type = "Control Panel Category"
+
+        elif isinstance(shell_item, pyfwsi.control_panel_item):
+            item_type = "Control Panel Item"
+
+        elif isinstance(shell_item, pyfwsi.users_property_view):
+            item_type = "Users Property View"
+
         else:
             item_type = 'unknown'
 
@@ -67,6 +76,7 @@ class ShellBagNtuserPlugin(Plugin):
 
         try:
             import pyfwsi
+            import pyfwps
         except ModuleNotFoundError as ex:
             logger.exception(f"Plugin `shellbag_plugin` has missing modules, install regipy using"
                              f" `pip install regipy[full]` in order to install plugin dependencies. "
@@ -74,6 +84,8 @@ class ShellBagNtuserPlugin(Plugin):
             raise ex
 
         path_segment = None
+        full_path = None
+        location_description = None
 
         if isinstance(shell_item, pyfwsi.volume):
             if shell_item.name:
@@ -98,6 +110,10 @@ class ShellBagNtuserPlugin(Plugin):
         elif isinstance(shell_item, pyfwsi.network_location):
             if shell_item.location:
                 path_segment = shell_item.location
+            if shell_item.description:
+                location_description = shell_item.description
+                if shell_item.comments:
+                    location_description += f', {shell_item.comments}'
 
         elif isinstance(shell_item, pyfwsi.root_folder):
             if shell_item.shell_folder_identifier in KNOWN_GUIDS:
@@ -107,10 +123,85 @@ class ShellBagNtuserPlugin(Plugin):
             else:
                 path_segment = '{{{0:s}}}'.format(shell_item.shell_folder_identifier)
 
+        elif isinstance(shell_item, pyfwsi.users_property_view):
+            # Users property view
+            if shell_item.delegate_folder_identifier in KNOWN_GUIDS:
+                path_segment = KNOWN_GUIDS[shell_item.delegate_folder_identifier]
+            elif hasattr(shell_item, 'identifier') and shell_item.identifier in KNOWN_GUIDS:
+                path_segment = KNOWN_GUIDS[shell_item.identifier]
+
+            # Variable: Users property view
+            elif shell_item.property_store_data:
+                fwps_store = pyfwps.store()
+                fwps_store.copy_from_byte_stream(shell_item.property_store_data)
+
+                for fwps_set in iter(fwps_store.sets):
+                    if fwps_set.identifier == 'b725f130-47ef-101a-a5f1-02608c9eebac':
+                        for fwps_record in iter(fwps_set.records):
+
+                            if fwps_record.entry_name:
+                                entry_string = fwps_record.entry_name
+                            else:
+                                entry_string = f'{fwps_record.entry_type:d}'
+
+                            property_key = f'{{{fwps_set.identifier:s}}}/{entry_string:s}'
+
+                            # PKEY_DisplayName
+                            if property_key == '{b725f130-47ef-101a-a5f1-02608c9eebac}/10':
+                                if fwps_record.value_type == 0x0001:
+                                    value_string = '<VT_NULL>'
+                                elif fwps_record.value_type in (0x0003, 0x0013, 0x0014, 0x0015):
+                                    value_string = str(fwps_record.get_data_as_integer())
+                                elif fwps_record.value_type in (0x0008, 0x001e, 0x001f):
+                                    value_string = fwps_record.get_data_as_string()
+                                elif fwps_record.value_type == 0x000b:
+                                    value_string = str(fwps_record.get_data_as_boolean())
+                                elif fwps_record.value_type == 0x0040:
+                                    filetime = fwps_record.get_data_as_integer()
+                                    value_string = self._FormatFiletimeValue(filetime)
+                                elif fwps_record.value_type == 0x0042:
+                                    # TODO: add support
+                                    value_string = '<VT_STREAM>'
+                                elif fwps_record.value_type == 0x0048:
+                                    value_string = fwps_record.get_data_as_guid()
+                                elif fwps_record.value_type & 0xf000 == 0x1000:
+                                    # TODO: add support
+                                    value_string = '<VT_VECTOR>'
+                                else:
+                                    value_string = None
+
+                                path_segment = value_string
+
+                    elif fwps_set.identifier == '28636aa6-953d-11d2-b5d6-00c04fd918d0':
+                        for fwps_record in iter(fwps_set.records):
+
+                            if fwps_record.entry_name:
+                                entry_string = fwps_record.entry_name
+                            else:
+                                entry_string = f'{fwps_record.entry_type:d}'
+
+                            property_key = f'{{{fwps_set.identifier:s}}}/{entry_string:s}'
+
+                            # PKEY_ParsingPath
+                            if property_key == '{28636aa6-953d-11d2-b5d6-00c04fd918d0}/30':
+                                full_path = fwps_record.get_data_as_string()
+
+        elif isinstance(shell_item, pyfwsi.control_panel_category):
+            if str(shell_item.identifier) in KNOWN_GUIDS:
+                path_segment = KNOWN_GUIDS[str(shell_item.identifier)]
+            else:
+                path_segment = '{{{0:s}}}'.format(shell_item.identifier)
+
+        elif isinstance(shell_item, pyfwsi.control_panel_item):
+            if shell_item.identifier in KNOWN_GUIDS:
+                path_segment = KNOWN_GUIDS[shell_item.identifier]
+            else:
+                path_segment = '{{{0:s}}}'.format(shell_item.identifier)
+
         if path_segment is None:
             path_segment = '<UNKNOWN: 0x{0:02x}>'.format(shell_item.class_type)
 
-        return path_segment
+        return path_segment, full_path, location_description
 
     def iter_sk(self, key, reg_path, base_path='', path=''):
         try:
@@ -140,7 +231,7 @@ class ShellBagNtuserPlugin(Plugin):
                 shell_items.copy_from_byte_stream(byte_stream, ascii_codepage=CODEPAGE)
                 for item in shell_items.items:
                     shell_type = self._get_shell_item_type(item)
-                    value = self._parse_shell_item_path_segment(self, item)
+                    value, full_path, location_description = self._parse_shell_item_path_segment(self, item)
                     if not path:
                         path = value
                         base_path = ''
@@ -184,6 +275,8 @@ class ShellBagNtuserPlugin(Plugin):
                              'node_slot': node_slot,
                              'shell_type': shell_type,
                              'path': path,
+                             'full path': full_path if full_path else None,
+                             'location description': location_description if location_description else None,
                              'creation_time': creation_time,
                              'access_time': access_time,
                              'modification_time': modification_time,
