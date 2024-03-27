@@ -44,7 +44,8 @@ def main():
               'full': [
                  'click>=7.0.0',
                  'tabulate',
-                 'libfwsi-python>=20220123'
+                 'libfwsi-python>=20240315',
+                 'libfwps-python>=20240310'
               ],
           },
           include_package_data=True,
