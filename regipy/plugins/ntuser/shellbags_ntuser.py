@@ -66,6 +66,22 @@ class ShellBagNtuserPlugin(Plugin):
         return item_type
 
     @staticmethod
+    def _check_known_guids(guid):
+        if guid in KNOWN_GUIDS:
+            path_segment = KNOWN_GUIDS[guid]
+        else:
+            path_segment = '{{{0:s}}}'.format(guid)
+        return path_segment
+
+    @staticmethod
+    def _get_entry_string(fwps_record):
+        if fwps_record.entry_name:
+            entry_string = fwps_record.entry_name
+        else:
+            entry_string = f'{fwps_record.entry_type:d}'
+        return entry_string
+
+    @staticmethod
     def _parse_shell_item_path_segment(self, shell_item):
         """Parses a shell item path segment.
         Args:
@@ -91,10 +107,7 @@ class ShellBagNtuserPlugin(Plugin):
             if shell_item.name:
                 path_segment = shell_item.name
             elif shell_item.identifier:
-                if shell_item.identifier in KNOWN_GUIDS:
-                    path_segment = KNOWN_GUIDS[shell_item.identifier]
-                else:
-                    path_segment = '{{{0:s}}}'.format(shell_item.identifier)
+                path_segment = self._check_known_guids(shell_item.identifier)
 
         elif isinstance(shell_item, pyfwsi.file_entry):
             long_name = ''
@@ -138,16 +151,10 @@ class ShellBagNtuserPlugin(Plugin):
                 for fwps_set in iter(fwps_store.sets):
                     if fwps_set.identifier == 'b725f130-47ef-101a-a5f1-02608c9eebac':
                         for fwps_record in iter(fwps_set.records):
+                            entry_string = self._get_entry_string(fwps_record)
 
-                            if fwps_record.entry_name:
-                                entry_string = fwps_record.entry_name
-                            else:
-                                entry_string = f'{fwps_record.entry_type:d}'
-
-                            property_key = f'{{{fwps_set.identifier:s}}}/{entry_string:s}'
-
-                            # PKEY_DisplayName
-                            if property_key == '{b725f130-47ef-101a-a5f1-02608c9eebac}/10':
+                            # PKEY_DisplayName: {b725f130-47ef-101a-a5f1-02608c9eebac}/10
+                            if entry_string == '10':
                                 if fwps_record.value_type == 0x0001:
                                     value_string = '<VT_NULL>'
                                 elif fwps_record.value_type in (0x0003, 0x0013, 0x0014, 0x0015):
@@ -174,29 +181,17 @@ class ShellBagNtuserPlugin(Plugin):
 
                     elif fwps_set.identifier == '28636aa6-953d-11d2-b5d6-00c04fd918d0':
                         for fwps_record in iter(fwps_set.records):
+                            entry_string = self._get_entry_string(fwps_record)
 
-                            if fwps_record.entry_name:
-                                entry_string = fwps_record.entry_name
-                            else:
-                                entry_string = f'{fwps_record.entry_type:d}'
-
-                            property_key = f'{{{fwps_set.identifier:s}}}/{entry_string:s}'
-
-                            # PKEY_ParsingPath
-                            if property_key == '{28636aa6-953d-11d2-b5d6-00c04fd918d0}/30':
+                            # PKEY_ParsingPath: {28636aa6-953d-11d2-b5d6-00c04fd918d0}/30
+                            if entry_string == '30':
                                 full_path = fwps_record.get_data_as_string()
 
         elif isinstance(shell_item, pyfwsi.control_panel_category):
-            if str(shell_item.identifier) in KNOWN_GUIDS:
-                path_segment = KNOWN_GUIDS[str(shell_item.identifier)]
-            else:
-                path_segment = '{{{0:s}}}'.format(shell_item.identifier)
+            path_segment = self._check_known_guids(str(shell_item.identifier))
 
         elif isinstance(shell_item, pyfwsi.control_panel_item):
-            if shell_item.identifier in KNOWN_GUIDS:
-                path_segment = KNOWN_GUIDS[shell_item.identifier]
-            else:
-                path_segment = '{{{0:s}}}'.format(shell_item.identifier)
+            path_segment = self._check_known_guids(shell_item.identifier)
 
         if path_segment is None:
             path_segment = '<UNKNOWN: 0x{0:02x}>'.format(shell_item.class_type)
