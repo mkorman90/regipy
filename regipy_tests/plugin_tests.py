@@ -815,11 +815,13 @@ def test_shellbags_plugin_ntuser(shellbags_ntuser):
              'value_name': '0',
              'node_slot': '11',
              'shell_type': 'Directory',
-             'path': '<UNKNOWN: 0x00>\\<UNKNOWN: 0x00>\\rekall',
+             'path': 'Search Folder\\tmp\\rekall',
              'creation_time': dt.datetime(2021, 8, 16, 9, 41, 32).isoformat(),
+             'full path': None,
              'access_time': dt.datetime(2021, 8, 16, 9, 43, 22).isoformat(),
              'modification_time': dt.datetime(2021, 8, 16, 9, 41, 32).isoformat(),
              'last_write': '2021-08-16T09:44:39.333110+00:00',
+             'location description': None,
              'mru_order': '0',
              'mru_order_location': 0}
 
@@ -838,9 +840,11 @@ def test_shellbags_plugin_usrclass(transaction_usrclass):
              'shell_type': 'Root Folder',
              'path': 'Dropbox',
              'creation_time': None,
+             'full path': None,
              'access_time': None,
              'modification_time': None,
              'last_write': '2018-04-05T02:13:26.843024+00:00',
+             'location description': None,
              'mru_order': '4-8-7-6-9-0-1-5-3-2',
              'mru_order_location': 4}
 
