@@ -21,9 +21,9 @@ class BAMPlugin(Plugin):
     def run(self):
         logger.debug('Started Computer Name Plugin...')
 
-        for key_path in BAM_PATH:
+        for path in BAM_PATH:
             try:
-                for subkey_path in self.registry_hive.get_control_sets(key_path):
+                for subkey_path in self.registry_hive.get_control_sets(path):
                     subkey = self.registry_hive.get_key(subkey_path)
                     for sid_subkey in subkey.iter_subkeys():
 
