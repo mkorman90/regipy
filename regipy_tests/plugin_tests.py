@@ -23,6 +23,7 @@ from regipy.plugins.ntuser.winscp_saved_sessions import WinSCPSavedSessionsPlugi
 from regipy.plugins.system.network_data import NetworkDataPlugin
 from regipy.plugins.usrclass.shellbags_usrclass import ShellBagUsrclassPlugin
 from regipy.registry import RegistryHive
+from regipy.plugins.system.bam import BAMPlugin
 
 
 def test_shimcache_plugin(system_hive):
@@ -849,6 +850,21 @@ def test_shellbags_plugin_usrclass(transaction_usrclass):
              'mru_order_location': 4}
 
     assert len(plugin_instance.entries) == 29
+
+def test_bam_plugin(system_hive_with_filetime):
+    registry_hive = RegistryHive(system_hive_with_filetime)
+    plugin_instance = BAMPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+    assert plugin_instance.entries[-1] == {
+             'sequence_number': 9,
+             'version': 1,
+             'sid': 'S-1-5-90-0-1',
+             'executable': '\\Device\\HarddiskVolume2\\Windows\\System32\\dwm.exe',
+             'timestamp': '2020-04-19T09:09:35.731816+00:00',
+             'key_path': '\\ControlSet001\\Services\\bam\\state\\UserSettings\\S-1-5-90-0-1'
+    }
+
+    assert len(plugin_instance.entries) == 55
 
 def test_network_data_plugin(system_hive):
     registry_hive = RegistryHive(system_hive)
