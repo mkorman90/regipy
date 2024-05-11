@@ -39,12 +39,33 @@ def get_file_from_tests(file_name):
     os.remove(tempfile_path)
 
 
+
 registry_path = 'SYSTEM_2.xz'
-print(f'Iterating over all subkeys in {registry_path}')
+print(f'Iterating over all subkeys in {registry_path}, while fetching values, Load hive to memory')
+with profiling():
+    with get_file_from_tests(registry_path) as reg:
+        registry_hive = RegistryHive(reg, load_to_memory=True)
+        keys = [x for x in registry_hive.recurse_subkeys(fetch_values=True)]
+
+print(f'Iterating over all subkeys in {registry_path}, without fetching values')
 with profiling():
     with get_file_from_tests(registry_path) as reg:
         registry_hive = RegistryHive(reg)
         keys = [x for x in registry_hive.recurse_subkeys(fetch_values=False)]
+
+print(f'Iterating over all subkeys in {registry_path}, while fetching values, should take more time...')
+with profiling():
+    with get_file_from_tests(registry_path) as reg:
+        registry_hive = RegistryHive(reg)
+        keys = [x for x in registry_hive.recurse_subkeys(fetch_values=True)]
+
+
+
+
+
+
+
+
 print(f'Done.')
 
 """

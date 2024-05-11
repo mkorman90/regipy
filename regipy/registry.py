@@ -4,7 +4,7 @@ import datetime as dt
 from typing import List, Optional, Union
 
 import logging
-
+import mmap
 import attr
 
 from construct import Bytes, CString, EnumIntegerString, GreedyRange, Int32sl, Int32ul, Int64ul, \
@@ -82,7 +82,7 @@ class RIRecord:
 class RegistryHive:
     CONTROL_SETS = [r'\ControlSet001', r'\ControlSet002']
 
-    def __init__(self, hive_path, hive_type=None, partial_hive_path=None):
+    def __init__(self, hive_path, hive_type=None, partial_hive_path=None, load_to_memory=False):
         """
         Represents a registry hive
         :param hive_path: Path to the registry hive
@@ -92,12 +92,15 @@ class RegistryHive:
                                   hive_type=ntuser partial_hive_path="/Software" would mean
                                   this is actually a HKCU hive, starting from HKCU/Software
         """
-
         self.partial_hive_path = None
         self.hive_type = None
+        self.mm : mmap.mmap = None
 
         with open(hive_path, 'rb') as f:
-            self._stream = BytesIO(f.read())
+            if load_to_memory:            
+                self._stream = mmap.mmap(f.fileno(), 0,  access=mmap.ACCESS_READ)
+            else:
+                self._stream = BytesIO(f.read())
 
         with boomerang_stream(self._stream) as s:
             self.header = REGF_HEADER.parse_stream(s)
@@ -388,26 +391,44 @@ class NKRecord:
         :param stream: The registry stream
         :return: A VKRecord
         """
-        stream.seek(REGF_HEADER_SIZE + 4 + vk.data_offset)
-        data_type = vk.data_type
-        data = stream.read(vk.data_size)
-        return VKRecord(value_type=data_type, value_type_str=str(data_type), value=data, size=vk.data_size)
+        # A data size bigger than this, means that the value is resident
+        # TODO: Fix resident dtaa handling cases causing bad parsing of indirect blocks
+        if vk.data_size >= 0x80000000:
+            print(f'Reading resident value from vk: {Int32ul.build(vk.data_offset)}, vk data size: {vk.data_size - 0x80000000}')
+            # TODO: Return the correct value according to vk.data_size - 0x80000000:
+            """
+                A data size of 4 uses all 4 bytes of the data offset
+                A data size of 2 uses the last 2 bytes of the data offset (on a little-endian system)
+                A data size of 1 uses the last byte (on a little-endian system)
+                A data size of 0 represents that the value is not set (or NULL)
+            """
+            return VKRecord(value_type=vk.data_type, value_type_str=str(vk.data_type), value=Int32ul.build(vk.data_offset), size=vk.data_size - 0x80000000) 
+        else:
+            # print(f'[+] [loc:{stream.tell()}] Seek {REGF_HEADER_SIZE + 4 + vk.data_offset} and read {vk.data_size}')
+            stream.seek(REGF_HEADER_SIZE + 4 + vk.data_offset)
+            data_type = vk.data_type
+            data = stream.read(vk.data_size)
+            return VKRecord(value_type=data_type, value_type_str=str(data_type), value=data, size=vk.data_size)
 
     @staticmethod
     def _parse_indirect_block(stream, value):
         # This is an indirect datablock (Bigger than 16344, therefor we handle it differently)
         # The value inside the vk entry actually contains a pointer to the buffers containing the data
         big_data_block_header = BIG_DATA_BLOCK.parse(value.value)
-
+        print(f'[+++ IDB] Parsed big data block: {big_data_block_header}')
         # Go to the start of the segment offset list
         stream.seek(REGF_HEADER_SIZE + big_data_block_header.offset_to_list_of_segments)
         buffer = BytesIO()
 
         # Read them sequentially until we got all the size of the VK
         value_size = value.size
+        print(f'[+] Parsing IDB with size {value_size}')
         while value_size > 0:
+            print(f'[++] Parsing DS offset from {stream.tell()}')
             data_segment_offset = Int32ul.parse_stream(stream)
+            # print(f'[+] Read ds offset: {data_segment_offset}')
             with boomerang_stream(stream) as tmpstream:
+                print(f'[++] Seeking to {REGF_HEADER_SIZE + 4 + data_segment_offset}')
                 tmpstream.seek(REGF_HEADER_SIZE + 4 + data_segment_offset)
                 tmpbuffer = tmpstream.read(min(0x3fd8, value_size))
                 value_size -= len(tmpbuffer)
@@ -447,6 +468,8 @@ class NKRecord:
                     logger.error(f'Could not parse VK at {substream.tell()}, registry hive is probably corrupted.')
                     return
 
+
+                # print(f'Reading value from vk: {vk}:')
                 value = self.read_value(vk, substream)
 
                 if vk.name_size == 0:
@@ -478,22 +501,19 @@ class NKRecord:
                     data_type = str(vk.data_type)
 
                 if data_type in ['REG_SZ', 'REG_EXPAND', 'REG_EXPAND_SZ']:
-                    if vk.data_size >= 0x80000000:
-                        # data is contained in the data_offset field
-                        value.size -= 0x80000000
-                        actual_value = vk.data_offset
-                    elif vk.data_size > 0x3fd8 and value.value[:2] == b'db':
+                    if vk.data_size > 0x3fd8 and value.value[:2] == b'db':
+                        print(f'[+++ REG_SZ] Parsing indirect block at {vk}')
                         data = self._parse_indirect_block(substream, value)
+                        print(f'[+++ REG_SZ] {vk} IDB: {data}')
                         actual_value = try_decode_binary(data, as_json=as_json, trim_values=trim_values)
                     else:
                         actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 elif data_type in ['REG_BINARY', 'REG_NONE']:
-                    if vk.data_size >= 0x80000000:
-                        # data is contained in the data_offset field
-                        actual_value = vk.data_offset
-                    elif vk.data_size > 0x3fd8 and value.value[:2] == b'db':
+                    if vk.data_size > 0x3fd8 and value.value[:2] == b'db':
                         try:
+                            print(f'[+++ REG_BIN] Parsing indirect block at {vk}')
                             actual_value = self._parse_indirect_block(substream, value)
+                            print(f'[+++ REG_BIN] {vk} IDB: {actual_value}')
 
                             actual_value = try_decode_binary(actual_value, as_json=True, trim_values=trim_values) if as_json else actual_value
                         except ConstError:
@@ -505,10 +525,9 @@ class NKRecord:
                 elif data_type == 'REG_SZ':
                     actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 elif data_type == 'REG_DWORD':
-                    # If the data size is bigger than 0x80000000, data is actually stored in the VK data offset.
-                    actual_value = vk.data_offset if vk.data_size >= 0x80000000 else Int32ul.parse(value.value)
+                    actual_value = Int32ul.parse(value.value)
                 elif data_type == 'REG_QWORD':
-                    actual_value = vk.data_offset if vk.data_size >= 0x80000000 else Int64ul.parse(value.value)
+                    actual_value = Int64ul.parse(value.value)
                 elif data_type == 'REG_MULTI_SZ':
                     parsed_value = GreedyRange(CString('utf-16-le')).parse(value.value)
                     # Because the ListContainer object returned by Construct cannot be turned into a list,

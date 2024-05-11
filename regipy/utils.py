@@ -57,7 +57,9 @@ def boomerang_stream(stream: TextIOWrapper) -> Generator[TextIOWrapper, None, No
     :param stream: The stream
     """
     current_offset = stream.tell()
+    # print(f'boomerang context saving context {current_offset}')
     yield stream
+    # print(f'returning from boomerang context load context from {stream.tell()} back to {current_offset}')
     stream.seek(current_offset)
 
 
