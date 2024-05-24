@@ -11,7 +11,6 @@ from construct import Bytes, CString, EnumIntegerString, GreedyRange, Int32sl, I
     StreamError, ConstError
 from io import BytesIO
 
-
 from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundException, NoRegistryValuesException, \
     RegistryValueNotFoundException, RegipyGeneralException, UnidentifiedHiveException, RegistryParsingException
 from regipy.hive_types import SUPPORTED_HIVE_TYPES
@@ -388,10 +387,18 @@ class NKRecord:
         :param stream: The registry stream
         :return: A VKRecord
         """
-        stream.seek(REGF_HEADER_SIZE + 4 + vk.data_offset)
+        # Handle resident values
+        is_resident = False
+        if vk.data_size >= 0x80000000:
+            # data is contained in the data_offset field
+            is_resident = True
+            data = Int32ul.build(vk.data_offset)
+        else:
+            stream.seek(REGF_HEADER_SIZE + 4 + vk.data_offset)
+            data = stream.read(vk.data_size)
         data_type = vk.data_type
-        data = stream.read(vk.data_size)
-        return VKRecord(value_type=data_type, value_type_str=str(data_type), value=data, size=vk.data_size)
+        return VKRecord(value_type=data_type, value_type_str=str(data_type), value=data,
+                        size=vk.data_size - 0x80000000 if is_resident else vk.data_size)
 
     @staticmethod
     def _parse_indirect_block(stream, value):
@@ -432,6 +439,8 @@ class NKRecord:
 
         for _ in range(self.values_count):
             is_corrupted = False
+            is_resident = False
+
             try:
                 vk_offset = Int32ul.parse_stream(self._stream)
             except StreamError:
@@ -477,8 +486,15 @@ class NKRecord:
                 else:
                     data_type = str(vk.data_type)
 
+                # Handle resident values
+                if vk.data_size >= 0x80000000:
+                    # data is contained in the data_offset field
+                    value.size -= 0x80000000
+                    value.value = Int32ul.build(vk.data_offset)
+                    is_resident = True
+
                 if data_type in ['REG_SZ', 'REG_EXPAND', 'REG_EXPAND_SZ']:
-                    if vk.data_size >= 0x80000000:
+                    if is_resident:
                         # data is contained in the data_offset field
                         value.size -= 0x80000000
                         actual_value = vk.data_offset
@@ -488,14 +504,13 @@ class NKRecord:
                     else:
                         actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 elif data_type in ['REG_BINARY', 'REG_NONE']:
-                    if vk.data_size >= 0x80000000:
-                        # data is contained in the data_offset field
+                    if is_resident:
                         actual_value = vk.data_offset
                     elif vk.data_size > 0x3fd8 and value.value[:2] == b'db':
                         try:
                             actual_value = self._parse_indirect_block(substream, value)
-
-                            actual_value = try_decode_binary(actual_value, as_json=True, trim_values=trim_values) if as_json else actual_value
+                            actual_value = try_decode_binary(actual_value, as_json=True,
+                                                             trim_values=trim_values) if as_json else actual_value
                         except ConstError:
                             logger.error(f'Bad value at {actual_vk_offset}')
                             continue
@@ -506,15 +521,15 @@ class NKRecord:
                     actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 elif data_type == 'REG_DWORD':
                     # If the data size is bigger than 0x80000000, data is actually stored in the VK data offset.
-                    actual_value = vk.data_offset if vk.data_size >= 0x80000000 else Int32ul.parse(value.value)
+                    actual_value = Int32ul.parse(value.value)
                 elif data_type == 'REG_QWORD':
-                    actual_value = vk.data_offset if vk.data_size >= 0x80000000 else Int64ul.parse(value.value)
+                    actual_value = Int64ul.parse(value.value)
                 elif data_type == 'REG_MULTI_SZ':
                     parsed_value = GreedyRange(CString('utf-16-le')).parse(value.value)
                     # Because the ListContainer object returned by Construct cannot be turned into a list,
                     # we do this trick
                     actual_value = [x for x in parsed_value if x]
-                # We currently dumps this as hex string or raw
+                # We currently dums this as hex string or raw
                 # TODO: Add actual parsing
                 elif data_type in ['REG_RESOURCE_REQUIREMENTS_LIST', 'REG_RESOURCE_LIST']:
                     actual_value = binascii.b2a_hex(value.value).decode()[:max_len] if trim_values else value.value

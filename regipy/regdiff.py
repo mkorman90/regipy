@@ -6,6 +6,7 @@ import logging
 from regipy.exceptions import RegistryKeyNotFoundException
 
 from regipy.registry import RegistryHive, NKRecord
+from regipy.registry_mmap import MemoryMappedRegistryHive
 from regipy.utils import convert_wintime, calculate_sha1
 
 logger = logging.getLogger(__name__)
@@ -54,7 +55,7 @@ def _get_name_value_tuples(subkey: NKRecord) -> Set[Tuple[str, Any]]:
     return values_tuple
 
 
-def compare_hives(first_hive_path, second_hive_path, verbose=False):
+def compare_hives(first_hive_path, second_hive_path, verbose=False, use_memory_map=False):
     # The list will contain tuples, in the following format: (Difference type, first value, second value, description)
     found_differences = []
 
@@ -67,8 +68,8 @@ def compare_hives(first_hive_path, second_hive_path, verbose=False):
         return found_differences
 
     # Compare header parameters
-    first_registry_hive = RegistryHive(first_hive_path)
-    second_registry_hive = RegistryHive(second_hive_path)
+    first_registry_hive = MemoryMappedRegistryHive(first_hive_path) if use_memory_map else RegistryHive(first_hive_path)
+    second_registry_hive = MemoryMappedRegistryHive(second_hive_path) if use_memory_map else RegistryHive(second_hive_path)
     if first_registry_hive.header.hive_bins_data_size != second_registry_hive.header.hive_bins_data_size:
         found_differences.append(('different_hive_bin_data_size', first_registry_hive.header.hive_bins_data_size,
                                   second_registry_hive.header.hive_bins_data_size, ''))
