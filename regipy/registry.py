@@ -11,7 +11,6 @@ from construct import Bytes, CString, EnumIntegerString, GreedyRange, Int32sl, I
     StreamError, ConstError
 from io import BytesIO
 
-
 from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundException, NoRegistryValuesException, \
     RegistryValueNotFoundException, RegipyGeneralException, UnidentifiedHiveException, RegistryParsingException
 from regipy.hive_types import SUPPORTED_HIVE_TYPES
@@ -82,10 +81,10 @@ class RIRecord:
 class RegistryHive:
     CONTROL_SETS = [r'\ControlSet001', r'\ControlSet002']
 
-    def __init__(self, hive_path, hive_type=None, partial_hive_path=None):
+    def __init__(self, hive: Union[str, bytes], hive_type=None, partial_hive_path=None):
         """
         Represents a registry hive
-        :param hive_path: Path to the registry hive
+        :param hive: Path to the registry hive or raw data of the registry hive
         :param hive_type: The hive type can be specified if this is a partial hive,
                           or for some other reason regipy cannot identify the hive type
         :param partial_hive_path: The path from which the partial hive actually starts, for example:
@@ -96,8 +95,11 @@ class RegistryHive:
         self.partial_hive_path = None
         self.hive_type = None
 
-        with open(hive_path, 'rb') as f:
-            self._stream = BytesIO(f.read())
+        if type(hive) == str:
+            with open(hive, 'rb') as f:
+                self._stream = BytesIO(f.read())
+        if type(hive) == bytes:
+            self._stream = BytesIO(hive)
 
         with boomerang_stream(self._stream) as s:
             self.header = REGF_HEADER.parse_stream(s)
@@ -118,7 +120,10 @@ class RegistryHive:
             try:
                 self.hive_type = identify_hive_type(self.name)
             except UnidentifiedHiveException:
-                logger.info(f'Hive type for {hive_path} was not identified: {self.name}')
+                if type(hive) == str:
+                    logger.info(f'Hive type for {hive} was not identified: {self.name}')
+                if type(hive) == bytes:
+                    logger.info(f'Hive type was not identified: {self.name}')
 
         if partial_hive_path:
             self.partial_hive_path = partial_hive_path
