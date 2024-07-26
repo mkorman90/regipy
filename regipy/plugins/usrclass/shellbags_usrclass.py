@@ -9,7 +9,7 @@ import re
 logger = logging.getLogger(__name__)
 
 USRCLASS_SHELLBAG = '\\Local Settings\\Software\\Microsoft\\Windows\\Shell\\BagMRU'
-CODEPAGE = 'cp1252'
+DEFAULT_CODEPAGE = 'cp1252'
 
 
 class ShellBagUsrclassPlugin(Plugin):
@@ -202,7 +202,7 @@ class ShellBagUsrclassPlugin(Plugin):
 
         return path_segment, full_path, location_description
 
-    def iter_sk(self, key, reg_path, base_path='', path=''):
+    def iter_sk(self, key, reg_path, codepage=DEFAULT_CODEPAGE, base_path='', path=''):
         try:
             import pyfwsi
         except ModuleNotFoundError as ex:
@@ -227,7 +227,7 @@ class ShellBagUsrclassPlugin(Plugin):
                 slot = v.name
                 byte_stream = v.value
                 shell_items = pyfwsi.item_list()
-                shell_items.copy_from_byte_stream(byte_stream, ascii_codepage=CODEPAGE)
+                shell_items.copy_from_byte_stream(byte_stream, ascii_codepage=codepage)
                 for item in shell_items.items:
                     shell_type = self._get_shell_item_type(item)
                     value, full_path, location_description = self._parse_shell_item_path_segment(self, item)
@@ -287,10 +287,10 @@ class ShellBagUsrclassPlugin(Plugin):
                     self.entries.append(entry)
                     sk_reg_path = f'{reg_path}\\{value_name}'
                     sk = self.registry_hive.get_key(sk_reg_path)
-                    self.iter_sk(sk, sk_reg_path, base_path, path)
+                    self.iter_sk(sk, sk_reg_path, codepage, base_path, path)
                     path = base_path
 
-    def run(self):
+    def run(self, codepage=DEFAULT_CODEPAGE):
 
         try:
             import pyfwsi
@@ -302,6 +302,6 @@ class ShellBagUsrclassPlugin(Plugin):
 
         try:
             shellbag_usrclass_subkey = self.registry_hive.get_key(USRCLASS_SHELLBAG)
-            self.iter_sk(shellbag_usrclass_subkey, USRCLASS_SHELLBAG)
+            self.iter_sk(shellbag_usrclass_subkey, USRCLASS_SHELLBAG, codepage=codepage)
         except RegistryKeyNotFoundException as ex:
             logger.error(f'Could not find {self.NAME} plugin data at: {USRCLASS_SHELLBAG}: {ex}')
