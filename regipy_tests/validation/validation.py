@@ -60,6 +60,4 @@ class ValidationCase:
             self.expected_entries_count == output_entries_count
         ), f"No match for expected entries count: expected {self.expected_entries_count}, got {output_entries_count}"
 
-        print(
-            f"\tValidation passed for {self.plugin.NAME}"
-        )
+        print(f"\tValidation passed for {self.plugin.NAME}")
