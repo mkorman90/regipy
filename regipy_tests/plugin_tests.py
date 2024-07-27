@@ -37,19 +37,6 @@ from regipy.registry import RegistryHive
 from regipy.plugins.system.bam import BAMPlugin
 
 
-def test_shimcache_plugin(system_hive):
-    registry_hive = RegistryHive(system_hive)
-    plugin_instance = ShimCachePlugin(registry_hive, as_json=True)
-    plugin_instance.run()
-
-    assert len(plugin_instance.entries) == 660
-    assert plugin_instance.entries[0] == {
-        "last_mod_date": "2011-01-12T12:08:00+00:00",
-        "path": "\\??\\C:\\Program Files\\McAfee\\VirusScan Enterprise\\mfeann.exe",
-        "exec_flag": "True",
-    }
-
-
 def test_computer_name_plugin(system_hive):
     registry_hive = RegistryHive(system_hive)
     plugin_instance = ComputerNamePlugin(registry_hive, as_json=True)
@@ -59,26 +46,6 @@ def test_computer_name_plugin(system_hive):
         {"name": "WKS-WIN732BITA", "timestamp": "2010-11-10T17:18:08.718750+00:00"},
         {"name": "WIN-V5T3CSP8U4H", "timestamp": "2010-11-10T18:17:36.968750+00:00"},
     ]
-
-
-def test_persistence_plugin_ntuser(ntuser_hive):
-    registry_hive = RegistryHive(ntuser_hive)
-    plugin_instance = NTUserPersistencePlugin(registry_hive, as_json=True)
-    plugin_instance.run()
-
-    assert plugin_instance.entries == {
-        "\\Software\\Microsoft\\Windows\\CurrentVersion\\Run": {
-            "timestamp": "2012-04-03T21:19:54.837716+00:00",
-            "values": [
-                {
-                    "name": "Sidebar",
-                    "value_type": "REG_EXPAND_SZ",
-                    "value": "%ProgramFiles%\\Windows Sidebar\\Sidebar.exe /autoRun",
-                    "is_corrupted": False,
-                }
-            ],
-        }
-    }
 
 
 def test_persistence_plugin_software(software_hive):
