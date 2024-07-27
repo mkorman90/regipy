@@ -40,4 +40,3 @@ for plugin in PLUGINS:
 
     else:
         print(f'[!] {plugin_name} has NO validation case (currently a warning) - will be enforced in the future!')
-        
