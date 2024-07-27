@@ -33,26 +33,28 @@ def _collect_bootkey(lsa_key: NKRecord) -> str:
     # and is stored as a Unicode string giving the hex value of that piece of the key.
 
     bootkey_subkeys = {
-        "JD": '',
-        "Skew1": '',
-        "GBG": '',
-        "Data": '',
+        "JD": "",
+        "Skew1": "",
+        "GBG": "",
+        "Data": "",
     }
 
     for subkey in lsa_key.iter_subkeys():
         if subkey.name in bootkey_subkeys:
             bootkey_subkeys[subkey.name] = subkey.get_class_name()
 
-    return ''.join(bootkey_subkeys.values())
+    return "".join(bootkey_subkeys.values())
 
 
 # Permutation matrix for the boot key
+# fmt: off
 _BOOTKEY_PBOX = [
     0x8, 0x5, 0x4, 0x2,
     0xB, 0x9, 0xD, 0x3,
     0x0, 0x6, 0x1, 0xC,
-    0xE, 0xA, 0xF, 0x7,
+    0xE, 0xA, 0xF, 0x7
 ]
+# fmt: on
 
 
 def _descramble_bootkey(key: str) -> bytes:
@@ -87,6 +89,8 @@ class BootKeyPlugin(Plugin):
             self.entries.append(
                 {
                     "key": bootkey.hex() if self.as_json else bootkey,
-                    'timestamp': convert_wintime(lsa_key.header.last_modified, as_json=self.as_json)
+                    "timestamp": convert_wintime(
+                        lsa_key.header.last_modified, as_json=self.as_json
+                    ),
                 }
             )

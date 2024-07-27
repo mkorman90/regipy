@@ -5,7 +5,8 @@ from regipy.registry import RegistryHive
 
 VALIDATION_CASES = set()
 
-class ValidationCase():
+
+class ValidationCase:
 
     input_hive: RegistryHive = None
     plugin: Plugin = None
@@ -24,12 +25,13 @@ class ValidationCase():
     def __init_subclass__(cls):
         VALIDATION_CASES.add(cls)
 
-
     def __init__(self, input_hive: RegistryHive) -> None:
         self.input_hive = input_hive
 
     def validate(self):
-        print(f'\t[*] Starting validation for {self.plugin.NAME} ({self.__class__.__name__})')
+        print(
+            f"\t[*] Starting validation for {self.plugin.NAME} ({self.__class__.__name__})"
+        )
         self.plugin_instance = self.plugin(self.input_hive, as_json=True)
         self.plugin_instance.run()
         self.plugin_output = self.plugin_instance.entries
@@ -43,4 +45,6 @@ class ValidationCase():
         assert entries_found
         assert self.expected_entries_count == len(self.plugin_output)
 
-        print(f'\t[*] Validation passed for {self.plugin.NAME} ({self.__class__.__name__})')
+        print(
+            f"\t[*] Validation passed for {self.plugin.NAME} ({self.__class__.__name__})"
+        )

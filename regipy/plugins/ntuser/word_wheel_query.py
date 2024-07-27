@@ -12,27 +12,31 @@ from regipy.utils import convert_wintime
 
 logger = logging.getLogger(__name__)
 
-WORD_WHEEL_QUERY_KEY_PATH = r'\Software\Microsoft\Windows\CurrentVersion\Explorer\WordWheelQuery'
+WORD_WHEEL_QUERY_KEY_PATH = (
+    r"\Software\Microsoft\Windows\CurrentVersion\Explorer\WordWheelQuery"
+)
 
 
 class WordWheelQueryPlugin(Plugin):
-    NAME = 'word_wheel_query'
-    DESCRIPTION = 'Parse the word wheel query artifact'
+    NAME = "word_wheel_query"
+    DESCRIPTION = "Parse the word wheel query artifact"
     COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
 
     def run(self):
         try:
             subkey = self.registry_hive.get_key(WORD_WHEEL_QUERY_KEY_PATH)
         except RegistryKeyNotFoundException as ex:
-            logger.error(f'Could not find {self.NAME} plugin data at: {WORD_WHEEL_QUERY_KEY_PATH}: {ex}')
+            logger.error(
+                f"Could not find {self.NAME} plugin data at: {WORD_WHEEL_QUERY_KEY_PATH}: {ex}"
+            )
             return None
 
         timestamp = convert_wintime(subkey.header.last_modified, as_json=self.as_json)
 
-        mru_list_order = subkey.get_value('MRUListEx')
+        mru_list_order = subkey.get_value("MRUListEx")
 
         # If this is the value, the list is empty
-        if mru_list_order == 0xffffffff:
+        if mru_list_order == 0xFFFFFFFF:
             return None
 
         for i, entry_name in enumerate(GreedyRange(Int32ul).parse(mru_list_order)):
@@ -41,9 +45,11 @@ class WordWheelQueryPlugin(Plugin):
             if not entry_value:
                 continue
 
-            self.entries.append({
-                'last_write': timestamp,
-                'mru_id': entry_name,
-                'order': i,
-                'name': CString('utf-16').parse(entry_value)
-            })
+            self.entries.append(
+                {
+                    "last_write": timestamp,
+                    "mru_id": entry_name,
+                    "order": i,
+                    "name": CString("utf-16").parse(entry_value),
+                }
+            )

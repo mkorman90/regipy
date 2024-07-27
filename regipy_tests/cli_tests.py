@@ -20,33 +20,36 @@ def test_cli_registry_dump(ntuser_hive):
     end_date = "2012-04-03T23:59:59.999999"
 
     output_file_path = mktemp()
-    result = runner.invoke(registry_dump, [ntuser_hive, "-d", "-s", start_date, "-e", end_date, "-o", output_file_path])
+    result = runner.invoke(
+        registry_dump,
+        [ntuser_hive, "-d", "-s", start_date, "-e", end_date, "-o", output_file_path],
+    )
     assert result.exit_code == 0
 
-    with open(output_file_path, 'r') as f:
+    with open(output_file_path, "r") as f:
         output = f.readlines()
 
     assert json.loads(output[0]) == {
-        'subkey_name': '.Default',
-        'path': '\\AppEvents\\EventLabels\\.Default',
-        'timestamp': '2012-04-03T21:19:54.733216+00:00',
-        'values_count': 2,
-        'values': [],
-        'actual_path': None
+        "subkey_name": ".Default",
+        "path": "\\AppEvents\\EventLabels\\.Default",
+        "timestamp": "2012-04-03T21:19:54.733216+00:00",
+        "values_count": 2,
+        "values": [],
+        "actual_path": None,
     }
 
     assert json.loads(output[-1]) == {
-        'subkey_name': 'System',
-        'path': '\\System',
-        'timestamp': '2012-04-03T21:19:54.847482+00:00',
-        'values_count': 0,
-        'values': [],
-        'actual_path': None
+        "subkey_name": "System",
+        "path": "\\System",
+        "timestamp": "2012-04-03T21:19:54.847482+00:00",
+        "values_count": 0,
+        "values": [],
+        "actual_path": None,
     }
 
     # The output file contains one extra line, because of line breaks
     assert len(output) == 1490
-    assert result.output.strip().endswith('(1489 subkeys enumerated)')
+    assert result.output.strip().endswith("(1489 subkeys enumerated)")
 
 
 def test_cli_run_plugins(ntuser_hive):
@@ -56,21 +59,24 @@ def test_cli_run_plugins(ntuser_hive):
     result = runner.invoke(run_plugins, [ntuser_hive, "-o", output_file_path])
     assert result.exit_code == 0
 
-    assert result.output.strip() == 'Loaded 38 plugins\nFinished: 11/38 plugins matched the hive type'
+    assert (
+        result.output.strip()
+        == "Loaded 38 plugins\nFinished: 11/38 plugins matched the hive type"
+    )
 
-    with open(output_file_path, 'r') as f:
+    with open(output_file_path, "r") as f:
         output = json.loads(f.read())
 
     assert set(output.keys()) == {
-        'installed_software_ntuser',
-        'word_wheel_query',
-        'winrar_plugin',
-        'user_assist',
-        'ntuser_persistence',
-        'terminal_services_history',
-        'typed_paths',
-        'network_drives_plugin',
-        'typed_urls',
-        'winscp_saved_sessions',
-        'shellbag_plugin'
+        "installed_software_ntuser",
+        "word_wheel_query",
+        "winrar_plugin",
+        "user_assist",
+        "ntuser_persistence",
+        "terminal_services_history",
+        "typed_paths",
+        "network_drives_plugin",
+        "typed_urls",
+        "winscp_saved_sessions",
+        "shellbag_plugin",
     }

@@ -31,7 +31,7 @@ def get_timestamp_for_subkeys(registry_hive, subkey_list):
         try:
             subkey = registry_hive.get_key(subkey_path)
         except RegistryKeyNotFoundException as ex:
-            logger.exception(f'Could not obtain timestamp for subkey {subkey_path}')
+            logger.exception(f"Could not obtain timestamp for subkey {subkey_path}")
             continue
         yield subkey_path, convert_wintime(subkey.header.last_modified, as_json=True)
 
@@ -63,34 +63,49 @@ def compare_hives(first_hive_path, second_hive_path, verbose=False):
     second_hive_sha1 = calculate_sha1(second_hive_path)
 
     if first_hive_sha1 == second_hive_sha1:
-        logger.info('Hives have the same hash!')
+        logger.info("Hives have the same hash!")
         return found_differences
 
     # Compare header parameters
     first_registry_hive = RegistryHive(first_hive_path)
     second_registry_hive = RegistryHive(second_hive_path)
-    if first_registry_hive.header.hive_bins_data_size != second_registry_hive.header.hive_bins_data_size:
-        found_differences.append(('different_hive_bin_data_size', first_registry_hive.header.hive_bins_data_size,
-                                  second_registry_hive.header.hive_bins_data_size, ''))
+    if (
+        first_registry_hive.header.hive_bins_data_size
+        != second_registry_hive.header.hive_bins_data_size
+    ):
+        found_differences.append(
+            (
+                "different_hive_bin_data_size",
+                first_registry_hive.header.hive_bins_data_size,
+                second_registry_hive.header.hive_bins_data_size,
+                "",
+            )
+        )
 
     # Enumerate subkeys for each hive and start comparing
-    logger.info('Enumerating subkeys in {}'.format(os.path.basename(first_hive_path)))
+    logger.info("Enumerating subkeys in {}".format(os.path.basename(first_hive_path)))
     first_hive_subkeys = get_subkeys_and_timestamps(first_registry_hive)
 
-    logger.info('Enumerating subkeys in {}'.format(os.path.basename(second_hive_path)))
+    logger.info("Enumerating subkeys in {}".format(os.path.basename(second_hive_path)))
     second_hive_subkeys = get_subkeys_and_timestamps(second_registry_hive)
 
     # Get a set of keys present in one hive and not the other and vice versa
     first_hive_subkey_names = {x[0] for x in first_hive_subkeys if x[0] is not None}
     second_hive_subkey_names = {x[0] for x in second_hive_subkeys if x[0] is not None}
 
-    found_differences.extend(('new_subkey', ts, None, subkey_path) for subkey_path, ts in
-                             get_timestamp_for_subkeys(first_registry_hive,
-                                                       first_hive_subkey_names - second_hive_subkey_names))
+    found_differences.extend(
+        ("new_subkey", ts, None, subkey_path)
+        for subkey_path, ts in get_timestamp_for_subkeys(
+            first_registry_hive, first_hive_subkey_names - second_hive_subkey_names
+        )
+    )
 
-    found_differences.extend(('new_subkey', None, ts, subkey_path) for subkey_path, ts in
-                             get_timestamp_for_subkeys(second_registry_hive,
-                                                       second_hive_subkey_names - first_hive_subkey_names))
+    found_differences.extend(
+        ("new_subkey", None, ts, subkey_path)
+        for subkey_path, ts in get_timestamp_for_subkeys(
+            second_registry_hive, second_hive_subkey_names - first_hive_subkey_names
+        )
+    )
 
     # Remove duplicate keys from each of the sets
     first_hive_diff_subkeys = first_hive_subkeys - second_hive_subkeys
@@ -111,28 +126,42 @@ def compare_hives(first_hive_path, second_hive_path, verbose=False):
                     first_subkey_values = _get_name_value_tuples(first_subkey_nk_record)
 
                 if second_subkey_nk_record.values_count:
-                    second_subkey_values = _get_name_value_tuples(second_subkey_nk_record)
+                    second_subkey_values = _get_name_value_tuples(
+                        second_subkey_nk_record
+                    )
 
                 # If one hive or the other contain values, and they are different, compare values
-                if (first_subkey_values or second_subkey_values) and (first_subkey_values != second_subkey_values):
+                if (first_subkey_values or second_subkey_values) and (
+                    first_subkey_values != second_subkey_values
+                ):
                     first_hive_value_names = set(x[0] for x in first_subkey_values)
                     second_hive_value_names = set(x[0] for x in second_subkey_values)
 
-                    values_in_first_but_not_in_second = first_hive_value_names - second_hive_value_names
-                    values_in_second_but_not_in_first = second_hive_value_names - first_hive_value_names
+                    values_in_first_but_not_in_second = (
+                        first_hive_value_names - second_hive_value_names
+                    )
+                    values_in_second_but_not_in_first = (
+                        second_hive_value_names - first_hive_value_names
+                    )
 
                     # If there are value names that are present in the first subkey but not the second
                     # Iterate over all values in the first subkey
                     # If the value name is one of those that is not on the second subkey, add it to the set
                     if values_in_first_but_not_in_second:
-                        found_differences.extend(('new_value', f'{n}: {d} @ {ts_1}', None, path_1) for n, d in
-                                                 get_values_from_tuples(first_subkey_values,
-                                                                        values_in_first_but_not_in_second))
+                        found_differences.extend(
+                            ("new_value", f"{n}: {d} @ {ts_1}", None, path_1)
+                            for n, d in get_values_from_tuples(
+                                first_subkey_values, values_in_first_but_not_in_second
+                            )
+                        )
 
                     if values_in_second_but_not_in_first:
-                        found_differences.extend(('new_value', None, f'{n}: {d} @ {ts_2}', path_1) for n, d in
-                                                 get_values_from_tuples(second_subkey_values,
-                                                                        values_in_second_but_not_in_first))
+                        found_differences.extend(
+                            ("new_value", None, f"{n}: {d} @ {ts_2}", path_1)
+                            for n, d in get_values_from_tuples(
+                                second_subkey_values, values_in_second_but_not_in_first
+                            )
+                        )
 
                 # We do not compare subkeys for each subkey, because we would have detected those.
     return found_differences

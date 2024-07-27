@@ -13,10 +13,22 @@ import attr
 import pytz
 
 
-from regipy.exceptions import NoRegistrySubkeysException, RegistryKeyNotFoundException, RegipyGeneralException, \
-    UnidentifiedHiveException
-from regipy.hive_types import NTUSER_HIVE_TYPE, SYSTEM_HIVE_TYPE, AMCACHE_HIVE_TYPE, SOFTWARE_HIVE_TYPE, \
-    SAM_HIVE_TYPE, SECURITY_HIVE_TYPE, BCD_HIVE_TYPE, USRCLASS_HIVE_TYPE
+from regipy.exceptions import (
+    NoRegistrySubkeysException,
+    RegistryKeyNotFoundException,
+    RegipyGeneralException,
+    UnidentifiedHiveException,
+)
+from regipy.hive_types import (
+    NTUSER_HIVE_TYPE,
+    SYSTEM_HIVE_TYPE,
+    AMCACHE_HIVE_TYPE,
+    SOFTWARE_HIVE_TYPE,
+    SAM_HIVE_TYPE,
+    SECURITY_HIVE_TYPE,
+    BCD_HIVE_TYPE,
+    USRCLASS_HIVE_TYPE,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +38,9 @@ MAX_LEN = 256
 
 def calculate_sha1(file_path):
     sha1 = hashlib.sha1()
-    with open(file_path, 'rb') as f:
+    with open(file_path, "rb") as f:
         while True:
-            data = f.read(1024 ** 2)
+            data = f.read(1024**2)
             if not data:
                 break
             sha1.update(data)
@@ -43,10 +55,14 @@ def calculate_xor32_checksum(b: bytes) -> int:
     """
     checksum = 0
     if len(b) % 4 != 0:
-        raise RegipyGeneralException(f'Buffer must be multiples of four, {len(b)} length buffer given')
+        raise RegipyGeneralException(
+            f"Buffer must be multiples of four, {len(b)} length buffer given"
+        )
 
     for i in range(0, len(b), 4):
-        checksum = (b[i] + (b[i + 1] << 0x08) + (b[i + 2] << 0x10) + (b[i + 3] << 0x18)) ^ checksum
+        checksum = (
+            b[i] + (b[i + 1] << 0x08) + (b[i + 2] << 0x10) + (b[i + 3] << 0x18)
+        ) ^ checksum
     return checksum
 
 
@@ -62,8 +78,7 @@ def boomerang_stream(stream: TextIOWrapper) -> Generator[TextIOWrapper, None, No
 
 
 def convert_filetime(dw_low_date_time, dw_high_date_time):
-    """
-    """
+    """ """
     if dw_high_date_time is None or dw_low_date_time is None:
         return None
     try:
@@ -94,7 +109,9 @@ def convert_wintime(wintime: int, as_json=False) -> Union[dt.datetime, str]:
     return date.isoformat() if as_json else date
 
 
-def get_subkey_values_from_list(registry_hive, entries_list, as_json=False, trim_values=True):
+def get_subkey_values_from_list(
+    registry_hive, entries_list, as_json=False, trim_values=True
+):
     """
     Return a list of registry subkeys given a list of paths
     :param registry_hive: A RegistryHive object
@@ -108,53 +125,57 @@ def get_subkey_values_from_list(registry_hive, entries_list, as_json=False, trim
         try:
             subkey = registry_hive.get_key(path)
         except (RegistryKeyNotFoundException, NoRegistrySubkeysException) as ex:
-            logger.debug('Could not find subkey: {} ({})'.format(path, ex))
+            logger.debug("Could not find subkey: {} ({})".format(path, ex))
             continue
         ts = convert_wintime(subkey.header.last_modified, as_json=as_json)
 
         values = []
         if subkey.values_count:
             if as_json:
-                values = [attr.asdict(x) for x in subkey.iter_values(as_json=as_json, trim_values=trim_values)]
+                values = [
+                    attr.asdict(x)
+                    for x in subkey.iter_values(
+                        as_json=as_json, trim_values=trim_values
+                    )
+                ]
             else:
-                values = list(subkey.iter_values(as_json=as_json, trim_values=trim_values))
+                values = list(
+                    subkey.iter_values(as_json=as_json, trim_values=trim_values)
+                )
 
         if subkey.values_count:
-            result[path] = {
-                'timestamp': ts,
-                'values': values
-            }
+            result[path] = {"timestamp": ts, "values": values}
     return result
 
 
 def identify_hive_type(name: str) -> str:
     hive_name = name.lower()
-    if hive_name.endswith('ntuser.dat'):
+    if hive_name.endswith("ntuser.dat"):
         return NTUSER_HIVE_TYPE
     elif hive_name == SYSTEM_HIVE_TYPE:
         return SYSTEM_HIVE_TYPE
-    elif hive_name.endswith('system32\\config\\software'):
+    elif hive_name.endswith("system32\\config\\software"):
         return SOFTWARE_HIVE_TYPE
-    elif hive_name == r'\systemroot\system32\config\sam':
+    elif hive_name == r"\systemroot\system32\config\sam":
         return SAM_HIVE_TYPE
-    elif hive_name.endswith(r'\system32\config\security'):
+    elif hive_name.endswith(r"\system32\config\security"):
         return SECURITY_HIVE_TYPE
-    elif hive_name.endswith(r'\boot\bcd'):
+    elif hive_name.endswith(r"\boot\bcd"):
         return BCD_HIVE_TYPE
-    elif hive_name == r'\microsoft\windows\usrclass.dat':
+    elif hive_name == r"\microsoft\windows\usrclass.dat":
         return USRCLASS_HIVE_TYPE
-    elif 'amcache' in hive_name.lower():
+    elif "amcache" in hive_name.lower():
         return AMCACHE_HIVE_TYPE
     else:
-        raise UnidentifiedHiveException(f'Could not identify hive: {name}')
+        raise UnidentifiedHiveException(f"Could not identify hive: {name}")
 
 
 def try_decode_binary(data, as_json=False, max_len=MAX_LEN, trim_values=True):
     try:
-        value = data.decode('utf-16-le').rstrip('\x00')
+        value = data.decode("utf-16-le").rstrip("\x00")
     except UnicodeDecodeError:
         try:
-            value = data.decode().rstrip('\x00')
+            value = data.decode().rstrip("\x00")
         except:
             value = binascii.b2a_hex(data).decode() if as_json else data
 
