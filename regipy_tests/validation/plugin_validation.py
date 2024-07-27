@@ -39,5 +39,5 @@ for plugin in PLUGINS:
             plugin_validation_case_instance.validate()
 
     else:
-        # print(f'[!] Plugin {plugin_name} has NO validation case (currently a warning)')
-        pass
+        print(f'[!] {plugin_name} has NO validation case (currently a warning) - will be enforced in the future!')
+        
