@@ -8,8 +8,8 @@ logger = logging.getLogger(__name__)
 
 
 class TemplatePlugin(Plugin):
-    NAME = 'template_plugin'
-    DESCRIPTION = 'template_description'
+    NAME = "template_plugin"
+    DESCRIPTION = "template_description"
 
     def can_run(self):
         # TODO: Choose the relevant condition - to determine if the plugin is relevant for the given hive

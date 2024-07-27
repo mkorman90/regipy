@@ -7,24 +7,30 @@ from regipy.utils import convert_wintime
 
 logger = logging.getLogger(__name__)
 
-WDIGEST_PATH = r'Control\SecurityProviders\WDigest'
+WDIGEST_PATH = r"Control\SecurityProviders\WDigest"
 
 
 class WDIGESTPlugin(Plugin):
-    NAME = 'wdigest'
-    DESCRIPTION = 'Get WDIGEST configuration'
+    NAME = "wdigest"
+    DESCRIPTION = "Get WDIGEST configuration"
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
     def run(self):
-        logger.debug('Started WDIGEST Plugin...')
+        logger.debug("Started WDIGEST Plugin...")
         for subkey_path in self.registry_hive.get_control_sets(WDIGEST_PATH):
             subkey = self.registry_hive.get_key(subkey_path)
 
             try:
-                self.entries.append({
-                    'subkey': subkey_path,
-                    'use_logon_credential': subkey.get_value('UseLogonCredential', as_json=self.as_json),
-                    'timestamp': convert_wintime(subkey.header.last_modified, as_json=self.as_json)
-                })
+                self.entries.append(
+                    {
+                        "subkey": subkey_path,
+                        "use_logon_credential": subkey.get_value(
+                            "UseLogonCredential", as_json=self.as_json
+                        ),
+                        "timestamp": convert_wintime(
+                            subkey.header.last_modified, as_json=self.as_json
+                        ),
+                    }
+                )
             except RegistryValueNotFoundException as ex:
                 continue

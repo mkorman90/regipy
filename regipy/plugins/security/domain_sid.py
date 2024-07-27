@@ -36,7 +36,9 @@ class DomainSidPlugin(Plugin):
         name_value = name_key.get_value()
 
         # Skip UNICODE_STRING struct header and strip trailing \x0000
-        domain_name = name_value[8:].decode('utf-16-le', errors='replace').rstrip('\x00')
+        domain_name = (
+            name_value[8:].decode("utf-16-le", errors="replace").rstrip("\x00")
+        )
 
         sid_key = self.registry_hive.get_key(DOMAIN_SID_PATH)
 

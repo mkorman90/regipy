@@ -7,19 +7,19 @@ from regipy.plugins.plugin import Plugin
 logger = logging.getLogger(__name__)
 
 
-SAFEBOOT_NETWORK_PATH = r'Control\SafeBoot\Network'
-SAFEBOOT_MINIMAL_PATH = r'Control\SafeBoot\Minimal'
+SAFEBOOT_NETWORK_PATH = r"Control\SafeBoot\Network"
+SAFEBOOT_MINIMAL_PATH = r"Control\SafeBoot\Minimal"
 
 
 class SafeBootConfigurationPlugin(Plugin):
-    NAME = 'safeboot_configuration'
-    DESCRIPTION = 'Get safeboot configuration'
+    NAME = "safeboot_configuration"
+    DESCRIPTION = "Get safeboot configuration"
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
     def _get_safeboot_entries(self, subkey_path):
         entries = []
         for safeboot_network_path in self.registry_hive.get_control_sets(subkey_path):
-            control_set_name = safeboot_network_path.split('\\')[1]
+            control_set_name = safeboot_network_path.split("\\")[1]
             try:
                 subkey = self.registry_hive.get_key(safeboot_network_path)
             except RegistryKeyNotFoundException as ex:
@@ -27,19 +27,23 @@ class SafeBootConfigurationPlugin(Plugin):
                 continue
 
             for safeboot_network_subkey in subkey.iter_subkeys():
-                timestamp = convert_wintime(safeboot_network_subkey.header.last_modified, as_json=self.as_json)
-                entries.append({
-                    'timestamp': timestamp,
-                    'name': safeboot_network_subkey.name,
-                    'description': safeboot_network_subkey.get_value(),
-                    'control_set_name': control_set_name
-                })
+                timestamp = convert_wintime(
+                    safeboot_network_subkey.header.last_modified, as_json=self.as_json
+                )
+                entries.append(
+                    {
+                        "timestamp": timestamp,
+                        "name": safeboot_network_subkey.name,
+                        "description": safeboot_network_subkey.get_value(),
+                        "control_set_name": control_set_name,
+                    }
+                )
         return entries
 
     def run(self):
-        logger.debug('Started Safeboot Configuration Plugin...')
+        logger.debug("Started Safeboot Configuration Plugin...")
 
         self.entries = {
-            'network': self._get_safeboot_entries(SAFEBOOT_NETWORK_PATH),
-            'minimal': self._get_safeboot_entries(SAFEBOOT_MINIMAL_PATH)
+            "network": self._get_safeboot_entries(SAFEBOOT_NETWORK_PATH),
+            "minimal": self._get_safeboot_entries(SAFEBOOT_MINIMAL_PATH),
         }

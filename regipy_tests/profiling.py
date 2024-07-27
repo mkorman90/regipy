@@ -30,22 +30,22 @@ def profiling():
 
 @contextmanager
 def get_file_from_tests(file_name):
-    path = str(Path(__file__).parent.joinpath('data').joinpath(file_name))
+    path = str(Path(__file__).parent.joinpath("data").joinpath(file_name))
     tempfile_path = mktemp()
-    with open(tempfile_path, 'wb') as tmp:
+    with open(tempfile_path, "wb") as tmp:
         with lzma.open(path) as f:
             tmp.write(f.read())
     yield tempfile_path
     os.remove(tempfile_path)
 
 
-registry_path = 'SYSTEM_2.xz'
-print(f'Iterating over all subkeys in {registry_path}')
+registry_path = "SYSTEM_2.xz"
+print(f"Iterating over all subkeys in {registry_path}")
 with profiling():
     with get_file_from_tests(registry_path) as reg:
         registry_hive = RegistryHive(reg)
         keys = [x for x in registry_hive.recurse_subkeys(fetch_values=False)]
-print(f'Done.')
+print(f"Done.")
 
 """
 
@@ -99,4 +99,3 @@ Iterating over all subkeys in SYSTEM_2.xz
      4353    0.045    0.000    0.610    0.000 :76(parseall)
 
 """
-

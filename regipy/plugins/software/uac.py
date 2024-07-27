@@ -6,12 +6,12 @@ from regipy.plugins.plugin import Plugin
 
 logger = logging.getLogger(__name__)
 
-UAC_KEY_PATH = r'\Microsoft\Windows\CurrentVersion\Policies\System'
+UAC_KEY_PATH = r"\Microsoft\Windows\CurrentVersion\Policies\System"
 
 
 class UACStatusPlugin(Plugin):
-    NAME = 'uac_plugin'
-    DESCRIPTION = 'Get the status of User Access Control'
+    NAME = "uac_plugin"
+    DESCRIPTION = "Get the status of User Access Control"
     COMPATIBLE_HIVE = SOFTWARE_HIVE_TYPE
 
     def run(self):
@@ -29,16 +29,26 @@ class UACStatusPlugin(Plugin):
         try:
             subkey = self.registry_hive.get_key(UAC_KEY_PATH)
         except RegistryKeyNotFoundException as ex:
-            logger.error(f'Could not find {self.NAME} subkey at {UAC_KEY_PATH}: {ex}')
+            logger.error(f"Could not find {self.NAME} subkey at {UAC_KEY_PATH}: {ex}")
             return None
 
         self.entries = {
-            'last_write': convert_wintime(subkey.header.last_modified, as_json=self.as_json),
-            'enable_limited_user_accounts': subkey.get_value('EnableLUA', as_json=self.as_json),
-            'enable_virtualization': subkey.get_value('EnableVirtualization', as_json=self.as_json),
-            'filter_admin_token': subkey.get_value('FilterAdministratorToken', as_json=self.as_json),
-            'consent_prompt_admin': subkey.get_value('ConsentPromptBehaviorAdmin', as_json=self.as_json),
-            'consent_prompt_user': subkey.get_value('ConsentPromptBehaviorUser', as_json=self.as_json)
+            "last_write": convert_wintime(
+                subkey.header.last_modified, as_json=self.as_json
+            ),
+            "enable_limited_user_accounts": subkey.get_value(
+                "EnableLUA", as_json=self.as_json
+            ),
+            "enable_virtualization": subkey.get_value(
+                "EnableVirtualization", as_json=self.as_json
+            ),
+            "filter_admin_token": subkey.get_value(
+                "FilterAdministratorToken", as_json=self.as_json
+            ),
+            "consent_prompt_admin": subkey.get_value(
+                "ConsentPromptBehaviorAdmin", as_json=self.as_json
+            ),
+            "consent_prompt_user": subkey.get_value(
+                "ConsentPromptBehaviorUser", as_json=self.as_json
+            ),
         }
-
-

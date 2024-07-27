@@ -2,12 +2,15 @@ class RegipyException(Exception):
     """
     This is the parent exception for all regipy exceptions
     """
+
     pass
+
 
 class RegipyGeneralException(RegipyException):
     """
     General exception
     """
+
     pass
 
 
@@ -39,7 +42,9 @@ class RegistryParsingException(RegipyException):
     """
     Raised when there is a parsing error, most probably a corrupted hive
     """
+
     pass
+
 
 class NtSidDecodingException(RegipyException):
     """

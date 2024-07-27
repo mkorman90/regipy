@@ -7,18 +7,18 @@ from regipy.utils import get_subkey_values_from_list
 logger = logging.getLogger(__name__)
 
 
-ROUTES_PATH = r'Services\Tcpip\Parameters\PersistentRoutes'
+ROUTES_PATH = r"Services\Tcpip\Parameters\PersistentRoutes"
 
 
 class RoutesPlugin(Plugin):
-    NAME = 'routes'
-    DESCRIPTION = 'Get list of routes'
+    NAME = "routes"
+    DESCRIPTION = "Get list of routes"
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
     def run(self):
-        logger.debug('Started Routes Plugin...')
+        logger.debug("Started Routes Plugin...")
 
         routes_path_list = self.registry_hive.get_control_sets(ROUTES_PATH)
-        self.entries = get_subkey_values_from_list(self.registry_hive, routes_path_list, as_json=self.as_json)
-
-
+        self.entries = get_subkey_values_from_list(
+            self.registry_hive, routes_path_list, as_json=self.as_json
+        )
