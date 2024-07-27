@@ -219,7 +219,7 @@ class ShellBagNtuserPlugin(Plugin):
             node_slot = ''
 
         for v in key.iter_values(trim_values=False):
-            if re.match("\d+", v.name):
+            if re.match(r"\d+", v.name):
                 slot = v.name
                 byte_stream = v.value
                 shell_items = pyfwsi.item_list()
