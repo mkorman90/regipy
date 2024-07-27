@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 
 class Plugin(object):
 
-    NAME: Optional[str] = None
-    DESCRIPTION: Optional[str] = None
-    COMPATIBLE_HIVE: Optional[str] = None
+    NAME: str = None
+    DESCRIPTION: str = None
+    COMPATIBLE_HIVE: str = None
 
     def __init_subclass__(cls):
         PLUGINS.add(cls)

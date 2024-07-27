@@ -1,5 +1,5 @@
 construct==2.10.68
-attrs==21.4.0
+attrs>=21.4.0
 click==8.0.4
 inflection==0.5.1
 pytz
