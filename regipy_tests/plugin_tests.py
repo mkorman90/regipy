@@ -742,9 +742,6 @@ def test_shellbags_plugin_usrclass(transaction_usrclass):
     assert len(plugin_instance.entries) == 29
 
 
-
-
-
 def test_network_data_plugin(system_hive):
     registry_hive = RegistryHive(system_hive)
     plugin_instance = NetworkDataPlugin(registry_hive, as_json=True)

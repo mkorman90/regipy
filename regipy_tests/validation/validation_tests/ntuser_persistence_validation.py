@@ -6,7 +6,8 @@ class NTUserPersistenceValidationCase(ValidationCase):
     plugin = NTUserPersistencePlugin
     test_hive_file_name = "NTUSER.DAT.xz"
 
-    exact_expected_result = {"\\Software\\Microsoft\\Windows\\CurrentVersion\\Run": {
+    exact_expected_result = {
+        "\\Software\\Microsoft\\Windows\\CurrentVersion\\Run": {
             "timestamp": "2012-04-03T21:19:54.837716+00:00",
             "values": [
                 {
