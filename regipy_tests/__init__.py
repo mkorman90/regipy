@@ -1,1 +1,7 @@
 from .validation.validation_tests import shimcache_validation
+from .validation.validation_tests import ntuser_persistence_validation
+from .validation.validation_tests import software_persistence_validation
+from .validation.validation_tests import ntuser_userassist_validation
+from .validation.validation_tests import amcache_validation
+from .validation.validation_tests import bam_validation
+from .validation.validation_tests import word_wheel_query_ntuser_validation

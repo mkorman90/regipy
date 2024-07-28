@@ -1,9 +1,19 @@
-from typing import List, Type
+from dataclasses import dataclass
+
+from typing import Dict, List, Optional, Type, Union
 from regipy.plugins.plugin import Plugin
 from regipy.registry import RegistryHive
 
 
 VALIDATION_CASES = set()
+
+
+@dataclass
+class ValidationResult:
+    plugin_name: str
+    plugin_class_name: str
+    test_case_name: Optional[str]
+    success: bool
 
 
 class ValidationCase:
@@ -17,7 +27,10 @@ class ValidationCase:
     plugin_output: List = None
 
     # These entries will be tested for presence in the plugin output
-    expected_entries: List = None
+    expected_entries: List[Dict] = []
+
+    # The result here will be matched to the
+    exact_expected_result: Optional[Union[Dict, List]] = None
 
     # Expected entries count
     expected_entries_count: int = None
@@ -30,21 +43,37 @@ class ValidationCase:
 
     def validate(self):
         print(
-            f"\t[*] Starting validation for {self.plugin.NAME} ({self.__class__.__name__})"
+            f"\tStarting validation for {self.plugin.NAME} ({self.__class__.__name__})"
         )
         self.plugin_instance = self.plugin(self.input_hive, as_json=True)
         self.plugin_instance.run()
         self.plugin_output = self.plugin_instance.entries
 
+        assert (
+            self.exact_expected_result is not None or self.expected_entries
+        ), "Some output must be tested!"
+
         entries_found = True
         for entry in self.expected_entries:
-            found_specific_entry = False
-            if not entry in self.plugin_output:
+            if entry not in self.plugin_output:
                 entries_found = False
 
         assert entries_found
-        assert self.expected_entries_count == len(self.plugin_output)
 
-        print(
-            f"\t[*] Validation passed for {self.plugin.NAME} ({self.__class__.__name__})"
+        if self.exact_expected_result:
+            assert (
+                self.plugin_output == self.exact_expected_result
+            ), "Expected exact plugin output!"
+
+        output_entries_count = len(self.plugin_output)
+        assert (
+            self.expected_entries_count == output_entries_count
+        ), f"No match for expected entries count: expected {self.expected_entries_count}, got {output_entries_count}"
+
+        print(f"\tValidation passed for {self.plugin.NAME}")
+        return ValidationResult(
+            plugin_name=self.plugin.NAME,
+            plugin_class_name=self.plugin.__name__,
+            test_case_name=self.__class__.__name__,
+            success=True,
         )
