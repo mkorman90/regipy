@@ -6,15 +6,21 @@ from tabulate import tabulate
 
 import os
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 from regipy.plugins.plugin import PLUGINS
 from regipy.registry import RegistryHive
 from regipy_tests.validation.utils import extract_lzma
-from regipy_tests.validation.validation import VALIDATION_CASES, ValidationCase, ValidationResult
+from regipy_tests.validation.validation import (
+    VALIDATION_CASES,
+    ValidationCase,
+    ValidationResult,
+)
 
 
 test_data_dir = str(Path(__file__).parent.parent.joinpath("data"))
-validation_results_output_file = str(Path(__file__).parent.joinpath("plugin_validation.md"))
+validation_results_output_file = str(
+    Path(__file__).parent.joinpath("plugin_validation.md")
+)
 
 
 class PluginValidationCaseFailureException(Exception):
@@ -42,7 +48,9 @@ def validate_case(plugin_validation_case: ValidationCase, registry_hive: Registr
         )
 
 
-def run_validations_for_hive_file(hive_file_name, validation_cases) -> List[ValidationResult]:
+def run_validations_for_hive_file(
+    hive_file_name, validation_cases
+) -> List[ValidationResult]:
     validation_results = []
     with load_hive(hive_file_name) as registry_hive:
         for validation_case in validation_cases:
@@ -52,7 +60,12 @@ def run_validations_for_hive_file(hive_file_name, validation_cases) -> List[Vali
 
 def main():
     # Map all existing validation cases
-    validation_cases = {v.plugin.NAME: v for v in VALIDATION_CASES}
+    validation_cases: Dict[str, ValidationCase] = {
+        v.plugin.NAME: v for v in VALIDATION_CASES
+    }
+    plugins_without_validation: set = {p.NAME for p in PLUGINS}.difference(
+        set(validation_cases.keys())
+    )
 
     print(f"[*] Loaded {len(validation_cases)} validation cases")
 
@@ -80,11 +93,39 @@ def main():
         print(
             f"\n\t[*] Validating {registry_hive_file_name} ({len(validation_cases)} validations):"
         )
-        validation_results.extend(run_validations_for_hive_file(registry_hive_file_name, validation_cases))
+        validation_results.extend(
+            run_validations_for_hive_file(registry_hive_file_name, validation_cases)
+        )
 
     print()
-    print(tabulate([asdict(v) for v in validation_results], headers='keys', tablefmt='markdown'))
-    # TODO: Add to table all plugins without validation
+    validation_results_dict = [asdict(v) for v in validation_results]
+    print(
+        f"\n[!] {len(validation_results_dict)}/{len(PLUGINS)} plugins have no validation case!"
+    )
+    print(tabulate(validation_results_dict, headers="keys", tablefmt="markdown"))
+
+    print(
+        f"\n[!] {len(plugins_without_validation)}/{len(PLUGINS)} plugins have no validation case!"
+    )
+    print(
+        tabulate(
+            [
+                asdict(
+                    ValidationResult(
+                        plugin_name=p.NAME,
+                        plugin_class_name=p.__name__,
+                        test_case_name=None,
+                        success=False,
+                    )
+                )
+                for p in PLUGINS
+                if p.NAME in plugins_without_validation
+            ],
+            headers="keys",
+            tablefmt="markdown",
+        )
+    )
+
     # TODO: Generate markdown file `validation_results_output_file`
 
 

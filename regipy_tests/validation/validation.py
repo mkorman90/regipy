@@ -12,6 +12,7 @@ VALIDATION_CASES = set()
 class ValidationResult:
     plugin_name: str
     plugin_class_name: str
+    test_case_name: Optional[str]
     success: bool
 
 
@@ -72,6 +73,7 @@ class ValidationCase:
         print(f"\tValidation passed for {self.plugin.NAME}")
         return ValidationResult(
             plugin_name=self.plugin.NAME,
-            plugin_class_name=self.__class__.__name__,
-            success=True
+            plugin_class_name=self.plugin.__name__,
+            test_case_name=self.__class__.__name__,
+            success=True,
         )
