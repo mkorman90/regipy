@@ -103,7 +103,7 @@ def main():
         f"\n[!] {len(validation_results_dict)}/{len(PLUGINS)} plugins have no validation case!"
     )
     md_for_validation_results = tabulate(
-        validation_results_dict, headers="keys", tablefmt="markdown"
+        validation_results_dict, headers="keys", tablefmt="mediawiki"
     )
     print(md_for_validation_results)
 
@@ -124,7 +124,7 @@ def main():
             if p.NAME in plugins_without_validation
         ],
         headers="keys",
-        tablefmt="markdown",
+        tablefmt="mediawiki",
     )
     print(md_for_plugins_without_validation_results)
 
