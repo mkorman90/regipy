@@ -2,7 +2,7 @@ from regipy.plugins.system.bam import BAMPlugin
 from regipy_tests.validation.validation import ValidationCase
 
 
-class NTUserUserAssistValidationCase(ValidationCase):
+class BamValidationCase(ValidationCase):
     plugin = BAMPlugin
     test_hive_file_name = "SYSTEM_WIN_10_1709.xz"
 

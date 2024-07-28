@@ -10,7 +10,7 @@
 | user_assist                   | UserAssistPlugin          | NTUserUserAssistValidationCase    | True      |
 | ntuser_persistence            | NTUserPersistencePlugin   | NTUserPersistenceValidationCase   | True      |
 | word_wheel_query              | WordWheelQueryPlugin      | NTUserUserAssistValidationCase    | True      |
-| background_activity_moderator | BAMPlugin                 | NTUserUserAssistValidationCase    | True      |
+| background_activity_moderator | BAMPlugin                 | BamValidationCase                 | True      |
 | shimcache                     | ShimCachePlugin           | AmCacheValidationCase             | True      |
 
 ## Plugins without validation
@@ -24,6 +24,7 @@
 | services                     | ServicesPlugin                  |                  | False     |
 | host_domain_name             | HostDomainNamePlugin            |                  | False     |
 | profilelist_plugin           | ProfileListPlugin               |                  | False     |
+| usrclass_shellbag_plugin     | ShellBagUsrclassPlugin          |                  | False     |
 | ntuser_shellbag_plugin       | ShellBagNtuserPlugin            |                  | False     |
 | computer_name                | ComputerNamePlugin              |                  | False     |
 | installed_programs_ntuser    | InstalledProgramsNTUserPlugin   |                  | False     |
@@ -36,7 +37,6 @@
 | typed_paths                  | TypedPathsPlugin                |                  | False     |
 | network_data                 | NetworkDataPlugin               |                  | False     |
 | typed_urls                   | TypedUrlsPlugin                 |                  | False     |
-| usrclass_shellbag_plugin     | ShellBagUsrclassPlugin          |                  | False     |
 | terminal_services_history    | TSClientPlugin                  |                  | False     |
 | ras_tracing                  | RASTracingPlugin                |                  | False     |
 | installed_programs_software  | InstalledProgramsSoftwarePlugin |                  | False     |
@@ -45,9 +45,9 @@
 | wdigest                      | WDIGESTPlugin                   |                  | False     |
 | ntuser_classes_installer     | NtuserClassesInstallerPlugin    |                  | False     |
 | image_file_execution_options | ImageFileExecutionOptions       |                  | False     |
-| winrar_plugin                | WinRARPlugin                    |                  | False     |
 | network_drives_plugin        | NetworkDrivesPlugin             |                  | False     |
 | bootkey                      | BootKeyPlugin                   |                  | False     |
 | boot_entry_list              | BootEntryListPlugin             |                  | False     |
+| winrar_plugin                | WinRARPlugin                    |                  | False     |
 | software_classes_installer   | SoftwareClassesInstallerPlugin  |                  | False     |
     
