@@ -1,9 +1,18 @@
+from dataclasses import dataclass
+
 from typing import Dict, List, Optional, Type, Union
 from regipy.plugins.plugin import Plugin
 from regipy.registry import RegistryHive
 
 
 VALIDATION_CASES = set()
+
+
+@dataclass
+class ValidationResult:
+    plugin_name: str
+    plugin_class_name: str
+    success: bool
 
 
 class ValidationCase:
@@ -61,3 +70,8 @@ class ValidationCase:
         ), f"No match for expected entries count: expected {self.expected_entries_count}, got {output_entries_count}"
 
         print(f"\tValidation passed for {self.plugin.NAME}")
+        return ValidationResult(
+            plugin_name=self.plugin.NAME,
+            plugin_class_name=self.__class__.__name__,
+            success=True
+        )
