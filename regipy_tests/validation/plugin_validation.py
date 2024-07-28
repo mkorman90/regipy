@@ -102,31 +102,50 @@ def main():
     print(
         f"\n[!] {len(validation_results_dict)}/{len(PLUGINS)} plugins have no validation case!"
     )
-    print(tabulate(validation_results_dict, headers="keys", tablefmt="markdown"))
+    md_for_validation_results = tabulate(
+        validation_results_dict, headers="keys", tablefmt="markdown"
+    )
+    print(md_for_validation_results)
 
     print(
         f"\n[!] {len(plugins_without_validation)}/{len(PLUGINS)} plugins have no validation case!"
     )
-    print(
-        tabulate(
-            [
-                asdict(
-                    ValidationResult(
-                        plugin_name=p.NAME,
-                        plugin_class_name=p.__name__,
-                        test_case_name=None,
-                        success=False,
-                    )
+    md_for_plugins_without_validation_results = tabulate(
+        [
+            asdict(
+                ValidationResult(
+                    plugin_name=p.NAME,
+                    plugin_class_name=p.__name__,
+                    test_case_name=None,
+                    success=False,
                 )
-                for p in PLUGINS
-                if p.NAME in plugins_without_validation
-            ],
-            headers="keys",
-            tablefmt="markdown",
-        )
+            )
+            for p in PLUGINS
+            if p.NAME in plugins_without_validation
+        ],
+        headers="keys",
+        tablefmt="markdown",
     )
+    print(md_for_plugins_without_validation_results)
 
-    # TODO: Generate markdown file `validation_results_output_file`
+    # Generate markdown file `validation_results_output_file`
+    markdown_content = f"""
+# Regipy plugin validation results
+
+## Plugins with validation
+
+{md_for_validation_results}
+
+## Plugins without validation
+**Please note that in the future, this check will be enforced for all plugins**
+
+{md_for_plugins_without_validation_results}
+    """
+
+    # Write the content to a Markdown file
+    print(f" ** Updated the validation results in {validation_results_output_file} **")
+    with open(validation_results_output_file, "w") as f:
+        f.write(markdown_content)
 
 
 if __name__ == "__main__":
