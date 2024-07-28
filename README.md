@@ -212,3 +212,53 @@ run_relevant_plugins(reg, as_json=True)
 
 
 ```
+
+## Validation cases
+[Validation cases report](regipy_tests/validation/plugin_validation.md)
+
+all new plugins, (and in the future, all plugins) should have a one or more basic validation cases (which can be expanded in the future), for example:
+```
+from regipy.plugins.system.bam import BAMPlugin
+from regipy_tests.validation.validation import ValidationCase
+
+
+class NTUserUserAssistValidationCase(ValidationCase):
+    # define your plugin class
+    plugin = BAMPlugin
+    # define the test file name, which should be present in `regipy_tests/data`
+    test_hive_file_name = "SYSTEM_WIN_10_1709.xz"
+
+    # Use `expected_entries` to test for presence of a few samples from the plugin results
+    expected_entries = [
+        {
+            "sequence_number": 9,
+            "version": 1,
+            "sid": "S-1-5-90-0-1",
+            "executable": "\\Device\\HarddiskVolume2\\Windows\\System32\\dwm.exe",
+            "timestamp": "2020-04-19T09:09:35.731816+00:00",
+            "key_path": "\\ControlSet001\\Services\\bam\\state\\UserSettings\\S-1-5-90-0-1",
+        }
+    ]
+
+    # OR use `exact_expected_result` to test for an exact result:
+    exact_expected_result = [
+        {
+            "sequence_number": 9,
+            "version": 1,
+            "sid": "S-1-5-90-0-1",
+            "executable": "\\Device\\HarddiskVolume2\\Windows\\System32\\dwm.exe",
+            "timestamp": "2020-04-19T09:09:35.731816+00:00",
+            "key_path": "\\ControlSet001\\Services\\bam\\state\\UserSettings\\S-1-5-90-0-1",
+        },
+        {
+            "sequence_number": 8,
+            "version": 1,
+            "sid": "S-1-5-90-0-1",
+            "executable": "\\Device\\HarddiskVolume2\\Windows\\System32\\cmd.exe",
+            "timestamp": "2020-04-19T09:09:34.544224+00:00",
+            "key_path": "\\ControlSet001\\Services\\bam\\state\\UserSettings\\S-1-5-90-0-1",
+        }
+    ]
+
+    expected_entries_count = 2
+```
