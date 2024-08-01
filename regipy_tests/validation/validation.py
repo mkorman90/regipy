@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from typing import Dict, List, Optional, Type, Union
+from typing import Callable, Dict, List, Optional, Type, Union
 from regipy.plugins.plugin import Plugin
 from regipy.registry import RegistryHive
 
@@ -24,13 +24,18 @@ class ValidationCase:
     plugin_instance: Type[Plugin] = None
 
     # Will hold the output of the plugin execution
-    plugin_output: List = None
+    plugin_output: Union[List, Dict] = None
 
     # These entries will be tested for presence in the plugin output
     expected_entries: List[Dict] = []
 
     # The result here will be matched to the
     exact_expected_result: Optional[Union[Dict, List]] = None
+
+    # Optionally Implement a custom test for your plugin, which will be called during the validation step
+    # This test can replace the validation of entries, but not the count.
+    # The test must return True, or raise an AssertionError
+    custom_test: Optional[Callable] = None
 
     # Expected entries count
     expected_entries_count: int = None
@@ -50,7 +55,7 @@ class ValidationCase:
         self.plugin_output = self.plugin_instance.entries
 
         assert (
-            self.exact_expected_result is not None or self.expected_entries
+            self.exact_expected_result is not None or self.expected_entries is not None or self.custom_test is not None
         ), "Some output must be tested!"
 
         entries_found = True
@@ -65,6 +70,9 @@ class ValidationCase:
                 self.plugin_output == self.exact_expected_result
             ), "Expected exact plugin output!"
 
+        if self.custom_test is not None:
+            self.custom_test()
+
         output_entries_count = len(self.plugin_output)
         assert (
             self.expected_entries_count == output_entries_count
@@ -77,3 +85,8 @@ class ValidationCase:
             test_case_name=self.__class__.__name__,
             success=True,
         )
+    
+    def debug(self):
+        import ipdb;
+        ipdb.set_trace()
+

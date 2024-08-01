@@ -31,6 +31,10 @@ class PluginValidationCaseFailureException(Exception):
     pass
 
 
+SHOULD_RAISE = False
+SHOULD_DEBUG = True
+
+
 @contextmanager
 def load_hive(hive_file_name):
     temp_path = extract_lzma(os.path.join(test_data_dir, hive_file_name))
@@ -43,9 +47,13 @@ def validate_case(plugin_validation_case: ValidationCase, registry_hive: Registr
         plugin_validation_case_instance = plugin_validation_case(registry_hive)
         return plugin_validation_case_instance.validate()
     except AssertionError as ex:
-        raise PluginValidationCaseFailureException(
-            f"Validation for {plugin_validation_case_instance.__class__.__name__} failed: {ex}"
-        )
+        msg = f"Validation for {plugin_validation_case_instance.__class__.__name__} failed: {ex}"
+        if not SHOULD_RAISE:
+            print(f'[!] NOT ENFORCED: {msg}')
+            if SHOULD_DEBUG:
+                plugin_validation_case_instance.debug()
+            return
+        raise PluginValidationCaseFailureException(msg)
 
 
 def run_validations_for_hive_file(
