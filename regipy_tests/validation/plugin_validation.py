@@ -93,6 +93,7 @@ def main():
         print(
             f"\n\t[*] Validating {registry_hive_file_name} ({len(validation_cases)} validations):"
         )
+
         validation_results.extend(
             run_validations_for_hive_file(registry_hive_file_name, validation_cases)
         )

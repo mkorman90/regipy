@@ -2,7 +2,7 @@ from regipy.plugins.ntuser.word_wheel_query import WordWheelQueryPlugin
 from regipy_tests.validation.validation import ValidationCase
 
 
-class NTUserUserAssistValidationCase(ValidationCase):
+class WordWheelQueryPluginValidationCase(ValidationCase):
     plugin = WordWheelQueryPlugin
     test_hive_file_name = "NTUSER.DAT.xz"
 
