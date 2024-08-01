@@ -6,7 +6,6 @@ from regipy_tests.validation.validation import ValidationCase
 def test_no_hidden_entries(c: ValidationCase):
     assert not any([x['is_hidden'] for x in c.plugin_output])
 
-
 class SoftwareClassesInstallerPluginValidationCase(ValidationCase):
     plugin = SoftwareClassesInstallerPlugin
     test_hive_file_name = "SOFTWARE.xz"

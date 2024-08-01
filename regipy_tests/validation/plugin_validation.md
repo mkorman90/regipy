@@ -50,4 +50,3 @@
 | terminal_services_history    | TSClientPlugin                |                  | False     |
 | safeboot_configuration       | SafeBootConfigurationPlugin   |                  | False     |
 | image_file_execution_options | ImageFileExecutionOptions     |                  | False     |
-    
