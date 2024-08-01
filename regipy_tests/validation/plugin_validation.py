@@ -16,6 +16,11 @@ from regipy_tests.validation.validation import (
     ValidationResult,
 )
 
+# Enable to raise exception on validation failure
+# As we are currently not enforcing validations - no raising exceptions by default
+SHOULD_RAISE = False
+SHOULD_DEBUG = True
+
 
 test_data_dir = str(Path(__file__).parent.parent.joinpath("data"))
 validation_results_output_file = str(
@@ -31,8 +36,7 @@ class PluginValidationCaseFailureException(Exception):
     pass
 
 
-SHOULD_RAISE = False
-SHOULD_DEBUG = True
+
 
 
 @contextmanager
@@ -48,12 +52,14 @@ def validate_case(plugin_validation_case: ValidationCase, registry_hive: Registr
         return plugin_validation_case_instance.validate()
     except AssertionError as ex:
         msg = f"Validation for {plugin_validation_case_instance.__class__.__name__} failed: {ex}"
-        if not SHOULD_RAISE:
-            print(f'[!] NOT ENFORCED: {msg}')
+        if SHOULD_RAISE:
             if SHOULD_DEBUG:
                 plugin_validation_case_instance.debug()
-            return
-        raise PluginValidationCaseFailureException(msg)
+            raise PluginValidationCaseFailureException(msg)
+        else:
+            print(f'[!] [NOT ENFORCED]: {msg}')
+            if SHOULD_DEBUG:
+                plugin_validation_case_instance.debug()
 
 
 def run_validations_for_hive_file(

@@ -73,10 +73,12 @@ class ValidationCase:
         if self.custom_test is not None:
             self.custom_test()
 
-        output_entries_count = len(self.plugin_output)
-        assert (
-            self.expected_entries_count == output_entries_count
-        ), f"No match for expected entries count: expected {self.expected_entries_count}, got {output_entries_count}"
+        # If we are verifying an exact result, there is no need to verify entries count
+        if not self.exact_expected_result:
+            output_entries_count = len(self.plugin_output)
+            assert (
+                self.expected_entries_count == output_entries_count
+            ), f"No match for expected entries count: expected {self.expected_entries_count}, got {output_entries_count}"
 
         print(f"\tValidation passed for {self.plugin.NAME}")
         return ValidationResult(
@@ -87,6 +89,6 @@ class ValidationCase:
         )
     
     def debug(self):
-        import ipdb;
+        import ipdb
         ipdb.set_trace()
 
