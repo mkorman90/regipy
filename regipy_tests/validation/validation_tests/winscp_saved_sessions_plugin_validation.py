@@ -4,5 +4,5 @@ from regipy_tests.validation.validation import ValidationCase
 
 class WinSCPSavedSessionsPluginValidationCase(ValidationCase):
     plugin = WinSCPSavedSessionsPlugin
-    test_hive_file_name = "ntuser_hive_2.xz"
+    test_hive_file_name = "NTUSER_with_winscp.DAT.xz.xz"
     expected_entries_count = 2
