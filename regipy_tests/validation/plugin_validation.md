@@ -21,15 +21,16 @@
 | domain_sid                   | DomainSidPlugin                 |                  | False     |
 | routes                       | RoutesPlugin                    |                  | False     |
 | last_logon_plugin            | LastLogonPlugin                 |                  | False     |
+| usrclass_shellbag_plugin     | ShellBagUsrclassPlugin          |                  | False     |
 | services                     | ServicesPlugin                  |                  | False     |
 | host_domain_name             | HostDomainNamePlugin            |                  | False     |
 | profilelist_plugin           | ProfileListPlugin               |                  | False     |
-| usrclass_shellbag_plugin     | ShellBagUsrclassPlugin          |                  | False     |
 | ntuser_shellbag_plugin       | ShellBagNtuserPlugin            |                  | False     |
 | computer_name                | ComputerNamePlugin              |                  | False     |
 | installed_programs_ntuser    | InstalledProgramsNTUserPlugin   |                  | False     |
 | winscp_saved_sessions        | WinSCPSavedSessionsPlugin       |                  | False     |
 | local_sid                    | LocalSidPlugin                  |                  | False     |
+| winrar_plugin                | WinRARPlugin                    |                  | False     |
 | print_demon_plugin           | PrintDemonPlugin                |                  | False     |
 | active_control_set           | ActiveControlSetPlugin          |                  | False     |
 | timezone_data                | TimezoneDataPlugin              |                  | False     |
@@ -48,6 +49,5 @@
 | network_drives_plugin        | NetworkDrivesPlugin             |                  | False     |
 | bootkey                      | BootKeyPlugin                   |                  | False     |
 | boot_entry_list              | BootEntryListPlugin             |                  | False     |
-| winrar_plugin                | WinRARPlugin                    |                  | False     |
 | software_classes_installer   | SoftwareClassesInstallerPlugin  |                  | False     |
     
