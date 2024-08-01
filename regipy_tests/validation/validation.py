@@ -55,7 +55,9 @@ class ValidationCase:
         self.plugin_output = self.plugin_instance.entries
 
         assert (
-            self.exact_expected_result is not None or self.expected_entries is not None or self.custom_test is not None
+            self.exact_expected_result is not None
+            or self.expected_entries is not None
+            or self.custom_test is not None
         ), "Some output must be tested!"
 
         entries_found = True
@@ -87,8 +89,8 @@ class ValidationCase:
             test_case_name=self.__class__.__name__,
             success=True,
         )
-    
+
     def debug(self):
         import ipdb
-        ipdb.set_trace()
 
+        ipdb.set_trace()

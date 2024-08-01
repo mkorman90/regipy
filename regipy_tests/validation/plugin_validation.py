@@ -36,9 +36,6 @@ class PluginValidationCaseFailureException(Exception):
     pass
 
 
-
-
-
 @contextmanager
 def load_hive(hive_file_name):
     temp_path = extract_lzma(os.path.join(test_data_dir, hive_file_name))
@@ -57,7 +54,7 @@ def validate_case(plugin_validation_case: ValidationCase, registry_hive: Registr
                 plugin_validation_case_instance.debug()
             raise PluginValidationCaseFailureException(msg)
         else:
-            print(f'[!] [NOT ENFORCED]: {msg}')
+            print(f"[!] [NOT ENFORCED]: {msg}")
             if SHOULD_DEBUG:
                 plugin_validation_case_instance.debug()
 
