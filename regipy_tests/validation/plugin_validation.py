@@ -18,8 +18,11 @@ from regipy_tests.validation.validation import (
 
 # Enable to raise exception on validation failure
 # As we are currently not enforcing validations - no raising exceptions by default
-SHOULD_RAISE = False
-SHOULD_DEBUG = True
+ENFORCE_VALIDATION = False
+
+# It is possible to get an ipdb breakpoint once an exception is raised, useful for debugging plugin results
+# The user will be dropped into the validation case context, accessing all properties using `self`.
+SHOULD_DEBUG = False
 
 
 test_data_dir = str(Path(__file__).parent.parent.joinpath("data"))
@@ -49,7 +52,7 @@ def validate_case(plugin_validation_case: ValidationCase, registry_hive: Registr
         return plugin_validation_case_instance.validate()
     except AssertionError as ex:
         msg = f"Validation for {plugin_validation_case_instance.__class__.__name__} failed: {ex}"
-        if SHOULD_RAISE:
+        if ENFORCE_VALIDATION:
             if SHOULD_DEBUG:
                 plugin_validation_case_instance.debug()
             raise PluginValidationCaseFailureException(msg)
@@ -139,6 +142,15 @@ def main():
         tablefmt="github",
     )
     print(md_for_plugins_without_validation_results)
+
+    # If we are enforcing validation, raise on plugins without validation
+    if ENFORCE_VALIDATION:
+        if plugins_without_validation:
+            # fmt: off
+            raise PluginValidationCaseFailureException(
+                f"{len(plugins_without_validation)} plugins are missing validation: {[p.__name__ for p in PLUGINS if p.NAME in plugins_without_validation]}"
+            )
+            # fmt: on
 
     # Generate markdown file `validation_results_output_file`
     markdown_content = f"""
