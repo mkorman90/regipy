@@ -16,6 +16,14 @@ from regipy_tests.validation.validation import (
     ValidationResult,
 )
 
+# Enable to raise exception on validation failure
+# As we are currently not enforcing validations - no raising exceptions by default
+ENFORCE_VALIDATION = False
+
+# It is possible to get an ipdb breakpoint once an exception is raised, useful for debugging plugin results
+# The user will be dropped into the validation case context, accessing all properties using `self`.
+SHOULD_DEBUG = False
+
 
 test_data_dir = str(Path(__file__).parent.parent.joinpath("data"))
 validation_results_output_file = str(
@@ -43,9 +51,15 @@ def validate_case(plugin_validation_case: ValidationCase, registry_hive: Registr
         plugin_validation_case_instance = plugin_validation_case(registry_hive)
         return plugin_validation_case_instance.validate()
     except AssertionError as ex:
-        raise PluginValidationCaseFailureException(
-            f"Validation for {plugin_validation_case_instance.__class__.__name__} failed: {ex}"
-        )
+        msg = f"Validation for {plugin_validation_case_instance.__class__.__name__} failed: {ex}"
+        if ENFORCE_VALIDATION:
+            if SHOULD_DEBUG:
+                plugin_validation_case_instance.debug()
+            raise PluginValidationCaseFailureException(msg)
+        else:
+            print(f"[!] [NOT ENFORCED]: {msg}")
+            if SHOULD_DEBUG:
+                plugin_validation_case_instance.debug()
 
 
 def run_validations_for_hive_file(
@@ -88,7 +102,7 @@ def main():
 
     # Execute grouped by file, to save performance on extracting and loading the hive
     print("\n\nRunning Validations:")
-    validation_results = []
+    validation_results: List[ValidationResult] = []
     for registry_hive_file_name, validation_cases in registry_hive_map.items():
         print(
             f"\n\t[*] Validating {registry_hive_file_name} ({len(validation_cases)} validations):"
@@ -99,35 +113,50 @@ def main():
         )
 
     print()
-    validation_results_dict = [asdict(v) for v in validation_results]
-    print(
-        f"\n[!] {len(validation_results_dict)}/{len(PLUGINS)} plugins have no validation case!"
+    validation_results_dict = sorted(
+        [asdict(v) for v in validation_results], key=lambda x: x["plugin_name"]
     )
-    md_for_validation_results = tabulate(
+    print(
+        f"\n[!] {len(validation_results_dict)}/{len(PLUGINS)} plugins have a validation case:"
+    )
+    md_table_for_validation_results = tabulate(
         validation_results_dict, headers="keys", tablefmt="github"
     )
-    print(md_for_validation_results)
+    print(md_table_for_validation_results)
 
     print(
         f"\n[!] {len(plugins_without_validation)}/{len(PLUGINS)} plugins have no validation case!"
     )
-    md_for_plugins_without_validation_results = tabulate(
-        [
-            asdict(
-                ValidationResult(
-                    plugin_name=p.NAME,
-                    plugin_class_name=p.__name__,
-                    test_case_name=None,
-                    success=False,
+    # Create empty validation results for plugins without validation
+    md_table_for_plugins_without_validation_results = tabulate(
+        sorted(
+            [
+                asdict(
+                    ValidationResult(
+                        plugin_name=p.NAME,
+                        plugin_class_name=p.__name__,
+                        test_case_name=None,
+                        success=False,
+                    )
                 )
-            )
-            for p in PLUGINS
-            if p.NAME in plugins_without_validation
-        ],
+                for p in PLUGINS
+                if p.NAME in plugins_without_validation
+            ],
+            key=lambda x: x["plugin_name"],
+        ),
         headers="keys",
         tablefmt="github",
     )
-    print(md_for_plugins_without_validation_results)
+    print(md_table_for_plugins_without_validation_results)
+
+    # If we are enforcing validation, raise on plugins without validation
+    if ENFORCE_VALIDATION:
+        if plugins_without_validation:
+            # fmt: off
+            raise PluginValidationCaseFailureException(
+                f"{len(plugins_without_validation)} plugins are missing validation: {[p.__name__ for p in PLUGINS if p.NAME in plugins_without_validation]}"
+            )
+            # fmt: on
 
     # Generate markdown file `validation_results_output_file`
     markdown_content = f"""
@@ -135,12 +164,12 @@ def main():
 
 ## Plugins with validation
 
-{md_for_validation_results}
+{md_table_for_validation_results}
 
 ## Plugins without validation
 **Please note that in the future, this check will be enforced for all plugins**
 
-{md_for_plugins_without_validation_results}
+{md_table_for_plugins_without_validation_results}
     """
 
     # Write the content to a Markdown file

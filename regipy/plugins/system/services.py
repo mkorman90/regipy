@@ -47,7 +47,7 @@ class ServicesPlugin(Plugin):
                         ]
                     except RegistryParsingException as ex:
                         logger.error(
-                            f"Exception while parsing data for service {service.name}: {ex}"
+                            f"Exception while parsing data for service {service.name[:10] if service.name else None}: {ex}"
                         )
 
                     if service.subkey_count:
