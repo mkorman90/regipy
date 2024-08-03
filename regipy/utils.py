@@ -33,7 +33,11 @@ from regipy.hive_types import (
 logger = logging.getLogger(__name__)
 
 # Max size of string to return when as_json=True
-MAX_LEN = 256
+MAX_LEN: int = 256
+
+# The max string lenth when raising registry exceptions that include registry data
+# As the length can be arbitrarly large
+MAX_LEN_ERR_MSG_REGVALUE: int = 20
 
 
 def calculate_sha1(file_path):
@@ -190,3 +194,8 @@ def _setup_logging(verbose):
         stream=sys.stderr,
         level=logging.DEBUG if verbose else logging.INFO,
     )
+
+
+def trim_registry_data_for_error_msg(s: str, max_len: int = MAX_LEN_ERR_MSG_REGVALUE) -> str:
+    # Registry values included in Registry expections might be arbitrarly large,
+    return s[:max_len] + f'... (trimmed original value from {len(s)} length)'
