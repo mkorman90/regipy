@@ -23,8 +23,8 @@
 | uac_plugin                    | UACStatusPlugin                 | UACStatusPluginValidationCase                 | True      |
 | profilelist_plugin            | ProfileListPlugin               | ProfileListPluginValidationCase               | True      |
 | computer_name                 | ComputerNamePlugin              | ComputerNamePluginValidationCase              | True      |
-| bootkey                       | BootKeyPlugin                   | BootKeyPluginValidationCase                   | True      |
 | host_domain_name              | HostDomainNamePlugin            | HostDomainNamePluginValidationCase            | True      |
+| bootkey                       | BootKeyPlugin                   | BootKeyPluginValidationCase                   | True      |
 | wdigest                       | WDIGESTPlugin                   | WDIGESTPluginValidationCase                   | True      |
 | shimcache                     | ShimCachePlugin                 | AmCacheValidationCase                         | True      |
 | network_data                  | NetworkDataPlugin               | NetworkDataPluginValidationCase               | True      |
