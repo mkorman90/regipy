@@ -30,3 +30,4 @@ from .validation.validation_tests import typed_paths_plugin_validation
 from .validation.validation_tests import shell_bag_ntuser_plugin_validation
 from .validation.validation_tests import shell_bag_usrclass_plugin_validation
 from .validation.validation_tests import network_data_plugin_validation
+from .validation.validation_tests import active_control_set_validation
