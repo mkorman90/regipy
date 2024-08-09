@@ -9,7 +9,7 @@ from regipy import boomerang_stream
 from regipy.exceptions import RegistryRecoveryException
 from regipy.hive_types import HVLE_TRANSACTION_LOG_MAGIC, DIRT_TRANSACTION_LOG_MAGIC
 from regipy.registry import RegistryHive
-from regipy.structs import TRANSACTION_LOG, REGF_HEADER_SIZE, REGF_HEADER, HBIN_HEADER
+from regipy.structs import TRANSACTION_LOG, REGF_HEADER_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ def _parse_hvle_block(
         logger.info(f"dirty pages: {parsed_hvle_block.dirty_pages_count}")
 
         if parsed_hvle_block.sequence_number == expected_sequence_number:
-            logger.info(f"This hvle block holds valid dirty blocks")
+            logger.info("This hvle block holds valid dirty blocks")
             expected_sequence_number += 1
 
         for dirty_page_entry in parsed_hvle_block.dirty_pages_references:

@@ -57,7 +57,7 @@ def run_relevant_plugins(registry_hive, as_json=False, plugins=None):
         plugin = plugin_class(registry_hive, as_json=as_json)
 
         # If the list of plugins is defined, but the plugin is not in the list skip it.
-        if plugins and not plugin.NAME in plugins:
+        if plugins and plugin.NAME not in plugins:
             continue
 
         if plugin.can_run():

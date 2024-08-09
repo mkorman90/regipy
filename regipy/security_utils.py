@@ -1,8 +1,4 @@
-import struct
-from struct import unpack
-
 from typing import Any
-from regipy.exceptions import NtSidDecodingException
 from regipy.structs import ACL, ACE, SID, Int64ub
 
 
