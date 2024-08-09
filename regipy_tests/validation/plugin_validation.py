@@ -2,6 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass, asdict
 from contextlib import contextmanager
 
+import sys
 from tabulate import tabulate
 
 import os
@@ -22,7 +23,7 @@ ENFORCE_VALIDATION = False
 
 # It is possible to get an ipdb breakpoint once an exception is raised, useful for debugging plugin results
 # The user will be dropped into the validation case context, accessing all properties using `self`.
-SHOULD_DEBUG = False
+SHOULD_DEBUG = True
 
 
 test_data_dir = str(Path(__file__).parent.parent.joinpath("data"))
@@ -82,6 +83,16 @@ def main():
     )
 
     print(f"[*] Loaded {len(validation_cases)} validation cases")
+
+    if plugin_name := sys.argv[1]:
+        if plugin_name in validation_cases.keys():
+            print(f"Running validation for plugin {plugin_name}")
+            validation_case: ValidationCase = validation_cases[plugin_name]
+            with load_hive(validation_case.test_hive_file_name) as registry_hive:
+                validate_case(validation_case, registry_hive)
+                return
+        print(f"No ValidationCase for {plugin_name}")
+        return
 
     # Map all plugins according to registry hive test file, for performance.
     # Also, warn about plugins without validation, this will be enforced in the future.
