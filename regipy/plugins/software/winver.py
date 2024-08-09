@@ -2,8 +2,8 @@ import logging
 
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
-from regipy.utils import get_subkey_values_from_list
 from regipy.utils import convert_wintime
+from regipy.exceptions import RegistryKeyNotFoundException
 import datetime
 
 logger = logging.getLogger(__name__)

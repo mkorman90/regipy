@@ -2,6 +2,7 @@ import logging
 
 from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
+from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.utils import convert_wintime
 from regipy.utils import convert_filetime2
 
