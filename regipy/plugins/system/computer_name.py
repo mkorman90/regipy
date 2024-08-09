@@ -31,5 +31,6 @@ class ComputerNamePlugin(Plugin):
                         ),
                     }
                 )
-            except RegistryValueNotFoundException as ex:
+            except RegistryValueNotFoundException:
+                logger.exception("Could not get computer name")
                 continue

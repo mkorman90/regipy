@@ -44,9 +44,3 @@ class RegistryParsingException(RegipyException):
     """
 
     pass
-
-
-class NtSidDecodingException(RegipyException):
-    """
-    Raised when the binary Windows NT SID representation can not be decoded
-    """

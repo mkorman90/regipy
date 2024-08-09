@@ -195,10 +195,10 @@ def get_shimcache_entries(cachebin, as_json=False):
     # This is a Windows 7/2k8-R2 Shim Cache.
     elif magic == CACHE_MAGIC_NT6_1:
         test_size = struct.unpack(
-            "<H", cachebin[CACHE_HEADER_SIZE_NT6_1 : CACHE_HEADER_SIZE_NT6_1 + 2]
+            "<H", cachebin[CACHE_HEADER_SIZE_NT6_1: CACHE_HEADER_SIZE_NT6_1 + 2]
         )[0]
         test_max_size = struct.unpack(
-            "<H", cachebin[CACHE_HEADER_SIZE_NT6_1 + 2 : CACHE_HEADER_SIZE_NT6_1 + 4]
+            "<H", cachebin[CACHE_HEADER_SIZE_NT6_1 + 2: CACHE_HEADER_SIZE_NT6_1 + 4]
         )[0]
 
         # Shim Cache types can come in 32-bit or 64-bit formats.
@@ -209,7 +209,7 @@ def get_shimcache_entries(cachebin, as_json=False):
             test_max_size - test_size == 2
             and struct.unpack(
                 "<L",
-                cachebin[CACHE_HEADER_SIZE_NT6_1 + 4 : CACHE_HEADER_SIZE_NT6_1 + 8],
+                cachebin[CACHE_HEADER_SIZE_NT6_1 + 4: CACHE_HEADER_SIZE_NT6_1 + 8],
             )[0]
         ) == 0:
             logger.debug("[+] Found 64bit Windows 7/2k8-R2 Shim Cache data...")
@@ -228,7 +228,7 @@ def get_shimcache_entries(cachebin, as_json=False):
     # Check the data set to see if it matches the Windows 8 format.
     elif (
         len(cachebin) > WIN8_STATS_SIZE
-        and cachebin[WIN8_STATS_SIZE : WIN8_STATS_SIZE + 4] == WIN8_MAGIC
+        and cachebin[WIN8_STATS_SIZE: WIN8_STATS_SIZE + 4] == WIN8_MAGIC
     ):
         logger.debug("[+] Found Windows 8/2k12 Apphelp Cache data...")
         yield from read_win8_entries(cachebin, WIN8_MAGIC, as_json=as_json)
@@ -236,7 +236,7 @@ def get_shimcache_entries(cachebin, as_json=False):
     # Windows 8.1 will use a different magic dword, check for it
     elif (
         len(cachebin) > WIN8_STATS_SIZE
-        and cachebin[WIN8_STATS_SIZE : WIN8_STATS_SIZE + 4] == WIN81_MAGIC
+        and cachebin[WIN8_STATS_SIZE: WIN8_STATS_SIZE + 4] == WIN81_MAGIC
     ):
         logger.debug("[+] Found Windows 8.1 Apphelp Cache data...")
         yield from read_win8_entries(cachebin, WIN81_MAGIC, as_json=as_json)
@@ -244,7 +244,7 @@ def get_shimcache_entries(cachebin, as_json=False):
     # Windows 10 will use a different magic dword, check for it
     elif (
         len(cachebin) > WIN10_STATS_SIZE
-        and cachebin[WIN10_STATS_SIZE : WIN10_STATS_SIZE + 4] == WIN10_MAGIC
+        and cachebin[WIN10_STATS_SIZE: WIN10_STATS_SIZE + 4] == WIN10_MAGIC
     ):
         logger.debug("[+] Found Windows 10 Apphelp Cache data...")
         yield from read_win10_entries(cachebin, WIN10_MAGIC, as_json=as_json)
@@ -252,7 +252,7 @@ def get_shimcache_entries(cachebin, as_json=False):
     # Windows 10 creators update moved the damn magic 4 bytes forward...
     elif (
         len(cachebin) > WIN10_STATS_SIZE
-        and cachebin[WIN10_STATS_SIZE + 4 : WIN10_STATS_SIZE + 8] == WIN10_MAGIC
+        and cachebin[WIN10_STATS_SIZE + 4: WIN10_STATS_SIZE + 8] == WIN10_MAGIC
     ):
         logger.debug("[+] Found Windows 10 Apphelp Cache data... (creators update)")
         yield from read_win10_entries(
@@ -269,7 +269,6 @@ def get_shimcache_entries(cachebin, as_json=False):
 def read_win8_entries(bin_data, ver_magic, as_json=False):
 
     entry_meta_len = 12
-    entry_list = []
 
     # Skip past the stats in the header
     cache_data = bin_data[WIN8_STATS_SIZE:]
@@ -328,11 +327,10 @@ def read_win8_entries(bin_data, ver_magic, as_json=False):
 def read_win10_entries(bin_data, ver_magic, creators_update=False, as_json=False):
 
     entry_meta_len = 12
-    entry_list = []
 
     # Skip past the stats in the header
     if creators_update:
-        cache_data = bin_data[WIN10_STATS_SIZE + 4 :]
+        cache_data = bin_data[WIN10_STATS_SIZE + 4:]
     else:
         cache_data = bin_data[WIN10_STATS_SIZE:]
 
@@ -377,7 +375,6 @@ def read_win10_entries(bin_data, ver_magic, creators_update=False, as_json=False
 
 # Read Windows 2k3/Vista/2k8 Shim Cache entry formats.
 def read_nt5_entries(bin_data, entry, as_json=False):
-    entry_list = []
     contains_file_size = False
     entry_size = entry.size()
 
@@ -394,7 +391,7 @@ def read_nt5_entries(bin_data, entry, as_json=False):
         entry_size,
     ):
 
-        entry.update(bin_data[offset : offset + entry_size])
+        entry.update(bin_data[offset: offset + entry_size])
 
         if entry.dw_file_size_low > 3:
             contains_file_size = True
@@ -407,12 +404,12 @@ def read_nt5_entries(bin_data, entry, as_json=False):
         entry_size,
     ):
 
-        entry.update(bin_data[offset : offset + entry_size])
+        entry.update(bin_data[offset: offset + entry_size])
 
         last_mod_date = convert_filetime(
             entry.dw_low_date_time, entry.dw_high_date_time
         )
-        path = bin_data[entry.offset : entry.offset + entry.w_length].decode(
+        path = bin_data[entry.offsets: entry.offset + entry.w_length].decode(
             "utf-16le", "replace"
         )
 
@@ -460,11 +457,11 @@ def read_nt6_entries(bin_data, entry, as_json=False):
         entry_size,
     ):
 
-        entry.update(bin_data[offset : offset + entry_size])
+        entry.update(bin_data[offset: offset + entry_size])
         last_mod_date = convert_filetime(
             entry.dw_low_date_time, entry.dw_high_date_time
         )
-        path = bin_data[entry.offset : entry.offset + entry.w_length].decode(
+        path = bin_data[entry.offset: entry.offset + entry.w_length].decode(
             "utf-16le", "replace"
         )
 
@@ -484,7 +481,6 @@ def read_nt6_entries(bin_data, entry, as_json=False):
 # Read the WinXP Shim Cache data. Some entries can be missing data but still
 # contain useful information, so try to get as much as we can.
 def read_winxp_entries(bin_data, as_json=False):
-    entry_list = []
 
     num_entries = struct.unpack("<L", bin_data[8:12])[0]
     if num_entries == 0:
@@ -496,12 +492,12 @@ def read_winxp_entries(bin_data, as_json=False):
         WINXP_ENTRY_SIZE32,
     ):
         # No size values are included in these entries, so search for utf-16 terminator.
-        path_len = bin_data[offset : offset + (MAX_PATH + 8)].find(b"\x00\x00")
+        path_len = bin_data[offset: offset + (MAX_PATH + 8)].find(b"\x00\x00")
 
         # if path is corrupt, procede to next entry.
         if path_len == 0:
             continue
-        path = bin_data[offset : offset + path_len + 1].decode("utf-16le")
+        path = bin_data[offset: offset + path_len + 1].decode("utf-16le")
 
         if len(path) == 0:
             continue
@@ -509,16 +505,16 @@ def read_winxp_entries(bin_data, as_json=False):
         entry_data = offset + (MAX_PATH + 8)
 
         # Get last mod time.
-        last_mod_time = struct.unpack("<2L", bin_data[entry_data : entry_data + 8])
+        last_mod_time = struct.unpack("<2L", bin_data[entry_data: entry_data + 8])
         last_mod_time = convert_filetime(last_mod_time[0], last_mod_time[1])
 
         # Get last file size.
-        file_size = struct.unpack("<2L", bin_data[entry_data + 8 : entry_data + 16])[0]
+        file_size = struct.unpack("<2L", bin_data[entry_data + 8: entry_data + 16])[0]
         if file_size == 0:
             file_size = BAD_ENTRY_DATA
 
         # Get last update time.
-        exec_time = struct.unpack("<2L", bin_data[entry_data + 16 : entry_data + 24])
+        exec_time = struct.unpack("<2L", bin_data[entry_data + 16: entry_data + 24])
         exec_time = convert_filetime(exec_time[0], exec_time[1])
 
         yield {
