@@ -326,6 +326,8 @@ class ShellBagUsrclassPlugin(Plugin):
     def run(self, codepage=DEFAULT_CODEPAGE):
 
         try:
+            # TODO: handle this import requirement in a better way
+            # flake8: noqa
             import pyfwsi
         except ModuleNotFoundError as ex:
             logger.exception(

@@ -1,3 +1,4 @@
+ # flake8: noqa 
 from .validation.validation_tests import shimcache_validation
 from .validation.validation_tests import ntuser_persistence_validation
 from .validation.validation_tests import software_persistence_validation

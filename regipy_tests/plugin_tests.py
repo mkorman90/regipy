@@ -1,25 +1,9 @@
-import pytest
 import datetime as dt
 from regipy.plugins import (
-    NTUserPersistencePlugin,
-    UserAssistPlugin,
-    AmCachePlugin,
-    WordWheelQueryPlugin,
-    UACStatusPlugin,
-    LastLogonPlugin,
-    SoftwareClassesInstallerPlugin,
-    InstalledProgramsSoftwarePlugin,
-    RASTracingPlugin,
     PrintDemonPlugin,
     ServicesPlugin,
-    NtuserClassesInstallerPlugin,
 )
-from regipy.plugins.ntuser.typed_urls import TypedUrlsPlugin
 from regipy.plugins.ntuser.typed_paths import TypedPathsPlugin
-from regipy.plugins.software.profilelist import ProfileListPlugin
-from regipy.plugins.software.persistence import SoftwarePersistencePlugin
-from regipy.plugins.system.computer_name import ComputerNamePlugin
-from regipy.plugins.system.shimcache import ShimCachePlugin
 from regipy.plugins.system.bootkey import BootKeyPlugin
 from regipy.plugins.system.host_domain_name import HostDomainNamePlugin
 from regipy.plugins.sam.local_sid import LocalSidPlugin
@@ -34,7 +18,6 @@ from regipy.plugins.ntuser.winscp_saved_sessions import WinSCPSavedSessionsPlugi
 from regipy.plugins.system.network_data import NetworkDataPlugin
 from regipy.plugins.usrclass.shellbags_usrclass import ShellBagUsrclassPlugin
 from regipy.registry import RegistryHive
-from regipy.plugins.system.bam import BAMPlugin
 
 
 def test_printdemon_plugin(software_hive):

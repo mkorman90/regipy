@@ -2,7 +2,6 @@ import logging
 
 from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
-from regipy.utils import get_subkey_values_from_list
 
 logger = logging.getLogger(__name__)
 

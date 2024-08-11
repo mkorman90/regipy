@@ -1,9 +1,6 @@
-import binascii
-import codecs
-
 import logging
 
-from construct import *
+from construct import CString, GreedyRange, Int32ul
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import NTUSER_HIVE_TYPE
