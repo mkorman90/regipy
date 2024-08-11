@@ -12,7 +12,7 @@ COMPUTER_NAME_PATH = r"Control\ComputerName\ComputerName"
 
 
 class ComputerNamePlugin(Plugin):
-    NAME = "computer_name"
+    NAME: str = "computer_name"
     DESCRIPTION = "Get the computer name"
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 

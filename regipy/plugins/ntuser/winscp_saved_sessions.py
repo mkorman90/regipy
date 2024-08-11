@@ -1,7 +1,5 @@
 import logging
 
-from inflection import underscore
-
 from regipy import RegistryKeyNotFoundException
 from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
