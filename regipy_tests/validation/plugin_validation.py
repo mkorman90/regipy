@@ -1,5 +1,5 @@
 from collections import defaultdict
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 from contextlib import contextmanager
 
 import sys
@@ -169,7 +169,8 @@ def main():
         if plugins_without_validation:
             # fmt: off
             raise PluginValidationCaseFailureException(
-                f"{len(plugins_without_validation)} plugins are missing validation: {[p.__name__ for p in PLUGINS if p.NAME in plugins_without_validation]}"
+                f"{len(plugins_without_validation)} plugins are missing validation:"
+                f" {[p.__name__ for p in PLUGINS if p.NAME in plugins_without_validation]}"
             )
             # fmt: on
 

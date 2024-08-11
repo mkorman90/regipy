@@ -1,26 +1,14 @@
-import pytest
 import datetime as dt
 from regipy.plugins import (
-    NTUserPersistencePlugin,
-    UserAssistPlugin,
-    AmCachePlugin,
-    WordWheelQueryPlugin,
-    UACStatusPlugin,
-    LastLogonPlugin,
-    SoftwareClassesInstallerPlugin,
-    InstalledProgramsSoftwarePlugin,
-    RASTracingPlugin,
     PrintDemonPlugin,
     ServicesPlugin,
-    NtuserClassesInstallerPlugin,
 )
+<<<<<<< HEAD
 from regipy.registry import RegistryHive
 from regipy.plugins.ntuser.typed_urls import TypedUrlsPlugin
+=======
+>>>>>>> f5ea369 (lint fall)
 from regipy.plugins.ntuser.typed_paths import TypedPathsPlugin
-from regipy.plugins.software.profilelist import ProfileListPlugin
-from regipy.plugins.software.persistence import SoftwarePersistencePlugin
-from regipy.plugins.system.computer_name import ComputerNamePlugin
-from regipy.plugins.system.shimcache import ShimCachePlugin
 from regipy.plugins.system.bootkey import BootKeyPlugin
 from regipy.plugins.system.host_domain_name import HostDomainNamePlugin
 from regipy.plugins.sam.local_sid import LocalSidPlugin
@@ -34,6 +22,7 @@ from regipy.plugins.ntuser.shellbags_ntuser import ShellBagNtuserPlugin
 from regipy.plugins.ntuser.winscp_saved_sessions import WinSCPSavedSessionsPlugin
 from regipy.plugins.system.network_data import NetworkDataPlugin
 from regipy.plugins.usrclass.shellbags_usrclass import ShellBagUsrclassPlugin
+<<<<<<< HEAD
 from regipy.plugins.software.winver import WinVersionPlugin
 from regipy.plugins.system.previous_winver import PreviousWinVersionPlugin
 from regipy.plugins.system.shutdown import ShutdownPlugin
@@ -48,6 +37,9 @@ from regipy.plugins.software.spp_clients import SppClientsPlugin
 from regipy.plugins.system.backuprestore import BackupRestorePlugin
 from regipy.plugins.system.timezone_data2 import TimezoneDataPlugin2
 from regipy.plugins.system.bam import BAMPlugin
+=======
+from regipy.registry import RegistryHive
+>>>>>>> f5ea369 (lint fall)
 
 def test_shimcache_plugin(system_hive):
     registry_hive = RegistryHive(system_hive)

@@ -1,22 +1,19 @@
-import binascii
 import csv
 import json
 import logging
 import os
 import time
-from typing import Generator, Iterator
 
 
 import attr
 import click
-import pytz
 from tabulate import tabulate
 
 from regipy.plugins.plugin import PLUGINS
 from regipy.recovery import apply_transaction_logs
 from regipy.regdiff import compare_hives
 from regipy.plugins.utils import run_relevant_plugins
-from regipy.registry import NKRecord, RegistryHive
+from regipy.registry import RegistryHive
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.utils import calculate_xor32_checksum, _setup_logging
 from regipy.cli_utils import get_filtered_subkeys, _normalize_subkey_fields

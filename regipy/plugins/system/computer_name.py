@@ -1,5 +1,4 @@
 import logging
-import attr
 
 from regipy.exceptions import RegistryValueNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
