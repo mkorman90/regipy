@@ -257,7 +257,9 @@ class RegistryHive:
                     else:
                         values = list(nk_record.iter_values(as_json=as_json))
                 except RegistryParsingException as ex:
-                    logger.exception(f"Failed to parse hive value at path: {trim_registry_data_for_error_msg(path_root)}: {ex}")
+                    logger.exception(
+                        f"Failed to parse hive value at path: {trim_registry_data_for_error_msg(path_root)}: {ex}"
+                    )
                     values = []
 
             ts = convert_wintime(nk_record.header.last_modified)
