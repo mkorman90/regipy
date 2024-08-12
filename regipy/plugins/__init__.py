@@ -37,3 +37,17 @@ from .system.wdigest import WDIGESTPlugin
 from .usrclass.shellbags_usrclass import ShellBagUsrclassPlugin
 from .ntuser.classes_installer import NtuserClassesInstallerPlugin
 from .system.network_data import NetworkDataPlugin
+from .software.winver import WinVersionPlugin
+from .system.previous_winver import PreviousWinVersionPlugin
+from .system.shutdown import ShutdownPlugin
+from .system.processor_architecture import ProcessorArchitecturePlugin
+from .system.crash_dump import CrashDumpPlugin
+from .software.susclient import SusclientPlugin
+from .system.disablelastaccess import DisableLastAccessPlugin
+from .system.codepage import CodepagePlugin
+from .software.disablesr import DisableSRPlugin
+from .system.diag_sr import DiagSRPlugin
+from .software.spp_clients import SppClientsPlugin
+from .system.backuprestore import BackupRestorePlugin
+from .system.timezone_data2 import TimezoneDataPlugin2
+

@@ -3,6 +3,7 @@ import datetime as dt
 import hashlib
 import logging
 import sys
+import struct
 
 from typing import Generator, Union
 
@@ -92,6 +93,21 @@ def convert_filetime(dw_low_date_time, dw_high_date_time):
         temp_time |= dw_low_date_time
         date = pytz.utc.localize(date + dt.timedelta(microseconds=temp_time / 10))
         return date.isoformat()
+    except OverflowError:
+        return None
+
+
+# Convert FILETIME to datetime.
+# Based on http://code.activestate.com/recipes/511425-filetime-to-datetime/
+def convert_filetime2(dte):
+    try:
+        epoch = dt.datetime(1601, 1, 1, 0, 0, 0)
+        nt_timestamp = struct.unpack("<Q", binascii.unhexlify(dte))[0]
+        epoch = dt.datetime(1601, 1, 1, 0, 0, 0)
+        nt_datetime = epoch + dt.timedelta(microseconds=nt_timestamp / 10)
+
+        return(nt_datetime.strftime("%Y-%m-%d %H:%M:%S"))
+
     except OverflowError:
         return None
 
