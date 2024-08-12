@@ -225,10 +225,10 @@ def test_classes_installer_plugin_ntuser(ntuser_hive_2):
     plugin_instance.run()
 
     assert plugin_instance.entries[0] == {
-        'identifier': '000041091A0090400000000000F01FEC',
-        'is_hidden': False,
-        'product_name': 'Microsoft Office OneNote MUI (English) 2010',
-        'timestamp': '2010-11-10T10:31:06.573040+00:00'
+        'identifier': '8A4152964845CF540BEAEBD27F7A8519', 
+        'timestamp': '2022-02-15T07:00:07.245646+00:00', 
+        'product_name': 'Microsoft Visual C++ Compiler Package for Python 2.7', 
+        'is_hidden': False
     }
 
     assert not any([x['is_hidden'] for x in plugin_instance.entries])
@@ -889,9 +889,8 @@ def test_network_data_plugin(system_hive):
     registry_hive = RegistryHive(system_hive)
     plugin_instance = NetworkDataPlugin(registry_hive, as_json=True)
     plugin_instance.run()
-    assert plugin_instance.entries[
-        "\\ControlSet001\\Services\\Tcpip\\Parameters\\Interfaces"
-    ]["interfaces"][0] == {
+    
+    assert plugin_instance.entries["\\ControlSet001\\Services\\Tcpip\\Parameters\\Interfaces"]["interfaces"][0] == {
         "interface_name": "{698E50A9-4F58-4D86-B61D-F42E58DCACF6}",
         "last_modified": "2011-09-17T13:43:23.770078+00:00",
         "dhcp_enabled": False,
@@ -925,8 +924,8 @@ def test_win_version_plugin(software_hive):
         "RegisteredOwner": "Windows User"
     }   
 
-def test_previous_win_version_plugin(system_hive):
-    registry_hive = RegistryHive(system_hive)
+def test_previous_win_version_plugin(system_hive_with_filetime):
+    registry_hive = RegistryHive(system_hive_with_filetime)
     plugin_instance = PreviousWinVersionPlugin(registry_hive, as_json=True)
     plugin_instance.run()
     
@@ -1022,22 +1021,24 @@ def test_susclient_plugin(software_hive):
         "SusClientIdValidation": ""
     }
     
-def test_disable_last_access_plugin(system_hive):
-    registry_hive = RegistryHive(system_hive)
+def test_disable_last_access_plugin(system_hive_with_filetime):
+    registry_hive = RegistryHive(system_hive_with_filetime)
     plugin_instance = DisableLastAccessPlugin(registry_hive, as_json=True)
     plugin_instance.run()
 
+    # work with SYSTEM_WIN_10_1709 HIVE
     assert plugin_instance.entries['\\ControlSet001\\Control\\FileSystem'] == {
         "last_write": "2020-02-13T11:59:20.987114+00:00",
         "NtfsDisableLastAccessUpdate": "80000003",
         "NtfsDisableLastAccessUpdateStr": "(System Managed, Updates Disabled)"
     }
     
-def test_code_page_plugin(system_hive):
-    registry_hive = RegistryHive(system_hive)
+def test_code_page_plugin(system_hive_with_filetime):
+    registry_hive = RegistryHive(system_hive_with_filetime)
     plugin_instance = CodepagePlugin(registry_hive, as_json=True)
     plugin_instance.run()
 
+    # work with SYSTEM_WIN_10_1709 HIVE
     assert plugin_instance.entries['\\ControlSet001\\Control\\Nls\\CodePage'] == {
         "ACP": "1252",
         "last_write": "2019-05-16T08:22:00.160628+00:00"
@@ -1079,11 +1080,12 @@ def test_spp_clients_plugin(software_hive):
         }
     }
     
-def test_backup_restore_plugin(system_hive):
-    registry_hive = RegistryHive(system_hive)
+def test_backup_restore_plugin(system_hive_with_filetime):
+    registry_hive = RegistryHive(system_hive_with_filetime)
     plugin_instance = BackupRestorePlugin(registry_hive, as_json=True)
     plugin_instance.run()
 
+    # work with SYSTEM_WIN_10_1709 HIVE
     assert plugin_instance.entries == {
         "\\ControlSet001\\Control\\BackupRestore\\FilesNotToBackup": {
             "BITS_metadata": [
@@ -1215,11 +1217,12 @@ def test_backup_restore_plugin(system_hive):
         }
     }
     
-def test_timezone_data2_plugin(system_hive):
-    registry_hive = RegistryHive(system_hive)
+def test_timezone_data2_plugin(system_hive_with_filetime):
+    registry_hive = RegistryHive(system_hive_with_filetime)
     plugin_instance = TimezoneDataPlugin2(registry_hive, as_json=True)
     plugin_instance.run()
 
+    # work with SYSTEM_WIN_10_1709 HIVE
     assert plugin_instance.entries['\\ControlSet001\\Control\\TimeZoneInformation'] == {
         "ActiveTimeBias": 420,
         "Bias": 480,
