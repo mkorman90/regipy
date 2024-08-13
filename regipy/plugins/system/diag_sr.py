@@ -16,7 +16,7 @@ crash_items = ("CrashDumpEnabled", "DumpFile", "MinidumpDir", "LogEvent")
 
 
 class DiagSRPlugin(Plugin):
-    NAME = 'diag_sr'
+    NAME = "diag_sr"
     DESCRIPTION = "Get Diag\\SystemRestore values and data"
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
@@ -31,8 +31,14 @@ class DiagSRPlugin(Plugin):
             try:
                 diagsr = self.registry_hive.get_key(diagsr_subkey)
             except RegistryKeyNotFoundException as ex:
-                logger.error(f'Could not find {self.NAME} subkey at {diagsr_subkey}: {ex}')
+                logger.error(
+                    f"Could not find {self.NAME} subkey at {diagsr_subkey}: {ex}"
+                )
                 continue
-            self.entries[diagsr_subkey] = {'last_write': convert_wintime(diagsr.header.last_modified).isoformat()}
+            self.entries[diagsr_subkey] = {
+                "last_write": convert_wintime(diagsr.header.last_modified).isoformat()
+            }
             for val in diagsr.iter_values():
-                self.entries[diagsr_subkey][val.name] = convert_filetime2(val.value[16:32])
+                self.entries[diagsr_subkey][val.name] = convert_filetime2(
+                    val.value[16:32]
+                )

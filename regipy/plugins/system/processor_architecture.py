@@ -9,11 +9,16 @@ logger = logging.getLogger(__name__)
 
 
 PROCESSOR_PATH = r"Control\Session Manager\Environment"
-processor_list = ("PROCESSOR_ARCHITECTURE", "NUMBER_OF_PROCESSORS", "PROCESSOR_IDENTIFIER", "PROCESSOR_REVISION")
+processor_list = (
+    "PROCESSOR_ARCHITECTURE",
+    "NUMBER_OF_PROCESSORS",
+    "PROCESSOR_IDENTIFIER",
+    "PROCESSOR_REVISION",
+)
 
 
 class ProcessorArchitecturePlugin(Plugin):
-    NAME = 'processor_architecture'
+    NAME = "processor_architecture"
     DESCRIPTION = "Get processor architecture info from the System's environment key"
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
@@ -28,7 +33,9 @@ class ProcessorArchitecturePlugin(Plugin):
             try:
                 processor = self.registry_hive.get_key(processor_subkey)
             except RegistryKeyNotFoundException as ex:
-                logger.error(f'Could not find {self.NAME} subkey at {processor_subkey}: {ex}')
+                logger.error(
+                    f"Could not find {self.NAME} subkey at {processor_subkey}: {ex}"
+                )
                 continue
             self.entries[processor_subkey] = {}
             for val in processor.iter_values():

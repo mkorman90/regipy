@@ -9,12 +9,12 @@ logger = logging.getLogger(__name__)
 
 
 SPP_CLIENT_PATH = r"\Microsoft\Windows NT\CurrentVersion\SPP\Clients"
-value_list = ("{09F7EDC5-294E-4180-AF6A-FB0E6A0E9513}")
+value_list = "{09F7EDC5-294E-4180-AF6A-FB0E6A0E9513}"
 
 
 class SppClientsPlugin(Plugin):
-    NAME = 'spp_clients_plugin'
-    DESCRIPTION = 'Determines volumes monitored by VSS'
+    NAME = "spp_clients_plugin"
+    DESCRIPTION = "Determines volumes monitored by VSS"
     COMPATIBLE_HIVE = SOFTWARE_HIVE_TYPE
 
     def can_run(self):
@@ -27,10 +27,16 @@ class SppClientsPlugin(Plugin):
         try:
             key = self.registry_hive.get_key(SPP_CLIENT_PATH)
         except RegistryKeyNotFoundException as ex:
-            logger.error(f'Could not find {self.NAME} subkey at {SPP_CLIENT_PATH}: {ex}')
+            logger.error(
+                f"Could not find {self.NAME} subkey at {SPP_CLIENT_PATH}: {ex}"
+            )
             return None
 
-        self.entries = {SPP_CLIENT_PATH: {'last_write': convert_wintime(key.header.last_modified).isoformat()}}
+        self.entries = {
+            SPP_CLIENT_PATH: {
+                "last_write": convert_wintime(key.header.last_modified).isoformat()
+            }
+        }
 
         for val in key.iter_values():
             if val.name in value_list:

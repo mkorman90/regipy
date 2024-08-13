@@ -10,15 +10,17 @@ logger = logging.getLogger(__name__)
 
 PROCESSOR_PATH = r"Control\CrashControl"
 crash_items = ("CrashDumpEnabled", "DumpFile", "MinidumpDir", "LogEvent")
-dump_enabled = {"0": "None",
-                "1": "Complete memory dump",
-                "2": "Kernel memory dump",
-                "3": "Small memory dump (64 KB)",
-                "7": "Automatic memory dump"}
+dump_enabled = {
+    "0": "None",
+    "1": "Complete memory dump",
+    "2": "Kernel memory dump",
+    "3": "Small memory dump (64 KB)",
+    "7": "Automatic memory dump",
+}
 
 
 class CrashDumpPlugin(Plugin):
-    NAME = 'crash_dump'
+    NAME = "crash_dump"
     DESCRIPTION = "Get crash control information"
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
@@ -33,11 +35,19 @@ class CrashDumpPlugin(Plugin):
             try:
                 architecture = self.registry_hive.get_key(architecture_subkey)
             except RegistryKeyNotFoundException as ex:
-                logger.error(f'Could not find {self.NAME} subkey at {architecture_subkey}: {ex}')
+                logger.error(
+                    f"Could not find {self.NAME} subkey at {architecture_subkey}: {ex}"
+                )
                 continue
-            self.entries[architecture_subkey] = {'last_write': convert_wintime(architecture.header.last_modified).isoformat()}
+            self.entries[architecture_subkey] = {
+                "last_write": convert_wintime(
+                    architecture.header.last_modified
+                ).isoformat()
+            }
             for val in architecture.iter_values():
                 if val.name in crash_items:
                     self.entries[architecture_subkey][val.name] = val.value
                 if val.name == "CrashDumpEnabled":
-                    self.entries[architecture_subkey]["CrashDumpEnabledStr"] = dump_enabled.get(str(val.value), "")
+                    self.entries[architecture_subkey]["CrashDumpEnabledStr"] = (
+                        dump_enabled.get(str(val.value), "")
+                    )
