@@ -1,5 +1,6 @@
 from typing import Any
-from regipy.structs import ACL, ACE, SID, Int64ub
+from regipy.structs import ACL, ACE, SID
+from construct import Int64ub
 
 
 def convert_sid(sid: Any, strip_rid: bool = False) -> str:
