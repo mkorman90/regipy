@@ -25,8 +25,10 @@ def get_filtered_subkeys(
     Get records filtered by the specified timestamps
     :param registry_hive: A RegistryHive object
     :param name_key_entry: A list of paths as strings
-    :param start_date: Include only subkeys modified after the specified date, in isoformat UTC, for example: 2020-02-18T14:15:00.000000
-    :param end_date: Include only subkeys modified before the specified date, in isoformat UTC, for example: 2020-02-20T14:15:00.000000
+    :param start_date: Include only subkeys modified after the specified date
+                     in isoformat UTC, for example: 2020-02-18T14:15:00.000000
+    :param end_date: Include only subkeys modified before the specified date
+                     in isoformat UTC, for example: 2020-02-20T14:15:00.000000
     """
     skipped_entries_count = 0
     if start_date:

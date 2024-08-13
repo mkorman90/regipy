@@ -1,9 +1,8 @@
-import binascii
 import codecs
 
 import logging
 
-from construct import *
+from construct import Bytes, Const, ConstError, Int32ul, Int64ul, Struct
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import NTUSER_HIVE_TYPE

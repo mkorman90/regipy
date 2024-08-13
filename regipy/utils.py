@@ -196,7 +196,8 @@ def try_decode_binary(data, as_json=False, max_len=MAX_LEN, trim_values=True):
     except UnicodeDecodeError:
         try:
             value = data.decode().rstrip("\x00")
-        except:
+        except Exception as ex:
+            logger.warning(f"Could not parse data as string, formating to hex: {ex}")
             value = binascii.b2a_hex(data).decode() if as_json else data
 
     if trim_values:
@@ -212,6 +213,8 @@ def _setup_logging(verbose):
     )
 
 
-def trim_registry_data_for_error_msg(s: str, max_len: int = MAX_LEN_ERR_MSG_REGVALUE) -> str:
+def trim_registry_data_for_error_msg(
+    s: str, max_len: int = MAX_LEN_ERR_MSG_REGVALUE
+) -> str:
     # Registry values included in Registry expections might be arbitrarly large,
-    return s[:max_len] + f'... (trimmed original value from {len(s)} length)'
+    return s[:max_len] + f"... (trimmed original value from {len(s)} length)"

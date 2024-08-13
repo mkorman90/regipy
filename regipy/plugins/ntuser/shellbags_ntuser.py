@@ -35,9 +35,9 @@ class ShellBagNtuserPlugin(Plugin):
             import pyfwsi
         except ModuleNotFoundError as ex:
             logger.exception(
-                f"Plugin `shellbag_plugin` has missing modules, install regipy using"
-                f" `pip install regipy[full]` in order to install plugin dependencies. "
-                f"This might take some time... "
+                "Plugin `shellbag_plugin` has missing modules, install regipy using"
+                " `pip install regipy[full]` in order to install plugin dependencies. "
+                "This might take some time... "
             )
             raise ex
 
@@ -319,12 +319,13 @@ class ShellBagNtuserPlugin(Plugin):
     def run(self, codepage=DEFAULT_CODEPAGE):
 
         try:
+            # flake8: noqa
             import pyfwsi
         except ModuleNotFoundError as ex:
             logger.exception(
-                f"Plugin `shellbag_plugin` has missing modules, install regipy using"
-                f" `pip install regipy[full]` in order to install plugin dependencies. "
-                f"This might take some time... "
+                "Plugin `shellbag_plugin` has missing modules, install regipy using"
+                " `pip install regipy[full]` in order to install plugin dependencies. "
+                "This might take some time... "
             )
             raise ex
 

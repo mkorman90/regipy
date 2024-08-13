@@ -1,3 +1,4 @@
+# flake8: noqa
 from .validation.validation_tests import shimcache_validation
 from .validation.validation_tests import ntuser_persistence_validation
 from .validation.validation_tests import software_persistence_validation
@@ -30,3 +31,4 @@ from .validation.validation_tests import typed_paths_plugin_validation
 from .validation.validation_tests import shell_bag_ntuser_plugin_validation
 from .validation.validation_tests import shell_bag_usrclass_plugin_validation
 from .validation.validation_tests import network_data_plugin_validation
+from .validation.validation_tests import active_control_set_validation

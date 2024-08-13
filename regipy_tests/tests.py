@@ -2,7 +2,6 @@ import json
 import os
 from tempfile import mkdtemp
 
-import pytest
 
 from regipy import NoRegistrySubkeysException
 from regipy.hive_types import NTUSER_HIVE_TYPE
@@ -97,12 +96,6 @@ def test_find_keys_partial_ntuser_hive(ntuser_software_partial):
     values = [x for x in run_key.iter_values(as_json=True)]
     assert values[0].name == "OneDrive"
     assert values[0].value_type == "REG_SZ"
-
-
-def test_ntuser_timeline(ntuser_hive):
-    registry_hive = RegistryHive(ntuser_hive)
-    # TODO
-    pass
 
 
 def test_regdiff(ntuser_hive, second_hive_path):
@@ -364,7 +357,8 @@ def test_parse_security_info(ntuser_hive):
 def test_parse_filetime_value(system_hive_with_filetime):
     registry_hive = RegistryHive(system_hive_with_filetime)
     subkey = registry_hive.get_key(
-        r"\ControlSet001\Enum\USBSTOR\Disk&Ven_SanDisk&Prod_Cruzer&Rev_1.20\200608767007B7C08A6A&0\Properties\{83da6326-97a6-4088-9453-a1923f573b29}\0064"
+        r"\ControlSet001\Enum\USBSTOR\Disk&Ven_SanDisk&Prod_Cruzer&Rev_1.2"
+        r"0\200608767007B7C08A6A&0\Properties\{83da6326-97a6-4088-9453-a1923f573b29}\0064"
     )
     val = subkey.get_value("(default)", as_json=True)
     assert val == "2020-03-17T14:02:38.955490+00:00"
