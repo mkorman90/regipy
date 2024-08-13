@@ -87,7 +87,7 @@ def main():
     # TODO: Move this to Click, understand how we can skip installation in setup.py, as the tests are not part of the package.
     # Possibly we should need to creae an additional regipy-tests package
     #  which will be installed during the validation step in github/workflows/python-package.yml
-    if len(sys.argv[1]) == 2:
+    if len(sys.argv) == 2:
         plugin_name = sys.argv[1]
         if plugin_name in validation_cases.keys():
             print(f"Running validation for plugin {plugin_name}")
@@ -149,6 +149,7 @@ def main():
                 asdict(
                     ValidationResult(
                         plugin_name=p.NAME,
+                        plugin_description=p.DESCRIPTION,
                         plugin_class_name=p.__name__,
                         test_case_name=None,
                         success=False,
