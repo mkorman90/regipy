@@ -2,7 +2,7 @@ import codecs
 
 import logging
 
-from construct import Bytes, Const, ConstError, Int32ul, Struct
+from construct import Bytes, Const, ConstError, Int32ul, Int64ul, Struct
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import NTUSER_HIVE_TYPE
@@ -47,7 +47,7 @@ WHITELISTED_NAMES = ["UEME_CTLSESSION"]
 WIN_XP_USER_ASSIST = Struct(
     "session_id" / Int32ul,
     "run_counter" / Int32ul,
-    "last_execution_timestamp" / Int32ul,
+    "last_execution_timestamp" / Int64ul,
 )
 
 WIN7_USER_ASSIST = Struct(
@@ -56,7 +56,7 @@ WIN7_USER_ASSIST = Struct(
     "focus_count" / Int32ul,
     "total_focus_time_ms" / Int32ul,
     "unknown" * Bytes(44),
-    "last_execution_timestamp" / Int32ul,
+    "last_execution_timestamp" / Int64ul,
     "Const" * Const(b"\x00\x00\x00\x00"),
 )
 

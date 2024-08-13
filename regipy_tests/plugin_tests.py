@@ -151,8 +151,6 @@ def test_user_assist_plugin_ntuser(ntuser_hive):
     plugin_instance = UserAssistPlugin(registry_hive, as_json=True)
     plugin_instance.run()
 
-    import ipdb; ipdb.set_trace()
-
     assert len(plugin_instance.entries) == 62
     assert plugin_instance.entries[-1] == {
         "focus_count": 1,
