@@ -14,6 +14,7 @@ from regipy.plugins import (
     ServicesPlugin,
     NtuserClassesInstallerPlugin,
 )
+from regipy.registry import RegistryHive
 from regipy.plugins.ntuser.typed_urls import TypedUrlsPlugin
 from regipy.plugins.ntuser.typed_paths import TypedPathsPlugin
 from regipy.plugins.software.profilelist import ProfileListPlugin
@@ -33,9 +34,32 @@ from regipy.plugins.ntuser.shellbags_ntuser import ShellBagNtuserPlugin
 from regipy.plugins.ntuser.winscp_saved_sessions import WinSCPSavedSessionsPlugin
 from regipy.plugins.system.network_data import NetworkDataPlugin
 from regipy.plugins.usrclass.shellbags_usrclass import ShellBagUsrclassPlugin
-from regipy.registry import RegistryHive
+from regipy.plugins.software.winver import WinVersionPlugin
+from regipy.plugins.system.previous_winver import PreviousWinVersionPlugin
+from regipy.plugins.system.shutdown import ShutdownPlugin
+from regipy.plugins.system.processor_architecture import ProcessorArchitecturePlugin
+from regipy.plugins.system.crash_dump import CrashDumpPlugin
+from regipy.plugins.software.susclient import SusclientPlugin
+from regipy.plugins.system.disablelastaccess import DisableLastAccessPlugin
+from regipy.plugins.system.codepage import CodepagePlugin
+from regipy.plugins.software.disablesr import DisableSRPlugin
+from regipy.plugins.system.diag_sr import DiagSRPlugin
+from regipy.plugins.software.spp_clients import SppClientsPlugin
+from regipy.plugins.system.backuprestore import BackupRestorePlugin
+from regipy.plugins.system.timezone_data2 import TimezoneDataPlugin2
 from regipy.plugins.system.bam import BAMPlugin
 
+def test_shimcache_plugin(system_hive):
+    registry_hive = RegistryHive(system_hive)
+    plugin_instance = ShimCachePlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert len(plugin_instance.entries) == 660
+    assert plugin_instance.entries[0] == {
+        'last_mod_date': '2011-01-12T12:08:00+00:00',
+        'path': '\\??\\C:\\Program Files\\McAfee\\VirusScan Enterprise\\mfeann.exe',
+        'exec_flag': 'True'
+    }
 
 def test_computer_name_plugin(system_hive):
     registry_hive = RegistryHive(system_hive)
@@ -43,9 +67,141 @@ def test_computer_name_plugin(system_hive):
     plugin_instance.run()
 
     assert plugin_instance.entries == [
-        {"name": "WKS-WIN732BITA", "timestamp": "2010-11-10T17:18:08.718750+00:00"},
-        {"name": "WIN-V5T3CSP8U4H", "timestamp": "2010-11-10T18:17:36.968750+00:00"},
+        {'name': 'WKS-WIN732BITA',
+         'timestamp': '2010-11-10T17:18:08.718750+00:00'
+         },
+        {'name': 'WIN-V5T3CSP8U4H',
+         'timestamp': '2010-11-10T18:17:36.968750+00:00'
+         }
     ]
+
+
+def test_persistence_plugin_ntuser(ntuser_hive):
+    registry_hive = RegistryHive(ntuser_hive)
+    plugin_instance = NTUserPersistencePlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == {
+        '\\Software\\Microsoft\\Windows\\CurrentVersion\\Run': {
+            'timestamp': '2012-04-03T21:19:54.837716+00:00',
+            'values': [
+                {'name': 'Sidebar',
+                 'value_type': 'REG_EXPAND_SZ',
+                 'value': '%ProgramFiles%\\Windows Sidebar\\Sidebar.exe /autoRun', 'is_corrupted': False
+                 }
+            ]
+        }
+    }
+
+
+def test_persistence_plugin_software(software_hive):
+    registry_hive = RegistryHive(software_hive)
+    plugin_instance = SoftwarePersistencePlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == {
+        '\\Microsoft\\Windows\\CurrentVersion\\Run':
+            {'timestamp': '2012-04-04T01:54:23.669836+00:00',
+             'values': [
+                 {
+                     'name': 'VMware Tools',
+                     'value_type': 'REG_SZ',
+                     'value': '"C:\\Program Files\\VMware\\VMware Tools\\VMwareTray.exe"',
+                     'is_corrupted': False
+                 },
+                 {
+                     'name': 'VMware User Process',
+                     'value_type': 'REG_SZ',
+                     'value': '"C:\\Program Files\\VMware\\VMware Tools\\VMwareUser.exe"',
+                     'is_corrupted': False
+                 },
+                 {
+                     'name': 'Adobe ARM',
+                     'value_type': 'REG_SZ',
+                     'value': '"C:\\Program Files\\Common Files\\Adobe\\ARM\\1.0\\AdobeARM.exe"',
+                     'is_corrupted': False
+                 },
+                 {
+                     'name': 'McAfeeUpdaterUI',
+                     'value_type': 'REG_SZ',
+                     'value': '"C:\\Program Files\\McAfee\\Common Framework\\udaterui.exe" /StartedFromRunKey',
+                     'is_corrupted': False
+                 },
+                 {
+                     'name': 'ShStatEXE',
+                     'value_type': 'REG_SZ',
+                     'value': '"C:\\Program Files\\McAfee\\VirusScan Enterprise\\SHSTAT.EXE" /STANDALONE',
+                     'is_corrupted': False
+                 },
+                 {
+                     'name': 'McAfee Host Intrusion Prevention Tray',
+                     'value_type': 'REG_SZ',
+                     'value': '"C:\\Program Files\\McAfee\\Host Intrusion Prevention\\FireTray.exe"',
+                     'is_corrupted': False
+                 },
+                 {
+                     'name': 'svchost',
+                     'value_type': 'REG_SZ',
+                     'value': 'c:\\windows\\system32\\dllhost\\svchost.exe',
+                     'is_corrupted': False
+                 }
+             ]
+             }
+    }
+
+
+def test_user_assist_plugin_ntuser(ntuser_hive):
+    registry_hive = RegistryHive(ntuser_hive)
+    plugin_instance = UserAssistPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert len(plugin_instance.entries) == 62
+    assert plugin_instance.entries[-1] == {
+        'focus_count': 1,
+        'name': '%PROGRAMFILES(X86)%\\Microsoft Office\\Office14\\EXCEL.EXE',
+        'run_counter': 4,
+        'session_id': 0,
+        'timestamp': '2012-04-04T15:43:14.785000+00:00',
+        'total_focus_time_ms': 47673
+    }
+
+    assert plugin_instance.entries[50] == {
+        'focus_count': 9,
+        'name': 'Microsoft.Windows.RemoteDesktop',
+        'run_counter': 8,
+        'session_id': 0,
+        'timestamp': '2012-04-03T22:06:58.124282+00:00',
+        'total_focus_time_ms': 180000
+    }
+
+
+def test_plugin_amcache(amcache_hive):
+    registry_hive = RegistryHive(amcache_hive)
+    plugin_instance = AmCachePlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert len(plugin_instance.entries) == 1367
+    assert plugin_instance.entries[100] == {
+        'full_path': 'C:\\Windows\\system32\\TPVMMondeu.dll',
+        'last_modified_timestamp_2': '2017-03-17T05:06:04.002722+00:00',
+        'program_id': '75a010066bb612ca7357ce31df8e9f0300000904',
+        'sha1': '056f4b9d9ec9b5dc548e1b460da889e44089d76f',
+        'timestamp': '2017-08-03T11:34:02.263418+00:00'
+    }
+
+
+def test_word_wheel_query_plugin_ntuser(ntuser_hive):
+    registry_hive = RegistryHive(ntuser_hive)
+    plugin_instance = WordWheelQueryPlugin(registry_hive, ntuser_hive)
+    plugin_instance.run()
+
+    assert len(plugin_instance.entries) == 6
+    assert plugin_instance.entries[0] == {
+        'last_write': '2012-04-04T15:45:18.551340+00:00',
+        'mru_id': 1,
+        'name': 'alloy',
+        'order': 0
+    }
 
 
 def test_uac_status_plugin_software(software_hive):
@@ -54,28 +210,13 @@ def test_uac_status_plugin_software(software_hive):
     plugin_instance.run()
 
     assert plugin_instance.entries == {
-        "consent_prompt_admin": 5,
-        "consent_prompt_user": 3,
-        "enable_limited_user_accounts": 1,
-        "enable_virtualization": 1,
-        "filter_admin_token": 0,
-        "last_write": "2011-08-30T18:47:10.734144+00:00",
+        'consent_prompt_admin': 5,
+        'consent_prompt_user': 3,
+        'enable_limited_user_accounts': 1,
+        'enable_virtualization': 1,
+        'filter_admin_token': 0,
+        'last_write': '2011-08-30T18:47:10.734144+00:00'
     }
-
-
-def test_classes_installer_plugin_software(software_hive):
-    registry_hive = RegistryHive(software_hive)
-    plugin_instance = SoftwareClassesInstallerPlugin(registry_hive, as_json=True)
-    plugin_instance.run()
-
-    assert plugin_instance.entries[0] == {
-        "identifier": "000041091A0090400000000000F01FEC",
-        "is_hidden": False,
-        "product_name": "Microsoft Office OneNote MUI (English) 2010",
-        "timestamp": "2010-11-10T10:31:06.573040+00:00",
-    }
-
-    assert not any([x["is_hidden"] for x in plugin_instance.entries])
 
 
 def test_classes_installer_plugin_ntuser(ntuser_hive_2):
@@ -84,11 +225,13 @@ def test_classes_installer_plugin_ntuser(ntuser_hive_2):
     plugin_instance.run()
 
     assert plugin_instance.entries[0] == {
-        "identifier": "8A4152964845CF540BEAEBD27F7A8519",
-        "is_hidden": False,
-        "product_name": "Microsoft Visual C++ Compiler Package for Python 2.7",
-        "timestamp": "2022-02-15T07:00:07.245646+00:00",
+        'identifier': '8A4152964845CF540BEAEBD27F7A8519', 
+        'timestamp': '2022-02-15T07:00:07.245646+00:00', 
+        'product_name': 'Microsoft Visual C++ Compiler Package for Python 2.7', 
+        'is_hidden': False
     }
+
+    assert not any([x['is_hidden'] for x in plugin_instance.entries])
 
 
 def test_ras_tracing_plugin_software(software_hive):
@@ -746,9 +889,8 @@ def test_network_data_plugin(system_hive):
     registry_hive = RegistryHive(system_hive)
     plugin_instance = NetworkDataPlugin(registry_hive, as_json=True)
     plugin_instance.run()
-    assert plugin_instance.entries[
-        "\\ControlSet001\\Services\\Tcpip\\Parameters\\Interfaces"
-    ]["interfaces"][0] == {
+    
+    assert plugin_instance.entries["\\ControlSet001\\Services\\Tcpip\\Parameters\\Interfaces"]["interfaces"][0] == {
         "interface_name": "{698E50A9-4F58-4D86-B61D-F42E58DCACF6}",
         "last_modified": "2011-09-17T13:43:23.770078+00:00",
         "dhcp_enabled": False,
@@ -758,3 +900,340 @@ def test_network_data_plugin(system_hive):
         "name_server": "10.3.58.4",
         "domain": 0,
     }
+
+
+def test_win_version_plugin(software_hive):
+    registry_hive = RegistryHive(software_hive)
+    plugin_instance = WinVersionPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries['\\Microsoft\\Windows NT\\CurrentVersion'] == {
+        "BuildLab": "7601.win7sp1_gdr.111118-2330",
+        "BuildLabEx": "7601.17727.x86fre.win7sp1_gdr.111118-2330",
+        "CSDVersion": "Service Pack 1",
+        "CurrentBuild": "7601",
+        "CurrentBuildNumber": "7601",
+        "CurrentVersion": "6.1",
+        "EditionID": "Ultimate",
+        "InstallationType": "Client",
+        "InstallDate": "2010-11-10 16:28:55",
+        "last_write": "2012-03-14T07:09:21.562500+00:00",
+        "ProductId": "00426-067-1817155-86250",
+        "ProductName": "Windows 7 Ultimate",
+        "RegisteredOrganization": 0,
+        "RegisteredOwner": "Windows User"
+    }   
+
+def test_previous_win_version_plugin(system_hive_with_filetime):
+    registry_hive = RegistryHive(system_hive_with_filetime)
+    plugin_instance = PreviousWinVersionPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+    
+    # work with SYSTEM_WIN_10_1709 HIVE
+    assert plugin_instance.entries == [
+        {
+            "BuildLab": "15063.rs2_release.170317-1834",
+            "BuildLabEx": "15063.0.amd64fre.rs2_release.170317-1834",
+            "CompositionEditionID": "Professional",
+            "CurrentBuild": "15063",
+            "CurrentBuildNumber": "15063",
+            "CurrentVersion": "6.3",
+            "EditionID": "Professional",
+            "InstallationType": "Client",
+            "InstallDate": "2017-07-12 07:18:28",
+            "key": "\\Setup\\Source OS (Updated on 1/6/2019 02:18:37)",
+            "ProductId": "00330-80111-62153-AA362",
+            "ProductName": "Windows 10 Pro",
+            "RegisteredOrganization": 0,
+            "RegisteredOwner": "Windows User",
+            "update_date": "2019-01-06 02:18:37"
+        },
+        {
+            "BuildLab": "17134.rs4_release.180410-1804",
+            "BuildLabEx": "17134.1.amd64fre.rs4_release.180410-1804",
+            "CompositionEditionID": "Enterprise",
+            "CurrentBuild": "17134",
+            "CurrentBuildNumber": "17134",
+            "CurrentVersion": "6.3",
+            "EditionID": "Professional",
+            "InstallationType": "Client",
+            "InstallDate": "2019-01-27 10:39:32",
+            "key": "\\Setup\\Source OS (Updated on 5/16/2019 00:55:20)",
+            "ProductId": "00330-80111-62153-AA442",
+            "ProductName": "Windows 10 Pro",
+            "RegisteredOrganization": 0,
+            "RegisteredOwner": "Windows User",
+            "update_date": "2019-05-16 00:55:20"
+        }
+    ]
+
+def test_shutdown_plugin(system_hive):
+    registry_hive = RegistryHive(system_hive)
+    plugin_instance = ShutdownPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == {
+        "\\ControlSet001\\Control\\Windows": {
+            "date": "2012-04-04 01:58:40",
+            "last_write": "2012-04-04T01:58:40.839250+00:00"
+        },
+        "\\ControlSet002\\Control\\Windows": {
+            "date": "2012-04-04 01:58:40",
+            "last_write": "2012-04-04T01:58:40.839250+00:00"
+        }
+    }
+
+def test_processor_architecture_plugin(system_hive):
+    registry_hive = RegistryHive(system_hive)
+    plugin_instance = ProcessorArchitecturePlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries['\\ControlSet001\\Control\\Session Manager\\Environment'] == {
+        "NUMBER_OF_PROCESSORS": 49,
+        "PROCESSOR_ARCHITECTURE": "x86",
+        "PROCESSOR_IDENTIFIER": "x86 Family 16 Model 8 Stepping 0, AuthenticAMD",
+        "PROCESSOR_REVISION": "0800"
+    }
+    
+def test_crash_dump_plugin(system_hive):
+    registry_hive = RegistryHive(system_hive)
+    plugin_instance = CrashDumpPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries['\\ControlSet001\\Control\\CrashControl'] == {
+        "CrashDumpEnabled": 2,
+        "CrashDumpEnabledStr": "Kernel memory dump",
+        "DumpFile": "%SystemRoot%\\MEMORY.DMP",
+        "last_write": "2012-04-04T11:47:36.984376+00:00",
+        "LogEvent": 1,
+        "MinidumpDir": "%SystemRoot%\\Minidump"
+    }
+    
+def test_susclient_plugin(software_hive):
+    registry_hive = RegistryHive(software_hive)
+    plugin_instance = SusclientPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries['\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate'] == {
+        "last_write": "2012-03-14T07:05:41.719626+00:00",
+        "LastRestorePointSetTime": "2012-03-14 07:05:41",
+        "SusClientId": "50df98f2-964a-496d-976d-d95296e13929",
+        "SusClientIdValidation": ""
+    }
+    
+def test_disable_last_access_plugin(system_hive_with_filetime):
+    registry_hive = RegistryHive(system_hive_with_filetime)
+    plugin_instance = DisableLastAccessPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    # work with SYSTEM_WIN_10_1709 HIVE
+    assert plugin_instance.entries['\\ControlSet001\\Control\\FileSystem'] == {
+        "last_write": "2020-02-13T11:59:20.987114+00:00",
+        "NtfsDisableLastAccessUpdate": "80000003",
+        "NtfsDisableLastAccessUpdateStr": "(System Managed, Updates Disabled)"
+    }
+    
+def test_code_page_plugin(system_hive_with_filetime):
+    registry_hive = RegistryHive(system_hive_with_filetime)
+    plugin_instance = CodepagePlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    # work with SYSTEM_WIN_10_1709 HIVE
+    assert plugin_instance.entries['\\ControlSet001\\Control\\Nls\\CodePage'] == {
+        "ACP": "1252",
+        "last_write": "2019-05-16T08:22:00.160628+00:00"
+    }
+    
+def test_disable_sr_plugin(software_hive):
+    registry_hive = RegistryHive(software_hive)
+    plugin_instance = DisableSRPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == {
+        "\\Microsoft\\Windows NT\\CurrentVersion\\SystemRestore": {
+            "last_write": "2012-03-31T04:00:23.006648+00:00"
+        }
+    }
+    
+def test_diag_sr_plugin(system_hive):
+    registry_hive = RegistryHive(system_hive)
+    plugin_instance = DiagSRPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries['\\ControlSet001\\Services\\VSS\\Diag\\SystemRestore'] == {
+        "last_write": "2012-03-31T04:00:22.998834+00:00",
+        "SrCreateRp (Enter)": "2012-03-31 04:00:01",
+        "SrCreateRp (Leave)": "2012-03-31 04:00:22"
+    }
+    
+def test_spp_clients_plugin(software_hive):
+    registry_hive = RegistryHive(software_hive)
+    plugin_instance = SppClientsPlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    assert plugin_instance.entries == {
+        "\\Microsoft\\Windows NT\\CurrentVersion\\SPP\\Clients": {
+            "{09F7EDC5-294E-4180-AF6A-FB0E6A0E9513}": [
+                "\\\\?\\Volume{656b1715-ecf6-11df-92e6-806e6f6e6963}\\:(C:)"
+            ],
+            "last_write": "2012-03-15T22:32:18.089574+00:00"
+        }
+    }
+    
+def test_backup_restore_plugin(system_hive_with_filetime):
+    registry_hive = RegistryHive(system_hive_with_filetime)
+    plugin_instance = BackupRestorePlugin(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    # work with SYSTEM_WIN_10_1709 HIVE
+    assert plugin_instance.entries == {
+        "\\ControlSet001\\Control\\BackupRestore\\FilesNotToBackup": {
+            "BITS_metadata": [
+                "%ProgramData%\\Microsoft\\Network\\Downloader\\* /s"
+            ],
+            "ETW": [
+                "%SystemRoot%\\system32\\LogFiles\\WMI\\RtBackup\\*.*"
+            ],
+            "FVE_Control": [
+                "\\System Volume Information\\FVE.{e40ad34d-dae9-4bc7-95bd-b16218c10f72}.*"
+            ],
+            "FVE_Log": [
+                "\\System Volume Information\\FVE.{c9ca54a3-6983-46b7-8684-a7e5e23499e3}"
+            ],
+            "FVE_Wipe": [
+                "\\System Volume Information\\FVE.{9ef82dfa-1239-4a30-83e6-3b3e9b8fed08}"
+            ],
+            "FVE2_Control": [
+                "\\System Volume Information\\FVE2.{e40ad34d-dae9-4bc7-95bd-b16218c10f72}.*"
+            ],
+            "FVE2_Log": [
+                "\\System Volume Information\\FVE2.{c9ca54a3-6983-46b7-8684-a7e5e23499e3}"
+            ],
+            "FVE2_VBB": [
+                "\\System Volume Information\\FVE2.{24e6f0ae-6a00-4f73-984b-75ce9942852d}"
+            ],
+            "FVE2_Wipe": [
+                "\\System Volume Information\\FVE2.{9ef82dfa-1239-4a30-83e6-3b3e9b8fed08}"
+            ],
+            "FVE2_WipeInfo": [
+                "\\System Volume Information\\FVE2.{aff97bac-a69b-45da-aba1-2cfbce434750}.*"
+            ],
+            "FVE2_WipeX": [
+                "\\System Volume Information\\FVE2.{9ef82dfa-1239-4a30-83e6-3b3e9b8fed08}.*"
+            ],
+            "Internet Explorer": [
+                "%UserProfile%\\index.dat /s"
+            ],
+            "Kernel Dumps": [
+                "%systemroot%\\Minidump\\* /s",
+                "%systemroot%\\memory.dmp"
+            ],
+            "last_write": "2019-05-16T08:21:59.973146+00:00",
+            "Memory Page File": [
+                "\\Pagefile.sys"
+            ],
+            "Mount Manager": [
+                "\\System Volume Information\\MountPointManagerRemoteDatabase"
+            ],
+            "MS Distributed Transaction Coordinator": [
+                "C:\\Windows\\system32\\MSDtc\\MSDTC.LOG",
+                "C:\\Windows\\system32\\MSDtc\\trace\\dtctrace.log"
+            ],
+            "Netlogon": [
+                "%SystemRoot%\\netlogon.chg"
+            ],
+            "Power Management": [
+                "\\hiberfil.sys"
+            ],
+            "Storage Tiers Management": [
+                "\\System Volume Information\\Heat\\*.* /s"
+            ],
+            "Temporary Files": [
+                "%TEMP%\\* /s"
+            ],
+            "VSS Default Provider": [
+                "\\System Volume Information\\*{3808876B-C176-4e48-B7AE-04046E6CC752} /s"
+            ],
+            "VSS Service Alternate DB": [
+                "\\System Volume Information\\*.{7cc467ef-6865-4831-853f-2a4817fd1bca}ALT"
+            ],
+            "VSS Service DB": [
+                "\\System Volume Information\\*.{7cc467ef-6865-4831-853f-2a4817fd1bca}DB"
+            ],
+            "WER": [
+                "%ProgramData%\\Microsoft\\Windows\\WER\\* /s"
+            ],
+            "WUA": [
+                "%windir%\\softwaredistribution\\*.* /s"
+            ]
+        },
+        "\\ControlSet001\\Control\\BackupRestore\\FilesNotToSnapshot": {
+            "FVE": [
+                "$AllVolumes$\\System Volume Information\\FVE.{9ef82dfa-1239-4a30-83e6-3b3e9b8fed08}"
+            ],
+            "FVE2_Wipe": [
+                "$AllVolumes$\\System Volume Information\\FVE2.{9ef82dfa-1239-4a30-83e6-3b3e9b8fed08}"
+            ],
+            "FVE2_WipeX": [
+                "$AllVolumes$\\System Volume Information\\FVE2.{9ef82dfa-1239-4a30-83e6-3b3e9b8fed08}.*"
+            ],
+            "last_write": "2020-02-13T08:47:50.455600+00:00",
+            "ModernOutlookOAB": [
+                "$UserProfile$\\AppData\\Local\\Packages\\Microsoft.Office.Desktop_8wekyb3d8bbwe\\LocalCache\\Local\\Microsoft\\Outlook\\*.oab /s"
+            ],
+            "ModernOutlookOST": [
+                "$UserProfile$\\AppData\\Local\\Packages\\Microsoft.Office.Desktop_8wekyb3d8bbwe\\LocalCache\\Local\\Microsoft\\Outlook\\*.ost /s"
+            ],
+            "OutlookOST": [
+                "$UserProfile$\\AppData\\Local\\Microsoft\\Outlook\\*.ost"
+            ],
+            "Storage Tiers Management": [
+                "\\System Volume Information\\Heat\\*.* /s"
+            ],
+            "TSBACKUP": [
+                "C:\\ProgramData\\FLEXnet\\*.* /s"
+            ],
+            "WUA": [
+                "%windir%\\softwaredistribution\\*.* /s"
+            ]
+        },
+        "\\ControlSet001\\Control\\BackupRestore\\KeysNotToRestore": {
+            "last_write": "2019-05-16T08:21:59.973146+00:00",
+            "Mount Manager": [
+                "MountedDevices\\"
+            ],
+            "MS Distributed Transaction Coordinator": [
+                "CurrentControlSet\\Control\\MSDTC\\ASR\\"
+            ],
+            "Pending Rename Operations": [
+                "CurrentControlSet\\Control\\Session Manager\\PendingFileRenameOperations"
+            ],
+            "Pending Rename Operations2": [
+                "CurrentControlSet\\Control\\Session Manager\\PendingFileRenameOperations2"
+            ],
+            "Session Manager": [
+                "CurrentControlSet\\Control\\Session Manager\\AllowProtectedRenames"
+            ]
+        }
+    }
+    
+def test_timezone_data2_plugin(system_hive_with_filetime):
+    registry_hive = RegistryHive(system_hive_with_filetime)
+    plugin_instance = TimezoneDataPlugin2(registry_hive, as_json=True)
+    plugin_instance.run()
+
+    # work with SYSTEM_WIN_10_1709 HIVE
+    assert plugin_instance.entries['\\ControlSet001\\Control\\TimeZoneInformation'] == {
+        "ActiveTimeBias": 420,
+        "Bias": 480,
+        "DaylightBias": -60,
+        "DaylightName": "@tzres.dll,-211",
+        "DaylightStart": "00000300020002000000000000000000",
+        "DynamicDaylightTimeDisabled": 0,
+        "last_write": "2020-03-09T13:07:51.297306+00:00",
+        "StandardBias": 0,
+        "StandardName": "@tzres.dll,-212",
+        "StandardStart": "00000b00010002000000000000000000",
+        "TimeZoneKeyName": "Pacific Standard Time"
+    }
+    
