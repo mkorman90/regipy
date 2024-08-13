@@ -19,7 +19,7 @@ from regipy_tests.validation.validation import (
 
 # Enable to raise exception on validation failure
 # As we are currently not enforcing validations - no raising exceptions by default
-ENFORCE_VALIDATION = False
+ENFORCE_VALIDATION = True
 
 # It is possible to get an ipdb breakpoint once an exception is raised, useful for debugging plugin results
 # The user will be dropped into the validation case context, accessing all properties using `self`.
