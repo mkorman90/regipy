@@ -1,10 +1,10 @@
 import logging
+from datetime import datetime, timezone
+import re
 
 from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.exceptions import RegistryKeyNotFoundException
-import datetime
-import re
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class PreviousWinVersionPlugin(Plugin):
                 for val in sk.iter_values():
                     if val.name in os_list:
                         if val.name == "InstallDate":
-                            temp_dict[val.name] = datetime.datetime.utcfromtimestamp(val.value).strftime("%Y-%m-%d %H:%M:%S")
+                            temp_dict[val.name] = datetime.fromtimestamp(val.value, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
                         else:
                             temp_dict[val.name] = val.value
                 self.entries.append(temp_dict)

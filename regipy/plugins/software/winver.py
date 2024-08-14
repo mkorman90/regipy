@@ -1,10 +1,10 @@
 import logging
+from datetime import datetime, timezone
 
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
 from regipy.exceptions import RegistryKeyNotFoundException
-import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +37,6 @@ class WinVersionPlugin(Plugin):
         for val in key.iter_values():
             if val.name in os_list:
                 if val.name == "InstallDate":
-                    self.entries[WIN_VER_PATH][val.name] = datetime.datetime.utcfromtimestamp(val.value).strftime("%Y-%m-%d %H:%M:%S")
+                    self.entries[WIN_VER_PATH][val.name] = datetime.fromtimestamp(val.value, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
                 else:
                     self.entries[WIN_VER_PATH][val.name] = val.value
