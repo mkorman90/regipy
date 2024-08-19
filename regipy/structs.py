@@ -1,4 +1,17 @@
-from construct import *
+from construct import (
+    Array,
+    Bytes,
+    Const,
+    Enum,
+    FlagsEnum,
+    Int8ul,
+    Int16ul,
+    Int32ul,
+    Int64ul,
+    PaddedString,
+    Struct,
+    this,
+)
 
 REGF_HEADER = Struct(
     "signature" / Const(b"regf"),

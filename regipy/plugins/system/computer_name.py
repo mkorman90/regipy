@@ -1,5 +1,4 @@
 import logging
-import attr
 
 from regipy.exceptions import RegistryValueNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
@@ -12,7 +11,7 @@ COMPUTER_NAME_PATH = r"Control\ComputerName\ComputerName"
 
 
 class ComputerNamePlugin(Plugin):
-    NAME = "computer_name"
+    NAME: str = "computer_name"
     DESCRIPTION = "Get the computer name"
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
@@ -31,5 +30,6 @@ class ComputerNamePlugin(Plugin):
                         ),
                     }
                 )
-            except RegistryValueNotFoundException as ex:
+            except RegistryValueNotFoundException:
+                logger.exception("Could not get computer name")
                 continue

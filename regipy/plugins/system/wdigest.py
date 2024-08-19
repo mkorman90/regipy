@@ -33,4 +33,5 @@ class WDIGESTPlugin(Plugin):
                     }
                 )
             except RegistryValueNotFoundException as ex:
+                logger.exception(f"Could not find Wdigest for registry hive: {ex}")
                 continue

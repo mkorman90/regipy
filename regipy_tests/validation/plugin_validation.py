@@ -1,7 +1,8 @@
 from collections import defaultdict
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 from contextlib import contextmanager
 
+import sys
 from tabulate import tabulate
 
 import os
@@ -83,6 +84,20 @@ def main():
 
     print(f"[*] Loaded {len(validation_cases)} validation cases")
 
+    # TODO: Move this to Click, understand how we can skip installation in setup.py, as the tests are not part of the package.
+    # Possibly we should need to creae an additional regipy-tests package
+    #  which will be installed during the validation step in github/workflows/python-package.yml
+    if len(sys.argv) == 2:
+        plugin_name = sys.argv[1]
+        if plugin_name in validation_cases.keys():
+            print(f"Running validation for plugin {plugin_name}")
+            validation_case: ValidationCase = validation_cases[plugin_name]
+            with load_hive(validation_case.test_hive_file_name) as registry_hive:
+                validate_case(validation_case, registry_hive)
+                return
+        print(f"No ValidationCase for {plugin_name}")
+        return
+
     # Map all plugins according to registry hive test file, for performance.
     # Also, warn about plugins without validation, this will be enforced in the future.
     registry_hive_map = defaultdict(list)
@@ -134,6 +149,7 @@ def main():
                 asdict(
                     ValidationResult(
                         plugin_name=p.NAME,
+                        plugin_description=p.DESCRIPTION,
                         plugin_class_name=p.__name__,
                         test_case_name=None,
                         success=False,
@@ -154,7 +170,8 @@ def main():
         if plugins_without_validation:
             # fmt: off
             raise PluginValidationCaseFailureException(
-                f"{len(plugins_without_validation)} plugins are missing validation: {[p.__name__ for p in PLUGINS if p.NAME in plugins_without_validation]}"
+                f"{len(plugins_without_validation)} plugins are missing validation:"
+                f" {[p.__name__ for p in PLUGINS if p.NAME in plugins_without_validation]}"
             )
             # fmt: on
 

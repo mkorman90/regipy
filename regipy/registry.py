@@ -24,7 +24,6 @@ from io import BytesIO
 from regipy.exceptions import (
     NoRegistrySubkeysException,
     RegistryKeyNotFoundException,
-    NoRegistryValuesException,
     RegistryValueNotFoundException,
     RegipyGeneralException,
     UnidentifiedHiveException,
@@ -50,8 +49,6 @@ from regipy.structs import (
     SECURITY_KEY_v1_1,
     SECURITY_DESCRIPTOR,
     SID,
-    ACL,
-    ACE,
     VALUE_TYPE_ENUM,
 )
 from regipy.utils import (
@@ -228,7 +225,7 @@ class RegistryHive:
                                 ]
                             else:
                                 values = list(subkey.iter_values(as_json=as_json))
-                        except RegistryParsingException as ex:
+                        except RegistryParsingException:
                             logger.exception(
                                 f"Failed to parse hive value at path: {trim_registry_data_for_error_msg(path_root)}"
                             )
@@ -260,7 +257,9 @@ class RegistryHive:
                     else:
                         values = list(nk_record.iter_values(as_json=as_json))
                 except RegistryParsingException as ex:
-                    logger.exception(f"Failed to parse hive value at path: {trim_registry_data_for_error_msg(path_root)}: {ex}")
+                    logger.exception(
+                        f"Failed to parse hive value at path: {trim_registry_data_for_error_msg(path_root)}: {ex}"
+                    )
                     values = []
 
             ts = convert_wintime(nk_record.header.last_modified)

@@ -30,7 +30,7 @@ def get_timestamp_for_subkeys(registry_hive, subkey_list):
     for subkey_path in subkey_list:
         try:
             subkey = registry_hive.get_key(subkey_path)
-        except RegistryKeyNotFoundException as ex:
+        except RegistryKeyNotFoundException:
             logger.exception(f"Could not obtain timestamp for subkey {subkey_path}")
             continue
         yield subkey_path, convert_wintime(subkey.header.last_modified, as_json=True)

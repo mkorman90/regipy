@@ -1,3 +1,4 @@
+# flake8: noqa
 import cProfile
 import io
 import lzma

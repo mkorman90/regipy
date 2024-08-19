@@ -1,5 +1,3 @@
-from typing import Dict
-
 from regipy.plugins.system.services import ServicesPlugin
 from regipy_tests.validation.validation import ValidationCase
 
