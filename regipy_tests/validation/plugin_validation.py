@@ -21,6 +21,9 @@ from regipy_tests.validation.validation import (
 # As we are currently not enforcing validations - no raising exceptions by default
 ENFORCE_VALIDATION = True
 
+# Generate a template for all plugins that have missing validation tests
+GENERATE_MISSING_VALIDATION_TEST_TEMPLATES = False
+
 # It is possible to get an ipdb breakpoint once an exception is raised, useful for debugging plugin results
 # The user will be dropped into the validation case context, accessing all properties using `self`.
 SHOULD_DEBUG = False
@@ -165,16 +168,42 @@ def main():
     )
     print(md_table_for_plugins_without_validation_results)
 
+    if GENERATE_MISSING_VALIDATION_TEST_TEMPLATES:
+        for p in PLUGINS:
+            if p.NAME in plugins_without_validation:
+                validation_template = f"""
+from regipy.plugins.{p.COMPATIBLE_HIVE}.{p.__name__.lower()} import {p.__name__}
+from regipy_tests.validation.validation import ValidationCase
+
+
+class {p.__name__}ValidationCase(ValidationCase):
+    plugin = {p.__name__}
+    test_hive_file_name = "{p.COMPATIBLE_HIVE}.xz"
+    exact_expected_result = None
+
+            """
+                plugin_name = p.NAME
+                missing_test_target_path = str(
+                    Path(__file__)
+                    .parent.joinpath("validation_tests")
+                    .joinpath(f"{plugin_name}_validation.py")
+                )
+                if not os.path.exists(missing_test_target_path):
+                    print(
+                        f"Creating template for {plugin_name} target path: {missing_test_target_path}"
+                    )
+                    with open(missing_test_target_path, "w+") as f:
+                        f.write(validation_template)
+
     # If we are enforcing validation, raise on plugins without validation
-    if ENFORCE_VALIDATION:
+    if not ENFORCE_VALIDATION:
         if plugins_without_validation:
             # fmt: off
             raise PluginValidationCaseFailureException(
                 f"{len(plugins_without_validation)} plugins are missing validation:"
                 f" {[p.__name__ for p in PLUGINS if p.NAME in plugins_without_validation]}"
             )
-            # fmt: on
-
+    # fmt: on
     # Generate markdown file `validation_results_output_file`
     markdown_content = f"""
 # Regipy plugin validation results
