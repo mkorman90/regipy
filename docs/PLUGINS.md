@@ -1,38 +1,8 @@
 ## regipy Plugins
 
-* The plugin system is a robust and extensive feature that auto-detects the hive type and execute the relevant plugins
+* The plugin system is a robust and extensive feature that auto-detects the hive type and execute the relevant plugins.
 
-### Plugins
-
-#### System Hive
-- [ ] persistence 
-- [X] Installed services
-- [X] List routes
-- [X] Get computer name
-- [X] Shimcache 
-- [ ] Timezone data
-
-#### NTUSER Hive
-- [X] Persistence
-- [ ] runmru
-- [ ] Recent documents
-- [ ] Typed URLs
-- [X] User Assist
-- [ ] Word Wheel Query
-
-#### Amcache Hive
-- [X] Parse amcache
-
-#### SOFTWARE Hive
-- [X] Persistence
-- [ ] Installed programs
-- [ ] Sysinternals EULA
-- [ ] User SIDs
-- [ ] Windows version info
-- [X] Profile List
-
-#### SAM Hive
-- [ ] Users and groups
+To see a comprehensive list, please refer to the [Validation cases report](../validation/plugin_validation.md)
 
 ## Contributing new plugins
 Adding a new plugin is very straight forward:
@@ -41,3 +11,4 @@ Adding a new plugin is very straight forward:
    * Update the `NAME` parameter and the Class name accordingly (NAME in snake case, Class name in camel case)
    * Feel free to use/add any utility function to `regipy/utils.py` 
    * Import your class in `regipy/plugins/__init__.py`
+3. Add a [validation case](../README.md#validation-cases). This is mandatory and replaces the old regipy tests.
