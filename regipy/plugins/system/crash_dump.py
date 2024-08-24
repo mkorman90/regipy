@@ -25,7 +25,6 @@ class CrashDumpPlugin(Plugin):
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
     def can_run(self):
-        # TODO: Choose the relevant condition - to determine if the plugin is relevant for the given hive
         return self.registry_hive.hive_type == SYSTEM_HIVE_TYPE
 
     def run(self):

@@ -58,6 +58,7 @@ def validate_case(plugin_validation_case: ValidationCase, registry_hive: Registr
         msg = f"Validation for {plugin_validation_case_instance.__class__.__name__} failed: {ex}"
         if ENFORCE_VALIDATION:
             if SHOULD_DEBUG:
+                print(f"[!] [ENFORCED] [DEBUG]: {msg}")
                 plugin_validation_case_instance.debug()
             raise PluginValidationCaseFailureException(msg)
         else:
@@ -115,7 +116,7 @@ def main():
             registry_hive_map[hive_file_name].append(plugin_validation_case)
         else:
             print(
-                f"[!] {plugin_name} has NO validation case (currently a warning) - will be enforced in the future!"
+                f"[!] {plugin_name} has NO validation case!"
             )
 
     # Execute grouped by file, to save performance on extracting and loading the hive
@@ -142,9 +143,10 @@ def main():
     )
     print(md_table_for_validation_results)
 
-    print(
-        f"\n[!] {len(plugins_without_validation)}/{len(PLUGINS)} plugins have no validation case!"
-    )
+    if plugins_without_validation:
+        print(
+            f"\n[!] {len(plugins_without_validation)}/{len(PLUGINS)} plugins have no validation case!"
+        )
     # Create empty validation results for plugins without validation
     md_table_for_plugins_without_validation_results = tabulate(
         sorted(
@@ -213,7 +215,7 @@ class {p.__name__}ValidationCase(ValidationCase):
 {md_table_for_validation_results}
 
 ## Plugins without validation
-**Please note that in the future, this check will be enforced for all plugins**
+**Starting regipy v5.0.0 - plugin validation replaces tests and is mandatary, being enforced by the build process**
 
 {md_table_for_plugins_without_validation_results}
     """
