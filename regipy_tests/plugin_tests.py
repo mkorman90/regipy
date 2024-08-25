@@ -891,6 +891,7 @@ def test_network_data_plugin(system_hive):
     ]["interfaces"][0] == {
         "interface_name": "{698E50A9-4F58-4D86-B61D-F42E58DCACF6}",
         "last_modified": "2011-09-17T13:43:23.770078+00:00",
+        "incomplete_data": False,
         "dhcp_enabled": False,
         "ip_address": ["10.3.58.5"],
         "subnet_mask": ["255.255.255.0"],
