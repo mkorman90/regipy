@@ -10,16 +10,15 @@ logger = logging.getLogger(__name__)
 
 
 PROCESSOR_PATH = r"Control\Nls\CodePage"
-crash_items = ("ACP")
+crash_items = "ACP"
 
 
 class CodepagePlugin(Plugin):
-    NAME = 'codepage'
+    NAME = "codepage"
     DESCRIPTION = "Get codepage value"
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
     def can_run(self):
-        # TODO: Choose the relevant condition - to determine if the plugin is relevant for the given hive
         return self.registry_hive.hive_type == SYSTEM_HIVE_TYPE
 
     def run(self):
@@ -29,9 +28,13 @@ class CodepagePlugin(Plugin):
             try:
                 codepage = self.registry_hive.get_key(codepage_subkey)
             except RegistryKeyNotFoundException as ex:
-                logger.error(f'Could not find {self.NAME} subkey at {codepage_subkey}: {ex}')
+                logger.error(
+                    f"Could not find {self.NAME} subkey at {codepage_subkey}: {ex}"
+                )
                 continue
-            self.entries[codepage_subkey] = {'last_write': convert_wintime(codepage.header.last_modified).isoformat()}
+            self.entries[codepage_subkey] = {
+                "last_write": convert_wintime(codepage.header.last_modified).isoformat()
+            }
             for val in codepage.iter_values():
                 if val.name in crash_items:
                     self.entries[codepage_subkey][val.name] = val.value
