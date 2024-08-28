@@ -106,7 +106,7 @@ def convert_filetime2(dte):
         epoch = dt.datetime(1601, 1, 1, 0, 0, 0)
         nt_datetime = epoch + dt.timedelta(microseconds=nt_timestamp / 10)
 
-        return(nt_datetime.strftime("%Y-%m-%d %H:%M:%S"))
+        return nt_datetime.strftime("%Y-%m-%d %H:%M:%S")
 
     except OverflowError:
         return None

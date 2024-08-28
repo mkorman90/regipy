@@ -216,7 +216,7 @@ run_relevant_plugins(reg, as_json=True)
 ## Validation cases
 [Validation cases report](regipy_tests/validation/plugin_validation.md)
 
-all new plugins, (and in the future, all plugins) should have a one or more basic validation cases (which can be expanded in the future), for example:
+all new plugins should have a one or more basic validation cases (which can be expanded in the future), for example:
 ```
 from regipy.plugins.system.bam import BAMPlugin
 from regipy_tests.validation.validation import ValidationCase

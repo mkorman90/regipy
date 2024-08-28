@@ -9,16 +9,19 @@ from regipy.exceptions import RegistryKeyNotFoundException
 logger = logging.getLogger(__name__)
 
 
-BACKUPRESTORE_PATH = [r"Control\BackupRestore\FilesNotToSnapshot", r"Control\BackupRestore\FilesNotToBackup", r"Control\BackupRestore\KeysNotToRestore"]
+BACKUPRESTORE_PATH = [
+    r"Control\BackupRestore\FilesNotToSnapshot",
+    r"Control\BackupRestore\FilesNotToBackup",
+    r"Control\BackupRestore\KeysNotToRestore",
+]
 
 
 class BackupRestorePlugin(Plugin):
-    NAME = 'backuprestore_plugin'
+    NAME = "backuprestore_plugin"
     DESCRIPTION = "Gets the contents of the FilesNotToSnapshot, KeysNotToRestore, and FilesNotToBackup keys"
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
     def can_run(self):
-        # TODO: Choose the relevant condition - to determine if the plugin is relevant for the given hive
         return self.registry_hive.hive_type == SYSTEM_HIVE_TYPE
 
     def run(self):
@@ -29,8 +32,14 @@ class BackupRestorePlugin(Plugin):
                 try:
                     backuprestore = self.registry_hive.get_key(br_subkey)
                 except RegistryKeyNotFoundException as ex:
-                    logger.error(f'Could not find {self.NAME} subkey at {br_subkey}: {ex}')
+                    logger.error(
+                        f"Could not find {self.NAME} subkey at {br_subkey}: {ex}"
+                    )
                     continue
-                self.entries[br_subkey] = {'last_write': convert_wintime(backuprestore.header.last_modified).isoformat()}
+                self.entries[br_subkey] = {
+                    "last_write": convert_wintime(
+                        backuprestore.header.last_modified
+                    ).isoformat()
+                }
                 for val in backuprestore.iter_values():
                     self.entries[br_subkey][val.name] = val.value

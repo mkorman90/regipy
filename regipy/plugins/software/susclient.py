@@ -13,12 +13,11 @@ value_list = ("LastRestorePointSetTime", "SusClientId")
 
 
 class SusclientPlugin(Plugin):
-    NAME = 'susclient_plugin'
-    DESCRIPTION = 'Extracts SusClient* info, including HDD SN'
+    NAME = "susclient_plugin"
+    DESCRIPTION = "Extracts SusClient* info, including HDD SN"
     COMPATIBLE_HIVE = SOFTWARE_HIVE_TYPE
 
     def can_run(self):
-        # TODO: Choose the relevant condition - to determine if the plugin is relevant for the given hive
         return self.registry_hive.hive_type == SOFTWARE_HIVE_TYPE
 
     def run(self):
@@ -27,10 +26,14 @@ class SusclientPlugin(Plugin):
         try:
             key = self.registry_hive.get_key(WIN_VER_PATH)
         except RegistryKeyNotFoundException as ex:
-            logger.error(f'Could not find {self.NAME} subkey at {WIN_VER_PATH}: {ex}')
+            logger.error(f"Could not find {self.NAME} subkey at {WIN_VER_PATH}: {ex}")
             return None
 
-        self.entries = {WIN_VER_PATH: {'last_write': convert_wintime(key.header.last_modified).isoformat()}}
+        self.entries = {
+            WIN_VER_PATH: {
+                "last_write": convert_wintime(key.header.last_modified).isoformat()
+            }
+        }
 
         for val in key.iter_values():
             if val.name == "SusClientIdValidation":
@@ -42,4 +45,4 @@ class SusclientPlugin(Plugin):
 def get_SN(data):
     offset = int(data[:2], 16)
     length = int(data[4:6], 16)
-    return bytes.fromhex(data[2 * offset:2 * (length + offset)]).decode('utf-16le')
+    return bytes.fromhex(data[2 * offset: 2 * (length + offset)]).decode("utf-16le")
