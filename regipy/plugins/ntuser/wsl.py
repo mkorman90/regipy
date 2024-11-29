@@ -13,7 +13,7 @@ WSL_PATH = r"\Software\Microsoft\Windows\CurrentVersion\Lxss"
 
 
 class WSLPlugin(Plugin):
-    NAME = "wsl_plugin"
+    NAME = "wsl"
     DESCRIPTION = "Get WSL information"
     COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
 

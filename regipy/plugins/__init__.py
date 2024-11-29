@@ -51,3 +51,4 @@ from .system.diag_sr import DiagSRPlugin
 from .software.spp_clients import SppClientsPlugin
 from .system.backuprestore import BackupRestorePlugin
 from .system.timezone_data2 import TimezoneDataPlugin2
+from .ntuser.wsl import WSLPlugin
