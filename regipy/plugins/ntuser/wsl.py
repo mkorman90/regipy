@@ -1,5 +1,4 @@
 import logging
-import json
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import NTUSER_HIVE_TYPE
