@@ -35,6 +35,13 @@ jobs:
         # Temporatily allow continuing on lint errors
         continue-on-error: true
 
-      - name: Test with pytest
+      - name: CLI Tests
         run: |
-          pytest
+          pytest -v regipy_tests/cli_tests.py
+      - name: Plugin Tests
+        run: |
+          pytest -v regipy_tests/plugin_tests.py
+      - name: Library Tests
+        run: |
+          pytest -v regipy_tests/tests.py
+                    
