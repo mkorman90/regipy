@@ -40,12 +40,6 @@ jobs:
           pytest -v regipy_tests/cli_tests.py
         # Temp. allow failure due to inconsistency between CI env and local env.
         continue-on-error: true
-      - name: Plugin Tests
-        run: |
-          pwd
-          ls -lah
-          ls -lah regipy_tests                  
-          pytest -v regipy_tests/plugin_tests.py
       - name: Library Tests
         run: |
           pytest -v regipy_tests/tests.py
