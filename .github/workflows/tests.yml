@@ -40,10 +40,13 @@ jobs:
           pytest -v regipy_tests/cli_tests.py
         # Temp. allow failure due to inconsistency between CI env and local env.
         continue-on-error: true
+        working-directory: ${{ github.workspace }}
       - name: Plugin Tests
         run: |
           pytest -v regipy_tests/plugin_tests.py
+        working-directory: ${{ github.workspace }}
       - name: Library Tests
         run: |
           pytest -v regipy_tests/tests.py
+        working-directory: ${{ github.workspace }}
                     
