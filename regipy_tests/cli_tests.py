@@ -61,22 +61,23 @@ def test_cli_run_plugins(ntuser_hive):
 
     assert (
         result.output.strip()
-        == "Loaded 38 plugins\nFinished: 11/38 plugins matched the hive type"
+        == "Loaded 52 plugins\nFinished: 12/52 plugins matched the hive type"
     )
 
     with open(output_file_path, "r") as f:
         output = json.loads(f.read())
 
     assert set(output.keys()) == {
-        "installed_software_ntuser",
         "word_wheel_query",
         "winrar_plugin",
         "user_assist",
         "ntuser_persistence",
+        "ntuser_classes_installer",
+        "ntuser_shellbag_plugin",
         "terminal_services_history",
         "typed_paths",
         "network_drives_plugin",
         "typed_urls",
         "winscp_saved_sessions",
-        "shellbag_plugin",
+        "installed_programs_ntuser"
     }
