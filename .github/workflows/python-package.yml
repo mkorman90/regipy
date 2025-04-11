@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9, 3.10.5, 3.11, 3.12.4]
+        python-version: [3.9.22, 3.10.17, 3.11.12, 3.12.10]
 
     steps:
     - uses: actions/checkout@v3
@@ -37,7 +37,7 @@ jobs:
     - name: Test with pytest
       run: |
         pip install -e .[cli]
-        pytest regipy_tests/tests.py -vvvs
-    - name: Plugin Validation
+        pytest regipy_tests/tests.py regipy_tests/plugin_tests.py -vvvs
+    - name: Plugin Validation (will replace plugin tests in the future)
       run: |
         python regipy_tests/validation/plugin_validation.py
