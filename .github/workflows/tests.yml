@@ -43,7 +43,8 @@ jobs:
       - name: Plugin Tests
         run: |
           pwd
-          ls -lah        
+          ls -lah
+          ls -lah regipy_tests                  
           pytest -v regipy_tests/plugin_tests.py
       - name: Library Tests
         run: |
