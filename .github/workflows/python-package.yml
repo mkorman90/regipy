@@ -37,7 +37,7 @@ jobs:
     - name: Test with pytest
       run: |
         pip install -e .[cli]
-        pytest regipy_tests/tests.py regipy_tests/plugin_tests.py -vvvs
+        pytest -vvv regipy_tests/tests.py
     - name: Plugin Validation (will replace plugin tests in the future)
       run: |
-        python regipy_tests/validation/plugin_validation.py
+        python -vvv regipy_tests/validation/plugin_validation.py
