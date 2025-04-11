@@ -23,7 +23,8 @@ class ShellBagNtuserPlugin(Plugin):
         if isinstance(mru_val, bytes):
             mru_val = mru_val[:-4]
             for i in range(0, len(mru_val), 4):
-                mru_order_string += f"{str(mru_val[i])}-"
+                current_val = int.from_bytes(mru_val[i: i + 4], byteorder="little")
+                mru_order_string += f"{current_val}-"
 
             return mru_order_string[:-1]
         else:
