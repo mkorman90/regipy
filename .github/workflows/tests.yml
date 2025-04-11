@@ -42,9 +42,11 @@ jobs:
         continue-on-error: true
       - name: Plugin Tests
         run: |
-          pytest -v plugin_tests.py
+          pwd
+          ls -lah        
+          pytest -v regipy_tests/plugin_tests.py
       - name: Library Tests
         run: |
-          pytest -v tests.py
+          pytest -v regipy_tests/tests.py
           
                     
