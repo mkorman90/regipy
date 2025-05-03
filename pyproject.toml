@@ -1,0 +1,84 @@
+[build-system]
+requires = [
+  "setuptools>=61.0",
+  "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+# Static metadata
+name = "regipy"
+version = "5.2.1"
+description = "Python Registry Parser"
+readme = { file = "docs/README.rst", content-type = "text/x-rst" }
+requires-python = ">=3.6"
+license = "MIT"
+license-files = ["LICENSE*"]
+
+keywords = ["Python", "Python3", "registry", "windows registry", "registry parser"]
+
+# Package keywords and classifiers (PyPI)
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Natural Language :: English",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.6",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Utilities"
+]
+
+# Authors/maintainers
+authors = [
+  { name = "Martin G. Korman", email = "martin@centauri.co.il" }
+]
+
+# Runtime dependencies
+dependencies = [
+  "construct>=2.10",
+  "attrs>=21",
+  "inflection>=0.5.1",
+  "pytz"
+]
+
+# Optional (“extra”) dependencies
+[project.optional-dependencies]
+test = [
+  "pytest",
+  "pytest-flake8"
+]
+cli = [
+  "click>=7.0.0",
+  "tabulate"
+]
+full = [
+  "click>=7.0.0",
+  "tabulate",
+  "libfwsi-python>=20240315",
+  "libfwps-python>=20240310"
+]
+
+
+
+# Project URLs
+[project.urls]
+Homepage     = "https://github.com/mkorman90/regipy/"
+Repository   = "https://github.com/mkorman90/regipy/"
+"Bug Tracker" = "https://github.com/mkorman90/regipy/issues"
+
+# Console scripts
+[project.scripts]
+regipy-parse-header              = "regipy.cli:parse_header"
+regipy-dump                     = "regipy.cli:registry_dump"
+regipy-plugins-run              = "regipy.cli:run_plugins"
+regipy-plugins-list             = "regipy.cli:list_plugins"
+regipy-diff                     = "regipy.cli:reg_diff"
+regipy-process-transaction-logs = "regipy.cli:parse_transaction_log"
+
+[tool.setuptools.packages.find]
+# Only pick up your library, not the tests folder.
+include = ["regipy*"]
+exclude = ["regipy_tests*", "regipy_tests.*"]
