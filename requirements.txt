@@ -4,6 +4,6 @@ click==8.0.4
 inflection==0.5.1
 pytz
 tabulate==0.8.9
-pytest==7.0.1
+pytest==8.4.0
 libfwsi-python==20240315
 libfwps-python==20240310
