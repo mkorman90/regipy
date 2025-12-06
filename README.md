@@ -104,7 +104,7 @@ Example output:
 
 ## Recover a registry hive, using transaction logs:
 ```bash
-regipy-transaction-logs NTUSER.DAT -p ntuser.dat.log1 -s ntuser.dat.log2 -o recovered_NTUSER.dat 
+regipy-process-transaction-logs NTUSER.DAT -p ntuser.dat.log1 -s ntuser.dat.log2 -o recovered_NTUSER.dat 
 ```
 After recovering, compare the hives with registry-diff to see what changed
 
