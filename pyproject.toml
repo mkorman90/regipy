@@ -68,7 +68,7 @@ Repository = "https://github.com/mkorman90/regipy/"
 Issues = "https://github.com/mkorman90/regipy/issues"
 
 [tool.setuptools]
-packages = ["regipy", "regipy.plugins", "regipy.plugins.ntuser", "regipy.plugins.system", "regipy.plugins.software", "regipy.plugins.sam", "regipy.plugins.security", "regipy.plugins.amcache", "regipy.plugins.bcd", "regipy.plugins.usrclass"]
+packages = ["regipy", "regipy.plugins", "regipy.plugins.ntuser", "regipy.plugins.system", "regipy.plugins.system.external", "regipy.plugins.software", "regipy.plugins.sam", "regipy.plugins.security", "regipy.plugins.amcache", "regipy.plugins.bcd", "regipy.plugins.usrclass"]
 include-package-data = true
 
 [tool.ruff]
