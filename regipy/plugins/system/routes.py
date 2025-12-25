@@ -19,6 +19,4 @@ class RoutesPlugin(Plugin):
         logger.debug("Started Routes Plugin...")
 
         routes_path_list = self.registry_hive.get_control_sets(ROUTES_PATH)
-        self.entries = get_subkey_values_from_list(
-            self.registry_hive, routes_path_list, as_json=self.as_json
-        )
+        self.entries = get_subkey_values_from_list(self.registry_hive, routes_path_list, as_json=self.as_json)

@@ -24,18 +24,13 @@ class WinSCPSavedSessionsPlugin(Plugin):
 
         for winscp_saved_session in sessions_sk.iter_subkeys():
             values = (
-                {
-                    x.name: x.value
-                    for x in winscp_saved_session.iter_values(as_json=self.as_json)
-                }
+                {x.name: x.value for x in winscp_saved_session.iter_values(as_json=self.as_json)}
                 if winscp_saved_session.values_count
                 else {}
             )
             self.entries.append(
                 {
-                    "timestamp": convert_wintime(
-                        winscp_saved_session.header.last_modified, as_json=self.as_json
-                    ),
+                    "timestamp": convert_wintime(winscp_saved_session.header.last_modified, as_json=self.as_json),
                     "hive_name": "HKEY_CURRENT_USER",
                     "key_path": rf"HKEY_CURRENT_USER{subkey_path}\{winscp_saved_session.name}",
                     **values,

@@ -1,9 +1,9 @@
 import logging
 
 from regipy import (
+    NoRegistrySubkeysException,
     RegistryKeyNotFoundException,
     convert_wintime,
-    NoRegistrySubkeysException,
 )
 from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
@@ -29,9 +29,7 @@ class TSClientPlugin(Plugin):
             self.entries.append(
                 {
                     "server": server.name,
-                    "last_connection": convert_wintime(
-                        server.header.last_modified, as_json=self.as_json
-                    ),
+                    "last_connection": convert_wintime(server.header.last_modified, as_json=self.as_json),
                     "username_hint": server.get_value("UsernameHint"),
                 }
             )

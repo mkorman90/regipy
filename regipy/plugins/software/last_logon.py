@@ -20,17 +20,10 @@ class LastLogonPlugin(Plugin):
         try:
             subkey = self.registry_hive.get_key(LAST_LOGON_KEY_PATH)
         except RegistryKeyNotFoundException as ex:
-            logger.error(
-                f"Could not find {self.NAME} subkey at {LAST_LOGON_KEY_PATH}: {ex}"
-            )
+            logger.error(f"Could not find {self.NAME} subkey at {LAST_LOGON_KEY_PATH}: {ex}")
             return None
 
         self.entries = {
-            "last_write": convert_wintime(
-                subkey.header.last_modified, as_json=self.as_json
-            ),
-            **{
-                underscore(x.name): x.value
-                for x in subkey.iter_values(as_json=self.as_json)
-            },
+            "last_write": convert_wintime(subkey.header.last_modified, as_json=self.as_json),
+            **{underscore(x.name): x.value for x in subkey.iter_values(as_json=self.as_json)},
         }

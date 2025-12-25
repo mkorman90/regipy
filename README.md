@@ -1,6 +1,15 @@
-## regipy
+# regipy
 
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/mkorman90/regipy/badge)](https://securityscorecards.dev/viewer/?uri=github.com/mkorman90/regipy)
+
+> **⚠️ Breaking Changes in v6.0.0**
+>
+> Version 6.0.0 includes significant modernization changes:
+> - **Python 3.9+ required** - Dropped support for Python 3.6, 3.7, and 3.8
+> - **`attrs` library removed** - Data classes now use Python's built-in `dataclasses` module
+> - If your code imports internal classes (`Cell`, `VKRecord`, `Value`, `Subkey`) and uses `attrs` functions like `attr.asdict()`, switch to `dataclasses.asdict()`
+>
+> See the [CHANGELOG](CHANGELOG.md) for full details.
 
 Regipy is a python library for parsing offline registry hives (Hive files with REGF header). regipy has a lot of capabilities:
 * Use as a library:
@@ -13,6 +22,8 @@ Regipy is a python library for parsing offline registry hives (Hive files with R
     * Compare registry hives
     * Execute plugins from a robust plugin system (i.e: amcache, shimcache, extract computer name...)
 
+**Requires Python 3.9 or higher.**
+
 ## Installation
 
 Regipy latest version can be installed from pypi:
@@ -21,7 +32,7 @@ Regipy latest version can be installed from pypi:
 pip install regipy[full]
 ```
 
-NOTE: ``regipy[full]`` installs dependencies that require compilation tools and might take some time. 
+NOTE: ``regipy[full]`` installs dependencies that require compilation tools and might take some time.
 It is possible to install a version with relaxed dependencies, by omitting the ``[full]``.
 
 Also, it is possible to install from source by cloning the repository and executing:
@@ -81,7 +92,7 @@ regipy-dump util can also output a timeline instead of a JSON, by adding the `-t
 ```bash
 regipy-plugins-run ~/Documents/TestEvidence/Registry/SYSTEM -o /tmp/plugins_output.json
 ```
-The hive type will be detected automatically and the relevant plugins will be executed. 
+The hive type will be detected automatically and the relevant plugins will be executed.
 [**See the plugins section for more information**](docs/PLUGINS.md)
 
 #### Compare registry hives
@@ -104,14 +115,14 @@ Example output:
 
 ## Recover a registry hive, using transaction logs:
 ```bash
-regipy-process-transaction-logs NTUSER.DAT -p ntuser.dat.log1 -s ntuser.dat.log2 -o recovered_NTUSER.dat 
+regipy-process-transaction-logs NTUSER.DAT -p ntuser.dat.log1 -s ntuser.dat.log2 -o recovered_NTUSER.dat
 ```
 After recovering, compare the hives with registry-diff to see what changed
 
 ## Using as a library
 
 #### Initiate the registry hive object
-```
+```python
 from regipy.registry import RegistryHive
 reg = RegistryHive('/Users/martinkorman/Documents/TestEvidence/Registry/Vibranium-NTUSER.DAT')
 ```
@@ -123,7 +134,7 @@ for entry in reg.recurse_subkeys(as_json=True):
 ```
 
 #### Iterate over a key and get all subkeys and their modification time:
-```
+```python
 for sk in reg.get_key('Software').iter_subkeys():
     print(sk.name, convert_wintime(sk.header.last_modified).isoformat())
 
@@ -137,7 +148,7 @@ Policies 2019-02-03T22:05:32.526592
 ```
 
 #### Get the values of a key:
-```
+```python
 reg.get_key('Software\Microsoft\Internet Explorer\BrowserEmulation').get_values(as_json=True)
 [{'name': 'CVListTTL',
   'value': 0,
@@ -178,7 +189,7 @@ reg.get_key('Software\Microsoft\Internet Explorer\BrowserEmulation').get_values(
 ```
 
 #### Use as a plugin:
-```
+```python
 from regipy.plugins.ntuser.ntuser_persistence import NTUserPersistencePlugin
 NTUserPersistencePlugin(reg, as_json=True).run()
 
@@ -195,8 +206,8 @@ NTUserPersistencePlugin(reg, as_json=True).run()
 }
 ```
 
-####  Run all relevant plugins for a specific hive
-```
+#### Run all relevant plugins for a specific hive
+```python
 from regipy.plugins.utils import run_relevant_plugins
 reg = RegistryHive('/Users/martinkorman/Documents/TestEvidence/Registry/SYSTEM')
 run_relevant_plugins(reg, as_json=True)
@@ -209,15 +220,13 @@ run_relevant_plugins(reg, as_json=True)
 		'timestamp': '2019-02-03T22:19:28.853219'
 	}]
 }
-
-
 ```
 
 ## Validation cases
 [Validation cases report](regipy_tests/validation/plugin_validation.md)
 
-all new plugins should have a one or more basic validation cases (which can be expanded in the future), for example:
-```
+All new plugins should have one or more basic validation cases (which can be expanded in the future), for example:
+```python
 from regipy.plugins.system.bam import BAMPlugin
 from regipy_tests.validation.validation import ValidationCase
 
@@ -262,3 +271,90 @@ class NTUserUserAssistValidationCase(ValidationCase):
 
     expected_entries_count = 2
 ```
+
+## Development
+
+### Setting up for development
+
+```bash
+# Clone the repository
+git clone https://github.com/mkorman90/regipy.git
+cd regipy
+
+# Install in development mode with all dependencies
+pip install -e ".[full,dev]"
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+### Running tests
+
+```bash
+# Run all tests
+pytest
+
+# Run specific test files
+pytest regipy_tests/tests.py
+pytest regipy_tests/cli_tests.py
+
+# Run plugin validation
+PYTHONPATH=. python regipy_tests/validation/plugin_validation.py
+```
+
+### Code quality
+
+```bash
+# Run linter
+ruff check .
+
+# Run formatter
+ruff format .
+
+# Run type checker
+mypy regipy/
+```
+
+### Testing GitHub Actions Locally
+
+To test CI workflow changes locally before pushing, use [act](https://github.com/nektos/act):
+
+```bash
+# Install act (Fedora)
+sudo dnf install act-cli
+
+# Install act (macOS)
+brew install act
+
+# Install act (other)
+# See https://nektosact.com/installation/index.html
+```
+
+Make sure Docker is running, then:
+
+```bash
+# List available jobs
+act -l
+
+# Run the lint job
+act -j lint
+
+# Run all jobs for a push event
+act push
+
+# Run the test job with a specific Python version
+act -j test
+
+# Test the build job from publish workflow (simulates a release)
+act release -j build --eventpath /dev/stdin <<< '{"action": "published"}'
+```
+
+Note: Some jobs may require secrets. You can provide them with:
+
+```bash
+act -j publish --secret PYPI_API_TOKEN=your_token
+```
+
+## License
+
+MIT

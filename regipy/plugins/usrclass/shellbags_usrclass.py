@@ -23,7 +23,7 @@ class ShellBagUsrclassPlugin(Plugin):
         if isinstance(mru_val, bytes):
             mru_val = mru_val[:-4]
             for i in range(0, len(mru_val), 4):
-                current_val = int.from_bytes(mru_val[i: i + 4], byteorder="little")
+                current_val = int.from_bytes(mru_val[i : i + 4], byteorder="little")
                 mru_order_string += f"{current_val}-"
 
             return mru_order_string[:-1]
@@ -136,10 +136,7 @@ class ShellBagUsrclassPlugin(Plugin):
         elif isinstance(shell_item, pyfwsi.root_folder):
             if shell_item.shell_folder_identifier in KNOWN_GUIDS:
                 path_segment = KNOWN_GUIDS[shell_item.shell_folder_identifier]
-            elif (
-                hasattr(shell_item, "identifier")
-                and shell_item.identifier in KNOWN_GUIDS
-            ):
+            elif hasattr(shell_item, "identifier") and shell_item.identifier in KNOWN_GUIDS:
                 path_segment = KNOWN_GUIDS[shell_item.identifier]
             else:
                 path_segment = "{{{0:s}}}".format(shell_item.shell_folder_identifier)
@@ -148,17 +145,11 @@ class ShellBagUsrclassPlugin(Plugin):
             # Users property view
             if shell_item.delegate_folder_identifier in KNOWN_GUIDS:
                 path_segment = KNOWN_GUIDS[shell_item.delegate_folder_identifier]
-            elif (
-                hasattr(shell_item, "identifier")
-                and shell_item.identifier in KNOWN_GUIDS
-            ):
+            elif hasattr(shell_item, "identifier") and shell_item.identifier in KNOWN_GUIDS:
                 path_segment = KNOWN_GUIDS[shell_item.identifier]
 
             # Variable
-            elif (
-                hasattr(shell_item, "known_folder_identifier")
-                and shell_item.known_folder_identifier in KNOWN_GUIDS
-            ):
+            elif hasattr(shell_item, "known_folder_identifier") and shell_item.known_folder_identifier in KNOWN_GUIDS:
                 path_segment = KNOWN_GUIDS[shell_item.known_folder_identifier]
 
             # Variable: Users property view
@@ -181,15 +172,11 @@ class ShellBagUsrclassPlugin(Plugin):
                                     0x0014,
                                     0x0015,
                                 ):
-                                    value_string = str(
-                                        fwps_record.get_data_as_integer()
-                                    )
+                                    value_string = str(fwps_record.get_data_as_integer())
                                 elif fwps_record.value_type in (0x0008, 0x001E, 0x001F):
                                     value_string = fwps_record.get_data_as_string()
                                 elif fwps_record.value_type == 0x000B:
-                                    value_string = str(
-                                        fwps_record.get_data_as_boolean()
-                                    )
+                                    value_string = str(fwps_record.get_data_as_boolean())
                                 elif fwps_record.value_type == 0x0040:
                                     filetime = fwps_record.get_data_as_integer()
                                     value_string = self._FormatFiletimeValue(filetime)
@@ -255,9 +242,7 @@ class ShellBagUsrclassPlugin(Plugin):
                 shell_items.copy_from_byte_stream(byte_stream, ascii_codepage=codepage)
                 for item in shell_items.items:
                     shell_type = self._get_shell_item_type(item)
-                    value, full_path, location_description = (
-                        self._parse_shell_item_path_segment(self, item)
-                    )
+                    value, full_path, location_description = self._parse_shell_item_path_segment(self, item)
                     if not path:
                         path = value
                         base_path = ""
@@ -276,17 +261,13 @@ class ShellBagUsrclassPlugin(Plugin):
                                     if self.as_json:
                                         creation_time = creation_time.isoformat()
                                 except OSError:
-                                    logger.exception(
-                                        f"Malformed creation time for {path}"
-                                    )
+                                    logger.exception(f"Malformed creation time for {path}")
                                 try:
                                     access_time = extension_block.get_access_time()
                                     if self.as_json:
                                         access_time = access_time.isoformat()
                                 except OSError:
-                                    logger.exception(
-                                        f"Malformed access time for {path}"
-                                    )
+                                    logger.exception(f"Malformed access time for {path}")
 
                     try:
                         if hasattr(item, "modification_time"):
@@ -307,9 +288,7 @@ class ShellBagUsrclassPlugin(Plugin):
                         "shell_type": shell_type,
                         "path": path,
                         "full path": full_path if full_path else None,
-                        "location description": (
-                            location_description if location_description else None
-                        ),
+                        "location description": (location_description if location_description else None),
                         "creation_time": creation_time,
                         "access_time": access_time,
                         "modification_time": modification_time,
@@ -325,7 +304,6 @@ class ShellBagUsrclassPlugin(Plugin):
                     path = base_path
 
     def run(self, codepage=DEFAULT_CODEPAGE):
-
         try:
             # TODO: handle this import requirement in a better way
             # flake8: noqa
@@ -342,6 +320,4 @@ class ShellBagUsrclassPlugin(Plugin):
             shellbag_usrclass_subkey = self.registry_hive.get_key(USRCLASS_SHELLBAG)
             self.iter_sk(shellbag_usrclass_subkey, USRCLASS_SHELLBAG, codepage=codepage)
         except RegistryKeyNotFoundException as ex:
-            logger.error(
-                f"Could not find {self.NAME} plugin data at: {USRCLASS_SHELLBAG}: {ex}"
-            )
+            logger.error(f"Could not find {self.NAME} plugin data at: {USRCLASS_SHELLBAG}: {ex}")

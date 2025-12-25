@@ -2,15 +2,13 @@ import json
 import os
 from tempfile import mkdtemp
 
-
 from regipy import NoRegistrySubkeysException
+from regipy.cli_utils import get_filtered_subkeys
 from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.utils import dump_hive_to_json
-
 from regipy.recovery import apply_transaction_logs
 from regipy.regdiff import compare_hives
-from regipy.registry import RegistryHive, NKRecord
-from regipy.cli_utils import get_filtered_subkeys
+from regipy.registry import NKRecord, RegistryHive
 
 
 def test_parse_header(ntuser_hive):
@@ -34,10 +32,7 @@ def test_parse_root_key(ntuser_hive):
 
     assert isinstance(registry_hive, RegistryHive)
     assert isinstance(registry_hive.root, NKRecord)
-    assert (
-        registry_hive.root.name
-        == "CMI-CreateHive{6A1C4018-979D-4291-A7DC-7AED1C75B67C}"
-    )
+    assert registry_hive.root.name == "CMI-CreateHive{6A1C4018-979D-4291-A7DC-7AED1C75B67C}"
     assert registry_hive.root.subkey_count == 11
     assert dict(registry_hive.root.header) == {
         "access_bits": b"\x02\x00\x00\x00",
@@ -77,7 +72,7 @@ def test_find_keys_ntuser(ntuser_hive):
     assert run_key.name == "Run"
     assert run_key.header.last_modified == 129779615948377168
 
-    values = [x for x in run_key.iter_values(as_json=True)]
+    values = list(run_key.iter_values(as_json=True))
     assert values[0].name == "Sidebar"
     assert values[0].value_type == "REG_EXPAND_SZ"
 
@@ -93,7 +88,7 @@ def test_find_keys_partial_ntuser_hive(ntuser_software_partial):
     assert run_key.name == "Run"
     assert run_key.header.last_modified == 132024690510209250
 
-    values = [x for x in run_key.iter_values(as_json=True)]
+    values = list(run_key.iter_values(as_json=True))
     assert values[0].name == "OneDrive"
     assert values[0].value_type == "REG_SZ"
 
@@ -162,9 +157,7 @@ def test_recurse_partial_ntuser(ntuser_software_partial):
 
 def test_recurse_ntuser_without_fetching_values(ntuser_hive):
     registry_hive = RegistryHive(ntuser_hive)
-    for subkey_count, subkey in enumerate(
-        registry_hive.recurse_subkeys(as_json=True, fetch_values=False)
-    ):
+    for subkey_count, subkey in enumerate(registry_hive.recurse_subkeys(as_json=True, fetch_values=False)):
         assert subkey.values == []
         assert subkey.values_count >= 0
     assert subkey_count == 1811
@@ -217,9 +210,7 @@ def test_ntuser_apply_transaction_logs(transaction_ntuser, transaction_log):
     assert len([x for x in found_differences if x[0] == "new_value"]) == 60
 
 
-def test_system_apply_transaction_logs(
-    transaction_system, system_tr_log_1, system_tr_log_2
-):
+def test_system_apply_transaction_logs(transaction_system, system_tr_log_1, system_tr_log_2):
     output_path = os.path.join(mkdtemp(), "recovered_hive.dat")
     restored_hive_path, recovered_dirty_pages_count = apply_transaction_logs(
         transaction_system,
@@ -238,22 +229,16 @@ def test_system_apply_transaction_logs(
 def test_system_hive_devprop_structure(system_devprop):
     registry_hive = RegistryHive(system_devprop)
     subkey = registry_hive.get_key(
-        "\\ControlSet001\\Enum\\ACPI\\ACPI0003\\0\\Properties\\{83da6326-97a6-4088-9453-"
-        "a1923f573b29}\\0003"
+        "\\ControlSet001\\Enum\\ACPI\\ACPI0003\\0\\Properties\\{83da6326-97a6-4088-9453-a1923f573b29}\\0003"
     )
     assert subkey.values_count == 1
     value = subkey.get_values()[0]
     assert value.name == "(default)"
-    assert (
-        value.value
-        == "cmbatt.inf:db04a16c09a7808a:AcAdapter_Inst:6.3.9600.16384:ACPI\\ACPI0003"
-    )
+    assert value.value == "cmbatt.inf:db04a16c09a7808a:AcAdapter_Inst:6.3.9600.16384:ACPI\\ACPI0003"
     assert value.value_type == 18
 
 
-def test_system_apply_transaction_logs_2(
-    transaction_usrclass, usrclass_tr_log_1, usrclass_tr_log_2
-):
+def test_system_apply_transaction_logs_2(transaction_usrclass, usrclass_tr_log_1, usrclass_tr_log_2):
     output_path = os.path.join(mkdtemp(), "recovered_hive.dat")
     restored_hive_path, recovered_dirty_pages_count = apply_transaction_logs(
         transaction_usrclass,
@@ -271,11 +256,9 @@ def test_system_apply_transaction_logs_2(
 
 def test_hive_serialization(ntuser_hive, temp_output_file):
     registry_hive = RegistryHive(ntuser_hive)
-    dump_hive_to_json(
-        registry_hive, temp_output_file, registry_hive.root, verbose=False
-    )
+    dump_hive_to_json(registry_hive, temp_output_file, registry_hive.root, verbose=False)
     counter = 0
-    with open(temp_output_file, "r") as dumped_hive:
+    with open(temp_output_file) as dumped_hive:
         for x in dumped_hive.readlines():
             assert json.loads(x)
             counter += 1
@@ -288,14 +271,8 @@ def test_get_key(software_hive):
     """
     registry_hive = RegistryHive(software_hive)
     # We verify the registry headers are similar, because this is the same subkey.
-    assert (
-        registry_hive.get_key("ODBC").header
-        == registry_hive.root.get_subkey("ODBC").header
-    )
-    assert (
-        registry_hive.root.get_subkey("ODBC").header
-        == registry_hive.get_key("SOFTWARE\\ODBC").header
-    )
+    assert registry_hive.get_key("ODBC").header == registry_hive.root.get_subkey("ODBC").header
+    assert registry_hive.root.get_subkey("ODBC").header == registry_hive.get_key("SOFTWARE\\ODBC").header
 
 
 def test_get_subkey_errors(software_hive):
@@ -303,14 +280,12 @@ def test_get_subkey_errors(software_hive):
     # Tests the NoRegistrySubkeysException that suppose to be raised
     try:
         registry_hive.get_key("ODBC").get_subkey("xyz")
-        assert False
+        raise AssertionError()
     except NoRegistrySubkeysException:
         assert True
 
     # Tests value if raised_on_missing is set to False
-    assert (
-        registry_hive.get_key("ODBC").get_subkey("xyz", raise_on_missing=False) is None
-    )
+    assert registry_hive.get_key("ODBC").get_subkey("xyz", raise_on_missing=False) is None
 
 
 def test_parse_security_info(ntuser_hive):
@@ -375,7 +350,6 @@ def test_ntuser_filtered_timestamps_do_not_fetch_values(ntuser_hive):
             end_date="2012-04-03T23:59:59.999999",
         )
     ):
-
         assert entry.values == []
     assert subkey_count == 1489
 
@@ -391,7 +365,6 @@ def test_ntuser_filtered_timestamps_fetch_values(ntuser_hive):
             end_date="2012-04-03T23:59:59.999999",
         )
     ):
-
         # values_count is parsed from the subkey header, so this test if effective.
         if entry.values_count > 0:
             assert len(entry.values) == entry.values_count
@@ -400,8 +373,6 @@ def test_ntuser_filtered_timestamps_fetch_values(ntuser_hive):
 
 def test_ntuser_filtered_timestamps_no_filter(ntuser_hive):
     registry_hive = RegistryHive(ntuser_hive)
-    for subkey_count, entry in enumerate(
-        get_filtered_subkeys(registry_hive, registry_hive.root, fetch_values=False)
-    ):
+    for subkey_count, entry in enumerate(get_filtered_subkeys(registry_hive, registry_hive.root, fetch_values=False)):
         assert entry.values == []
     assert subkey_count == 1811

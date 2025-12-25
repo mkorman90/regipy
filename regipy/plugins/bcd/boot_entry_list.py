@@ -4,12 +4,11 @@ Windows Boot Configuration Data (BCD) boot entry list plugin
 
 import logging
 import uuid
-
 from typing import Union
 
-from regipy.registry import NKRecord
 from regipy.hive_types import BCD_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
+from regipy.registry import NKRecord
 from regipy.utils import convert_wintime
 
 logger = logging.getLogger(__name__)
@@ -40,7 +39,7 @@ def _get_element_by_type(obj_key: NKRecord, datatype: int) -> Union[str, bytes, 
     if elements_key.subkey_count == 0:
         return None
 
-    elem_key = elements_key.get_subkey("%08X" % datatype, raise_on_missing=False)
+    elem_key = elements_key.get_subkey(f"{datatype:08X}", raise_on_missing=False)
     if elem_key is None:
         return None
 
@@ -83,7 +82,7 @@ class BootEntryListPlugin(Plugin):
             gpt_part_guid = str(uuid.UUID(bytes_le=device_data[32:48]))
             gpt_disk_guid = str(uuid.UUID(bytes_le=device_data[56:72]))
 
-            entry_type = "0x%08X" % desc_type if self.as_json else desc_type
+            entry_type = f"0x{desc_type:08X}" if self.as_json else desc_type
 
             self.entries.append(
                 {
@@ -93,8 +92,6 @@ class BootEntryListPlugin(Plugin):
                     "gpt_disk": gpt_disk_guid,
                     "gpt_partition": gpt_part_guid,
                     "image_path": path_name,
-                    "timestamp": convert_wintime(
-                        obj_key.header.last_modified, as_json=self.as_json
-                    ),
+                    "timestamp": convert_wintime(obj_key.header.last_modified, as_json=self.as_json),
                 }
             )

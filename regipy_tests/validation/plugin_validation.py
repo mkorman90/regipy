@@ -1,13 +1,12 @@
-from collections import defaultdict
-from dataclasses import asdict
-from contextlib import contextmanager
-
+import os
 import sys
+from collections import defaultdict
+from contextlib import contextmanager
+from dataclasses import asdict
+from pathlib import Path
+
 from tabulate import tabulate
 
-import os
-from pathlib import Path
-from typing import Dict, List
 from regipy.plugins.plugin import PLUGINS
 from regipy.registry import RegistryHive
 from regipy_tests.validation.utils import extract_lzma
@@ -30,9 +29,7 @@ SHOULD_DEBUG = False
 
 
 test_data_dir = str(Path(__file__).parent.parent.joinpath("data"))
-validation_results_output_file = str(
-    Path(__file__).parent.joinpath("plugin_validation.md")
-)
+validation_results_output_file = str(Path(__file__).parent.joinpath("plugin_validation.md"))
 
 
 class PluginValidationCaseFailureException(Exception):
@@ -67,9 +64,7 @@ def validate_case(plugin_validation_case: ValidationCase, registry_hive: Registr
                 plugin_validation_case_instance.debug()
 
 
-def run_validations_for_hive_file(
-    hive_file_name, validation_cases
-) -> List[ValidationResult]:
+def run_validations_for_hive_file(hive_file_name, validation_cases) -> list[ValidationResult]:
     validation_results = []
     with load_hive(hive_file_name) as registry_hive:
         for validation_case in validation_cases:
@@ -79,18 +74,14 @@ def run_validations_for_hive_file(
 
 def main():
     # Map all existing validation cases
-    validation_cases: Dict[str, ValidationCase] = {
-        v.plugin.NAME: v for v in VALIDATION_CASES
-    }
-    plugins_without_validation: set = {p.NAME for p in PLUGINS}.difference(
-        set(validation_cases.keys())
-    )
+    validation_cases: dict[str, ValidationCase] = {v.plugin.NAME: v for v in VALIDATION_CASES}
+    plugins_without_validation: set = {p.NAME for p in PLUGINS}.difference(set(validation_cases.keys()))
 
     print(f"[*] Loaded {len(validation_cases)} validation cases")
 
     if len(sys.argv) == 2:
         plugin_name = sys.argv[1]
-        if plugin_name in validation_cases.keys():
+        if plugin_name in validation_cases:
             print(f"Running validation for plugin {plugin_name}")
             validation_case: ValidationCase = validation_cases[plugin_name]
             with load_hive(validation_case.test_hive_file_name) as registry_hive:
@@ -112,38 +103,24 @@ def main():
             hive_file_name = plugin_validation_case.test_hive_file_name
             registry_hive_map[hive_file_name].append(plugin_validation_case)
         else:
-            print(
-                f"[!] {plugin_name} has NO validation case!"
-            )
+            print(f"[!] {plugin_name} has NO validation case!")
 
     # Execute grouped by file, to save performance on extracting and loading the hive
     print("\n\nRunning Validations:")
-    validation_results: List[ValidationResult] = []
+    validation_results: list[ValidationResult] = []
     for registry_hive_file_name, validation_cases in registry_hive_map.items():
-        print(
-            f"\n\t[*] Validating {registry_hive_file_name} ({len(validation_cases)} validations):"
-        )
+        print(f"\n\t[*] Validating {registry_hive_file_name} ({len(validation_cases)} validations):")
 
-        validation_results.extend(
-            run_validations_for_hive_file(registry_hive_file_name, validation_cases)
-        )
+        validation_results.extend(run_validations_for_hive_file(registry_hive_file_name, validation_cases))
 
     print()
-    validation_results_dict = sorted(
-        [asdict(v) for v in validation_results], key=lambda x: x["plugin_name"]
-    )
-    print(
-        f"\n[!] {len(validation_results_dict)}/{len(PLUGINS)} plugins have a validation case:"
-    )
-    md_table_for_validation_results = tabulate(
-        validation_results_dict, headers="keys", tablefmt="github"
-    )
+    validation_results_dict = sorted([asdict(v) for v in validation_results], key=lambda x: x["plugin_name"])
+    print(f"\n[!] {len(validation_results_dict)}/{len(PLUGINS)} plugins have a validation case:")
+    md_table_for_validation_results = tabulate(validation_results_dict, headers="keys", tablefmt="github")
     print(md_table_for_validation_results)
 
     if plugins_without_validation:
-        print(
-            f"\n[!] {len(plugins_without_validation)}/{len(PLUGINS)} plugins have no validation case!"
-        )
+        print(f"\n[!] {len(plugins_without_validation)}/{len(PLUGINS)} plugins have no validation case!")
     # Create empty validation results for plugins without validation
     md_table_for_plugins_without_validation_results = tabulate(
         sorted(
@@ -183,25 +160,20 @@ class {p.__name__}ValidationCase(ValidationCase):
             """
                 plugin_name = p.NAME
                 missing_test_target_path = str(
-                    Path(__file__)
-                    .parent.joinpath("validation_tests")
-                    .joinpath(f"{plugin_name}_validation.py")
+                    Path(__file__).parent.joinpath("validation_tests").joinpath(f"{plugin_name}_validation.py")
                 )
                 if not os.path.exists(missing_test_target_path):
-                    print(
-                        f"Creating template for {plugin_name} target path: {missing_test_target_path}"
-                    )
+                    print(f"Creating template for {plugin_name} target path: {missing_test_target_path}")
                     with open(missing_test_target_path, "w+") as f:
                         f.write(validation_template)
 
     # If we are enforcing validation, raise on plugins without validation
-    if not ENFORCE_VALIDATION:
-        if plugins_without_validation:
-            # fmt: off
-            raise PluginValidationCaseFailureException(
-                f"{len(plugins_without_validation)} plugins are missing validation:"
-                f" {[p.__name__ for p in PLUGINS if p.NAME in plugins_without_validation]}"
-            )
+    if not ENFORCE_VALIDATION and plugins_without_validation:
+        # fmt: off
+        raise PluginValidationCaseFailureException(
+            f"{len(plugins_without_validation)} plugins are missing validation:"
+            f" {[p.__name__ for p in PLUGINS if p.NAME in plugins_without_validation]}"
+        )
     # fmt: on
     # Generate markdown file `validation_results_output_file`
     markdown_content = f"""

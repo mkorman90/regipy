@@ -25,9 +25,7 @@ class ComputerNamePlugin(Plugin):
                 self.entries.append(
                     {
                         "name": subkey.get_value("ComputerName", as_json=self.as_json),
-                        "timestamp": convert_wintime(
-                            subkey.header.last_modified, as_json=self.as_json
-                        ),
+                        "timestamp": convert_wintime(subkey.header.last_modified, as_json=self.as_json),
                     }
                 )
             except RegistryValueNotFoundException:

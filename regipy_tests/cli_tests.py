@@ -26,7 +26,7 @@ def test_cli_registry_dump(ntuser_hive):
     )
     assert result.exit_code == 0
 
-    with open(output_file_path, "r") as f:
+    with open(output_file_path) as f:
         output = f.readlines()
 
     assert json.loads(output[0]) == {
@@ -59,25 +59,23 @@ def test_cli_run_plugins(ntuser_hive):
     result = runner.invoke(run_plugins, [ntuser_hive, "-o", output_file_path])
     assert result.exit_code == 0
 
-    assert (
-        result.output.strip()
-        == "Loaded 52 plugins\nFinished: 12/52 plugins matched the hive type"
-    )
+    assert result.output.strip() == "Loaded 53 plugins\nFinished: 13/53 plugins matched the hive type"
 
-    with open(output_file_path, "r") as f:
+    with open(output_file_path) as f:
         output = json.loads(f.read())
 
     assert set(output.keys()) == {
-        "word_wheel_query",
-        "winrar_plugin",
-        "user_assist",
-        "ntuser_persistence",
+        "installed_programs_ntuser",
+        "network_drives_plugin",
         "ntuser_classes_installer",
+        "ntuser_persistence",
         "ntuser_shellbag_plugin",
         "terminal_services_history",
         "typed_paths",
-        "network_drives_plugin",
         "typed_urls",
+        "user_assist",
+        "winrar_plugin",
         "winscp_saved_sessions",
-        "installed_programs_ntuser"
+        "word_wheel_query",
+        "wsl",
     }

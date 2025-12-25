@@ -1,12 +1,10 @@
-import os
-from typing import Any, Set, Tuple
-
 import logging
+import os
+from typing import Any
 
 from regipy.exceptions import RegistryKeyNotFoundException
-
-from regipy.registry import RegistryHive, NKRecord
-from regipy.utils import convert_wintime, calculate_sha1
+from regipy.registry import NKRecord, RegistryHive
+from regipy.utils import calculate_sha1, convert_wintime
 
 logger = logging.getLogger(__name__)
 
@@ -36,13 +34,13 @@ def get_timestamp_for_subkeys(registry_hive, subkey_list):
         yield subkey_path, convert_wintime(subkey.header.last_modified, as_json=True)
 
 
-def _get_name_value_tuples(subkey: NKRecord) -> Set[Tuple[str, Any]]:
+def _get_name_value_tuples(subkey: NKRecord) -> set[tuple[str, Any]]:
     """
     Iterate over value in a subkey and return a set of tuples containing value names and values
     :param subkey: NKRecord to iterate over
     :return: A set of tuples containing value names and values
     """
-    values_tuple: Set[Tuple[str, Any]] = set()
+    values_tuple: set[tuple[str, Any]] = set()
     for value in subkey.iter_values(as_json=True):
         if not value.value:
             continue
@@ -69,10 +67,7 @@ def compare_hives(first_hive_path, second_hive_path, verbose=False):
     # Compare header parameters
     first_registry_hive = RegistryHive(first_hive_path)
     second_registry_hive = RegistryHive(second_hive_path)
-    if (
-        first_registry_hive.header.hive_bins_data_size
-        != second_registry_hive.header.hive_bins_data_size
-    ):
+    if first_registry_hive.header.hive_bins_data_size != second_registry_hive.header.hive_bins_data_size:
         found_differences.append(
             (
                 "different_hive_bin_data_size",
@@ -83,10 +78,10 @@ def compare_hives(first_hive_path, second_hive_path, verbose=False):
         )
 
     # Enumerate subkeys for each hive and start comparing
-    logger.info("Enumerating subkeys in {}".format(os.path.basename(first_hive_path)))
+    logger.info(f"Enumerating subkeys in {os.path.basename(first_hive_path)}")
     first_hive_subkeys = get_subkeys_and_timestamps(first_registry_hive)
 
-    logger.info("Enumerating subkeys in {}".format(os.path.basename(second_hive_path)))
+    logger.info(f"Enumerating subkeys in {os.path.basename(second_hive_path)}")
     second_hive_subkeys = get_subkeys_and_timestamps(second_registry_hive)
 
     # Get a set of keys present in one hive and not the other and vice versa
@@ -126,23 +121,15 @@ def compare_hives(first_hive_path, second_hive_path, verbose=False):
                     first_subkey_values = _get_name_value_tuples(first_subkey_nk_record)
 
                 if second_subkey_nk_record.values_count:
-                    second_subkey_values = _get_name_value_tuples(
-                        second_subkey_nk_record
-                    )
+                    second_subkey_values = _get_name_value_tuples(second_subkey_nk_record)
 
                 # If one hive or the other contain values, and they are different, compare values
-                if (first_subkey_values or second_subkey_values) and (
-                    first_subkey_values != second_subkey_values
-                ):
-                    first_hive_value_names = set(x[0] for x in first_subkey_values)
-                    second_hive_value_names = set(x[0] for x in second_subkey_values)
+                if (first_subkey_values or second_subkey_values) and (first_subkey_values != second_subkey_values):
+                    first_hive_value_names = {x[0] for x in first_subkey_values}
+                    second_hive_value_names = {x[0] for x in second_subkey_values}
 
-                    values_in_first_but_not_in_second = (
-                        first_hive_value_names - second_hive_value_names
-                    )
-                    values_in_second_but_not_in_first = (
-                        second_hive_value_names - first_hive_value_names
-                    )
+                    values_in_first_but_not_in_second = first_hive_value_names - second_hive_value_names
+                    values_in_second_but_not_in_first = second_hive_value_names - first_hive_value_names
 
                     # If there are value names that are present in the first subkey but not the second
                     # Iterate over all values in the first subkey
@@ -150,17 +137,13 @@ def compare_hives(first_hive_path, second_hive_path, verbose=False):
                     if values_in_first_but_not_in_second:
                         found_differences.extend(
                             ("new_value", f"{n}: {d} @ {ts_1}", None, path_1)
-                            for n, d in get_values_from_tuples(
-                                first_subkey_values, values_in_first_but_not_in_second
-                            )
+                            for n, d in get_values_from_tuples(first_subkey_values, values_in_first_but_not_in_second)
                         )
 
                     if values_in_second_but_not_in_first:
                         found_differences.extend(
                             ("new_value", None, f"{n}: {d} @ {ts_2}", path_1)
-                            for n, d in get_values_from_tuples(
-                                second_subkey_values, values_in_second_but_not_in_first
-                            )
+                            for n, d in get_values_from_tuples(second_subkey_values, values_in_second_but_not_in_first)
                         )
 
                 # We do not compare subkeys for each subkey, because we would have detected those.

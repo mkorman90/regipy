@@ -3,20 +3,19 @@ import json
 import logging
 import os
 import time
+from dataclasses import asdict
 
-
-import attr
 import click
 from tabulate import tabulate
 
+from regipy.cli_utils import _normalize_subkey_fields, get_filtered_subkeys
+from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.plugins.plugin import PLUGINS
+from regipy.plugins.utils import run_relevant_plugins
 from regipy.recovery import apply_transaction_logs
 from regipy.regdiff import compare_hives
-from regipy.plugins.utils import run_relevant_plugins
 from regipy.registry import RegistryHive
-from regipy.exceptions import RegistryKeyNotFoundException
-from regipy.utils import calculate_xor32_checksum, _setup_logging
-from regipy.cli_utils import get_filtered_subkeys, _normalize_subkey_fields
+from regipy.utils import _setup_logging, calculate_xor32_checksum
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +33,7 @@ def parse_header(hive_path, verbose):
 
     click.secho(tabulate(registry_hive.header.items(), tablefmt="fancy_grid"))
 
-    if (
-        registry_hive.header.primary_sequence_num
-        != registry_hive.header.secondary_sequence_num
-    ):
+    if registry_hive.header.primary_sequence_num != registry_hive.header.secondary_sequence_num:
         click.secho("Hive is not clean! You should apply transaction logs", fg="red")
 
     calculated_checksum = calculate_xor32_checksum(registry_hive._stream.read(508))
@@ -86,8 +82,7 @@ def parse_header(hive_path, verbose):
     "--do-not-fetch-values",
     is_flag=True,
     default=False,
-    help="Not fetching the values for each subkey "
-    "makes the iteration way faster. Values count will still be returned",
+    help="Not fetching the values for each subkey makes the iteration way faster. Values count will still be returned",
 )
 @click.option(
     "-s",
@@ -116,9 +111,7 @@ def registry_dump(
     end_date,
 ):
     _setup_logging(verbose=verbose)
-    registry_hive = RegistryHive(
-        hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path
-    )
+    registry_hive = RegistryHive(hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path)
 
     start_time = time.monotonic()
 
@@ -126,15 +119,13 @@ def registry_dump(
         try:
             name_key_entry = registry_hive.get_key(registry_path)
         except RegistryKeyNotFoundException as ex:
-            logger.debug("Did not find the key: {}".format(ex))
+            logger.debug(f"Did not find the key: {ex}")
             return
     else:
         name_key_entry = registry_hive.root
 
     if timeline and not output_path:
-        click.secho(
-            "You must provide an output path if choosing timeline output!", fg="red"
-        )
+        click.secho("You must provide an output path if choosing timeline output!", fg="red")
         return
 
     if output_path:
@@ -170,7 +161,7 @@ def registry_dump(
                 else:
                     output_file.write(
                         json.dumps(
-                            attr.asdict(
+                            asdict(
                                 entry,
                             ),
                             separators=(
@@ -183,15 +174,11 @@ def registry_dump(
                     output_file.write("\n")
     else:
         for subkey_count, entry in enumerate(
-            registry_hive.recurse_subkeys(
-                name_key_entry, as_json=True, fetch_values=not do_not_fetch_values
-            )
+            registry_hive.recurse_subkeys(name_key_entry, as_json=True, fetch_values=not do_not_fetch_values)
         ):
-            click.secho(json.dumps(attr.asdict(entry), indent=4))
+            click.secho(json.dumps(asdict(entry), indent=4))
 
-    click.secho(
-        f"Completed in {time.monotonic() - start_time}s ({subkey_count} subkeys enumerated)"
-    )
+    click.secho(f"Completed in {time.monotonic() - start_time}s ({subkey_count} subkeys enumerated)")
 
 
 @click.command()
@@ -232,10 +219,8 @@ def registry_dump(
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Verbosity")
 def run_plugins(hive_path, output_path, plugins, hive_type, partial_hive_path, verbose):
     _setup_logging(verbose=verbose)
-    registry_hive = RegistryHive(
-        hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path
-    )
-    click.secho("Loaded {} plugins".format(len(PLUGINS)), fg="white")
+    registry_hive = RegistryHive(hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path)
+    click.secho(f"Loaded {len(PLUGINS)} plugins", fg="white")
 
     if plugins:
         plugin_names = {x.NAME for x in PLUGINS}
@@ -243,9 +228,7 @@ def run_plugins(hive_path, output_path, plugins, hive_type, partial_hive_path, v
         plugins = set(plugins)
         if not plugins.issubset(plugin_names):
             click.secho(
-                "Invalid plugin names given: {}".format(
-                    ",".join(set(plugins) - plugin_names)
-                ),
+                "Invalid plugin names given: {}".format(",".join(set(plugins) - plugin_names)),
                 fg="red",
             )
             click.secho(
@@ -264,9 +247,7 @@ def run_plugins(hive_path, output_path, plugins, hive_type, partial_hive_path, v
     else:
         print(json.dumps(plugin_results, indent=4))
     click.secho(
-        "Finished: {}/{} plugins matched the hive type".format(
-            len(plugin_results), len(PLUGINS)
-        ),
+        f"Finished: {len(plugin_results)}/{len(PLUGINS)} plugins matched the hive type",
         fg="green",
     )
 
@@ -303,14 +284,8 @@ def reg_diff(first_hive_path, second_hive_path, output_path, verbose):
     _setup_logging(verbose=verbose)
     REGDIFF_HEADERS = ["difference", "first_hive", "second_hive", "description"]
 
-    found_differences = compare_hives(
-        first_hive_path, second_hive_path, verbose=verbose
-    )
-    click.secho(
-        "Comparing {} vs {}".format(
-            os.path.basename(first_hive_path), os.path.basename(second_hive_path)
-        )
-    )
+    found_differences = compare_hives(first_hive_path, second_hive_path, verbose=verbose)
+    click.secho(f"Comparing {os.path.basename(first_hive_path)} vs {os.path.basename(second_hive_path)}")
 
     if output_path:
         with open(output_path, "w") as csvfile:
@@ -319,9 +294,7 @@ def reg_diff(first_hive_path, second_hive_path, output_path, verbose):
             for difference in found_differences:
                 csvwriter.writerow(difference)
     else:
-        click.secho(
-            tabulate(found_differences, headers=REGDIFF_HEADERS, tablefmt="fancy_grid")
-        )
+        click.secho(tabulate(found_differences, headers=REGDIFF_HEADERS, tablefmt="fancy_grid"))
     click.secho(f"Detected {len(found_differences)} differences", fg="green")
 
 
@@ -350,15 +323,11 @@ def reg_diff(first_hive_path, second_hive_path, output_path, verbose):
     required=False,
 )
 @click.option("-v", "--verbose", is_flag=True, default=True, help="Verbosity")
-def parse_transaction_log(
-    hive_path, primary_log_path, secondary_log_path, output_path, verbose
-):
+def parse_transaction_log(hive_path, primary_log_path, secondary_log_path, output_path, verbose):
     _setup_logging(verbose=verbose)
     logger.info(f"Processing hive {hive_path} with transaction log {primary_log_path}")
     if secondary_log_path:
-        logger.info(
-            f"Processing hive {hive_path} with secondary transaction log {secondary_log_path}"
-        )
+        logger.info(f"Processing hive {hive_path} with secondary transaction log {secondary_log_path}")
 
     restored_hive_path, recovered_dirty_pages_count = apply_transaction_logs(
         hive_path,

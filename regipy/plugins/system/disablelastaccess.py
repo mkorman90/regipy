@@ -1,10 +1,9 @@
 import logging
 
+from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
-from regipy.exceptions import RegistryKeyNotFoundException
-
 
 logger = logging.getLogger(__name__)
 
@@ -34,16 +33,10 @@ class DisableLastAccessPlugin(Plugin):
             try:
                 access = self.registry_hive.get_key(access_subkey)
             except RegistryKeyNotFoundException as ex:
-                logger.error(
-                    f"Could not find {self.NAME} subkey at {access_subkey}: {ex}"
-                )
+                logger.error(f"Could not find {self.NAME} subkey at {access_subkey}: {ex}")
                 continue
-            self.entries[access_subkey] = {
-                "last_write": convert_wintime(access.header.last_modified).isoformat()
-            }
+            self.entries[access_subkey] = {"last_write": convert_wintime(access.header.last_modified).isoformat()}
             for val in access.iter_values():
                 if val.name in crash_items:
                     self.entries[access_subkey][val.name] = f"{val.value:0x}"
-                    self.entries[access_subkey][f"{val.name}Str"] = last_acc.get(
-                        f"{val.value:0x}", ""
-                    )
+                    self.entries[access_subkey][f"{val.name}Str"] = last_acc.get(f"{val.value:0x}", "")

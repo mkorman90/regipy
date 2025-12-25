@@ -32,8 +32,6 @@ class HostDomainNamePlugin(Plugin):
                 {
                     "hostname": hostname,
                     "domain": domain,
-                    "timestamp": convert_wintime(
-                        subkey.header.last_modified, as_json=self.as_json
-                    ),
+                    "timestamp": convert_wintime(subkey.header.last_modified, as_json=self.as_json),
                 }
             )

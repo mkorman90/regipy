@@ -6,9 +6,9 @@ import logging
 
 from regipy.hive_types import SAM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
+from regipy.security_utils import convert_sid
 from regipy.structs import SID
 from regipy.utils import convert_wintime
-from regipy.security_utils import convert_sid
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +43,6 @@ class LocalSidPlugin(Plugin):
         self.entries.append(
             {
                 "machine_sid": convert_sid(parsed_sid),
-                "timestamp": convert_wintime(
-                    account_key.header.last_modified, as_json=self.as_json
-                ),
+                "timestamp": convert_wintime(account_key.header.last_modified, as_json=self.as_json),
             }
         )

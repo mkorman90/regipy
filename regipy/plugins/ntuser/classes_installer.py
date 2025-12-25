@@ -16,18 +16,14 @@ class NtuserClassesInstallerPlugin(Plugin):
 
     def run(self):
         try:
-            classes_installer_subkey = self.registry_hive.get_key(
-                CLASSES_INSTALLER_PATH
-            )
+            classes_installer_subkey = self.registry_hive.get_key(CLASSES_INSTALLER_PATH)
         except RegistryKeyNotFoundException as ex:
             logger.error(ex)
             return
 
         for entry in classes_installer_subkey.iter_subkeys():
             identifier = entry.name
-            timestamp = convert_wintime(
-                entry.header.last_modified, as_json=self.as_json
-            )
+            timestamp = convert_wintime(entry.header.last_modified, as_json=self.as_json)
             product_name = entry.get_value("ProductName")
             self.entries.append(
                 {

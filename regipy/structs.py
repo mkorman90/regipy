@@ -170,10 +170,7 @@ HASH_LEAF_SIGNATURE = b"lh"
 FAST_LEAF_SIGNATURE = b"lf"
 LF_LH_SK_ELEMENT = Struct(
     "element_count" / Int16ul,
-    "elements"
-    / Array(
-        this.element_count, Struct("key_node_offset" / Int32ul, "hash_value" / Int32ul)
-    ),
+    "elements" / Array(this.element_count, Struct("key_node_offset" / Int32ul, "hash_value" / Int32ul)),
 ).compile()
 
 DIRTY_PAGES_REFERENCES = Struct("offset" / Int32ul, "size" / Int32ul)

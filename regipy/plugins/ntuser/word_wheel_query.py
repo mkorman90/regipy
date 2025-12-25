@@ -9,9 +9,7 @@ from regipy.utils import convert_wintime
 
 logger = logging.getLogger(__name__)
 
-WORD_WHEEL_QUERY_KEY_PATH = (
-    r"\Software\Microsoft\Windows\CurrentVersion\Explorer\WordWheelQuery"
-)
+WORD_WHEEL_QUERY_KEY_PATH = r"\Software\Microsoft\Windows\CurrentVersion\Explorer\WordWheelQuery"
 
 
 class WordWheelQueryPlugin(Plugin):
@@ -23,9 +21,7 @@ class WordWheelQueryPlugin(Plugin):
         try:
             subkey = self.registry_hive.get_key(WORD_WHEEL_QUERY_KEY_PATH)
         except RegistryKeyNotFoundException as ex:
-            logger.error(
-                f"Could not find {self.NAME} plugin data at: {WORD_WHEEL_QUERY_KEY_PATH}: {ex}"
-            )
+            logger.error(f"Could not find {self.NAME} plugin data at: {WORD_WHEEL_QUERY_KEY_PATH}: {ex}")
             return None
 
         timestamp = convert_wintime(subkey.header.last_modified, as_json=self.as_json)

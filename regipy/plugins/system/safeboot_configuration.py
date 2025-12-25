@@ -27,9 +27,7 @@ class SafeBootConfigurationPlugin(Plugin):
                 continue
 
             for safeboot_network_subkey in subkey.iter_subkeys():
-                timestamp = convert_wintime(
-                    safeboot_network_subkey.header.last_modified, as_json=self.as_json
-                )
+                timestamp = convert_wintime(safeboot_network_subkey.header.last_modified, as_json=self.as_json)
                 entries.append(
                     {
                         "timestamp": timestamp,

@@ -29,20 +29,14 @@ class USBSTORPlugin(Plugin):
                 usbstor_key = self.registry_hive.get_key(subkey_path)
                 for usbstor_drive in usbstor_key.iter_subkeys():
                     try:
-                        disk, manufacturer, title, version = usbstor_drive.name.split(
-                            "&"
-                        )
+                        disk, manufacturer, title, version = usbstor_drive.name.split("&")
                     except ValueError:
                         manufacturer, title, version = None, None, None
 
                     for serial_subkey in usbstor_drive.iter_subkeys():
-                        timestamp = convert_wintime(
-                            serial_subkey.header.last_modified, as_json=self.as_json
-                        )
+                        timestamp = convert_wintime(serial_subkey.header.last_modified, as_json=self.as_json)
                         serial_number = serial_subkey.name
-                        key_path = (
-                            rf"{subkey_path}\{usbstor_drive.name}\{serial_number}"
-                        )
+                        key_path = rf"{subkey_path}\{usbstor_drive.name}\{serial_number}"
 
                         try:
                             device_guid_key = self.registry_hive.get_key(
@@ -63,12 +57,8 @@ class USBSTORPlugin(Plugin):
                             ) = (None, None, None, None, None)
                         else:
                             try:
-                                device_name_guid_key = properties_subkey.get_subkey(
-                                    PROPERTIES_NAME_GUID
-                                )
-                                device_name_key = device_name_guid_key.get_subkey(
-                                    DEVICE_NAME_KEY
-                                )
+                                device_name_guid_key = properties_subkey.get_subkey(PROPERTIES_NAME_GUID)
+                                device_name_key = device_name_guid_key.get_subkey(DEVICE_NAME_KEY)
                                 device_name = device_name_key.get_value()
                             except (
                                 RegistryKeyNotFoundException,
@@ -83,43 +73,23 @@ class USBSTORPlugin(Plugin):
                                 last_installed_time,
                             ) = (None, None, None, None)
 
-                            dates_subkey = properties_subkey.get_subkey(
-                                PROPERTIES_DATES_GUID, raise_on_missing=False
-                            )
+                            dates_subkey = properties_subkey.get_subkey(PROPERTIES_DATES_GUID, raise_on_missing=False)
                             if dates_subkey:
-                                first_installed_key = dates_subkey.get_subkey(
-                                    FIRST_INSTALLED_TIME_KEY, raise_on_missing=False
-                                )
+                                first_installed_key = dates_subkey.get_subkey(FIRST_INSTALLED_TIME_KEY, raise_on_missing=False)
                                 if first_installed_key:
-                                    first_installed_time = (
-                                        first_installed_key.get_value(
-                                            as_json=self.as_json
-                                        )
-                                    )
+                                    first_installed_time = first_installed_key.get_value(as_json=self.as_json)
 
-                                last_connected_key = dates_subkey.get_subkey(
-                                    LAST_CONNECTED_TIME_KEY, raise_on_missing=False
-                                )
+                                last_connected_key = dates_subkey.get_subkey(LAST_CONNECTED_TIME_KEY, raise_on_missing=False)
                                 if last_connected_key:
-                                    last_connected_time = last_connected_key.get_value(
-                                        as_json=self.as_json
-                                    )
+                                    last_connected_time = last_connected_key.get_value(as_json=self.as_json)
 
-                                last_removed_key = dates_subkey.get_subkey(
-                                    LAST_REMOVED_TIME_KEY, raise_on_missing=False
-                                )
+                                last_removed_key = dates_subkey.get_subkey(LAST_REMOVED_TIME_KEY, raise_on_missing=False)
                                 if last_removed_key:
-                                    last_removed_time = last_removed_key.get_value(
-                                        as_json=self.as_json
-                                    )
+                                    last_removed_time = last_removed_key.get_value(as_json=self.as_json)
 
-                                last_installed_key = dates_subkey.get_subkey(
-                                    LAST_INSTALLED_TIME_KEY, raise_on_missing=False
-                                )
+                                last_installed_key = dates_subkey.get_subkey(LAST_INSTALLED_TIME_KEY, raise_on_missing=False)
                                 if last_installed_key:
-                                    last_installed_time = last_installed_key.get_value(
-                                        as_json=self.as_json
-                                    )
+                                    last_installed_time = last_installed_key.get_value(as_json=self.as_json)
 
                         self.entries.append(
                             {
@@ -139,6 +109,4 @@ class USBSTORPlugin(Plugin):
                         )
 
         except RegistryKeyNotFoundException as ex:
-            logger.error(
-                f"Could not find {self.NAME} plugin data at: {USBSTOR_KEY_PATH}: {ex}"
-            )
+            logger.error(f"Could not find {self.NAME} plugin data at: {USBSTOR_KEY_PATH}: {ex}")
