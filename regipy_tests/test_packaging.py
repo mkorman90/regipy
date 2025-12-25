@@ -6,6 +6,7 @@ pyproject.toml, preventing ImportError when installed from PyPI.
 """
 
 import pathlib
+
 import tomllib
 
 
