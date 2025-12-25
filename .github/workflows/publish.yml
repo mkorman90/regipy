@@ -46,5 +46,11 @@ jobs:
           name: dist
           path: dist/
 
+      # Uses trusted publishing if configured, otherwise falls back to token
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Fallback to API token if trusted publishing is not configured
+          # To use trusted publishing, configure it at https://pypi.org/manage/account/publishing/
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          skip-existing: true

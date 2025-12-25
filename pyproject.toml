@@ -51,6 +51,7 @@ dev = [
     "ruff",
     "mypy",
     "pre-commit",
+    "tabulate",  # Required for plugin validation
 ]
 
 [project.scripts]
@@ -94,7 +95,6 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"setup.py" = ["ALL"]  # Legacy file, will be deleted
 "regipy_tests/*" = ["B007"]  # Unused loop variables in tests are fine
 "regipy/cli.py" = ["B007"]  # subkey_count is used after the loop
 "regipy/cli_utils.py" = ["B007"]  # Loop counter used for progress
