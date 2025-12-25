@@ -83,7 +83,7 @@ jobs:
         run: PYTHONPATH=. python regipy_tests/validation/plugin_validation.py
 
       - name: Upload validation documentation
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: plugin-validation-docs
           path: regipy_tests/validation/plugin_validation.md
@@ -132,7 +132,7 @@ jobs:
           cyclonedx-py environment -o sbom.xml --of XML
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sbom
           path: |
