@@ -2,6 +2,15 @@
 
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/mkorman90/regipy/badge)](https://securityscorecards.dev/viewer/?uri=github.com/mkorman90/regipy)
 
+> **⚠️ Breaking Changes in v6.0.0**
+>
+> Version 6.0.0 includes significant modernization changes:
+> - **Python 3.9+ required** - Dropped support for Python 3.6, 3.7, and 3.8
+> - **`attrs` library removed** - Data classes now use Python's built-in `dataclasses` module
+> - If your code imports internal classes (`Cell`, `VKRecord`, `Value`, `Subkey`) and uses `attrs` functions like `attr.asdict()`, switch to `dataclasses.asdict()`
+>
+> See the [CHANGELOG](CHANGELOG.md) for full details.
+
 Regipy is a python library for parsing offline registry hives (Hive files with REGF header). regipy has a lot of capabilities:
 * Use as a library:
     * Recurse over the registry hive, from root or a given path and get all subkeys and values
