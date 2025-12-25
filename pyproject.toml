@@ -52,6 +52,7 @@ dev = [
     "mypy",
     "pre-commit",
     "tabulate",  # Required for plugin validation
+    "tomli; python_version < '3.11'",  # For test_packaging.py on Python 3.9/3.10
 ]
 
 [project.scripts]

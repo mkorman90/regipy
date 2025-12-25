@@ -6,8 +6,12 @@ pyproject.toml, preventing ImportError when installed from PyPI.
 """
 
 import pathlib
+import sys
 
-import tomllib
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 
 def test_all_packages_included_in_pyproject():
