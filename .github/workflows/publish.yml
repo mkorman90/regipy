@@ -5,7 +5,7 @@ on:
     types: [published]
 
 permissions:
-  contents: read
+  contents: write  # Needed to attach assets to release
 
 jobs:
   build:
@@ -21,10 +21,16 @@ jobs:
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build
+          pip install build cyclonedx-bom
 
       - name: Build package
         run: python -m build
+
+      - name: Generate SBOM (CycloneDX)
+        run: |
+          pip install -e ".[full]"
+          cyclonedx-py environment -o sbom.json --of JSON
+          cyclonedx-py environment -o sbom.xml --of XML
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -32,12 +38,21 @@ jobs:
           name: dist
           path: dist/
 
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            sbom.json
+            sbom.xml
+
   publish:
     needs: build
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
       id-token: write  # Required for trusted publishing
+      contents: write  # Required to attach assets to release
 
     steps:
       - name: Download build artifacts
@@ -45,6 +60,12 @@ jobs:
         with:
           name: dist
           path: dist/
+
+      - name: Download SBOM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom
+          path: sbom/
 
       # Uses trusted publishing if configured, otherwise falls back to token
       - name: Publish to PyPI
@@ -54,3 +75,10 @@ jobs:
           # To use trusted publishing, configure it at https://pypi.org/manage/account/publishing/
           password: ${{ secrets.PYPI_API_TOKEN }}
           skip-existing: true
+
+      - name: Attach SBOM to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            sbom/sbom.json
+            sbom/sbom.xml
