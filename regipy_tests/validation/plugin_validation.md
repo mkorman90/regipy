@@ -57,7 +57,7 @@
 | winscp_saved_sessions         | Retrieve list of WinSCP saved sessions                                                   | WinSCPSavedSessionsPlugin       | WinSCPSavedSessionsPluginValidationCase       | True      |
 | winver_plugin                 | Get relevant OS information                                                              | WinVersionPlugin                | WinVersionPluginValidationCase                | True      |
 | word_wheel_query              | Parse the word wheel query artifact                                                      | WordWheelQueryPlugin            | WordWheelQueryPluginValidationCase            | True      |
-| wsl                           | Get data about WSL                                                                       | WSLPlugin                       | WSLPluginValidationCase                       | True      |
+| wsl                           | Get WSL information                                                                      | WSLPlugin                       | WSLPluginValidationCase                       | True      |
 
 ## Plugins without validation
 **Starting regipy v5.0.0 - plugin validation replaces tests and is mandatary, being enforced by the build process**

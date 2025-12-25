@@ -29,22 +29,16 @@ class WSLPlugin(Plugin):
             # Initialize the entry for a distribution with its GUID as the key
             distribution_entry = {
                 "GUID": subkey.name,
-                "last_modified": convert_wintime(
-                    subkey.header.last_modified, as_json=self.as_json
-                ),
+                "last_modified": convert_wintime(subkey.header.last_modified, as_json=self.as_json),
                 "wsl_distribution_source_location": subkey.get_value("BasePath"),
                 "default_uid": subkey.get_value("DefaultUid"),
                 "distribution_name": subkey.get_value("DistributionName"),
-                "default_environment": subkey.get_value(
-                    "DefaultEnvironment"
-                ),  # REG_MULTI_SZ
+                "default_environment": subkey.get_value("DefaultEnvironment"),  # REG_MULTI_SZ
                 "flags": flags,
                 "kernel_command_line": subkey.get_value("KernelCommandLine"),
                 "package_family_name": subkey.get_value("PackageFamilyName"),
                 "state": state,
-                "filesystem": (
-                    "lxfs" if version == 1 else "wslfs" if version == 2 else "Unknown"
-                ),
+                "filesystem": ("lxfs" if version == 1 else "wslfs" if version == 2 else "Unknown"),
             }
 
             # Decode flags for additional information
@@ -74,7 +68,6 @@ class WSLPlugin(Plugin):
         return distribs
 
     def run(self):
-
         try:
             # Attempt to get the WSL registry key
             wsl_key = self.registry_hive.get_key(WSL_PATH)
@@ -84,19 +77,13 @@ class WSLPlugin(Plugin):
 
         self.entries = {
             WSL_PATH: {
-                "last_modified": convert_wintime(
-                    wsl_key.header.last_modified, as_json=self.as_json
-                ),
+                "last_modified": convert_wintime(wsl_key.header.last_modified, as_json=self.as_json),
                 "number_of_distrib": wsl_key.header.subkey_count,
                 "default_distrib_GUID": wsl_key.get_value("DefaultDistribution"),
                 "wsl_version": (
                     "WSL1"
                     if wsl_key.get_value("DefaultVersion") == 1
-                    else (
-                        "WSL2"
-                        if wsl_key.get_value("DefaultVersion") == 2
-                        else "Unknown"
-                    )
+                    else ("WSL2" if wsl_key.get_value("DefaultVersion") == 2 else "Unknown")
                 ),
                 "nat_ip_address": wsl_key.get_value("NatIpAddress"),
                 "distributions": [],

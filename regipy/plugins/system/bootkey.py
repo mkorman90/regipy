@@ -9,9 +9,9 @@ machine account password or system certificates etc.
 
 import logging
 
-from regipy.registry import NKRecord
 from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
+from regipy.registry import NKRecord
 from regipy.utils import convert_wintime
 
 logger = logging.getLogger(__name__)
@@ -89,8 +89,6 @@ class BootKeyPlugin(Plugin):
             self.entries.append(
                 {
                     "key": bootkey.hex() if self.as_json else bootkey,
-                    "timestamp": convert_wintime(
-                        lsa_key.header.last_modified, as_json=self.as_json
-                    ),
+                    "timestamp": convert_wintime(lsa_key.header.last_modified, as_json=self.as_json),
                 }
             )

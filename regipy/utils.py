@@ -2,32 +2,30 @@ import binascii
 import datetime as dt
 import hashlib
 import logging
-import sys
 import struct
-
-from typing import Generator, Union
-
+import sys
+from collections.abc import Generator
 from contextlib import contextmanager
+from dataclasses import asdict
 from io import TextIOWrapper
+from typing import Union
 
-import attr
 import pytz
-
 
 from regipy.exceptions import (
     NoRegistrySubkeysException,
-    RegistryKeyNotFoundException,
     RegipyGeneralException,
+    RegistryKeyNotFoundException,
     UnidentifiedHiveException,
 )
 from regipy.hive_types import (
-    NTUSER_HIVE_TYPE,
-    SYSTEM_HIVE_TYPE,
     AMCACHE_HIVE_TYPE,
-    SOFTWARE_HIVE_TYPE,
+    BCD_HIVE_TYPE,
+    NTUSER_HIVE_TYPE,
     SAM_HIVE_TYPE,
     SECURITY_HIVE_TYPE,
-    BCD_HIVE_TYPE,
+    SOFTWARE_HIVE_TYPE,
+    SYSTEM_HIVE_TYPE,
     USRCLASS_HIVE_TYPE,
 )
 
@@ -60,14 +58,10 @@ def calculate_xor32_checksum(b: bytes) -> int:
     """
     checksum = 0
     if len(b) % 4 != 0:
-        raise RegipyGeneralException(
-            f"Buffer must be multiples of four, {len(b)} length buffer given"
-        )
+        raise RegipyGeneralException(f"Buffer must be multiples of four, {len(b)} length buffer given")
 
     for i in range(0, len(b), 4):
-        checksum = (
-            b[i] + (b[i + 1] << 0x08) + (b[i + 2] << 0x10) + (b[i + 3] << 0x18)
-        ) ^ checksum
+        checksum = (b[i] + (b[i + 1] << 0x08) + (b[i + 2] << 0x10) + (b[i + 3] << 0x18)) ^ checksum
     return checksum
 
 
@@ -129,9 +123,7 @@ def convert_wintime(wintime: int, as_json=False) -> Union[dt.datetime, str]:
     return date.isoformat() if as_json else date
 
 
-def get_subkey_values_from_list(
-    registry_hive, entries_list, as_json=False, trim_values=True
-):
+def get_subkey_values_from_list(registry_hive, entries_list, as_json=False, trim_values=True):
     """
     Return a list of registry subkeys given a list of paths
     :param registry_hive: A RegistryHive object
@@ -145,23 +137,16 @@ def get_subkey_values_from_list(
         try:
             subkey = registry_hive.get_key(path)
         except (RegistryKeyNotFoundException, NoRegistrySubkeysException) as ex:
-            logger.debug("Could not find subkey: {} ({})".format(path, ex))
+            logger.debug(f"Could not find subkey: {path} ({ex})")
             continue
         ts = convert_wintime(subkey.header.last_modified, as_json=as_json)
 
         values = []
         if subkey.values_count:
             if as_json:
-                values = [
-                    attr.asdict(x)
-                    for x in subkey.iter_values(
-                        as_json=as_json, trim_values=trim_values
-                    )
-                ]
+                values = [asdict(x) for x in subkey.iter_values(as_json=as_json, trim_values=trim_values)]
             else:
-                values = list(
-                    subkey.iter_values(as_json=as_json, trim_values=trim_values)
-                )
+                values = list(subkey.iter_values(as_json=as_json, trim_values=trim_values))
 
         if subkey.values_count:
             result[path] = {"timestamp": ts, "values": values}
@@ -213,8 +198,6 @@ def _setup_logging(verbose):
     )
 
 
-def trim_registry_data_for_error_msg(
-    s: str, max_len: int = MAX_LEN_ERR_MSG_REGVALUE
-) -> str:
+def trim_registry_data_for_error_msg(s: str, max_len: int = MAX_LEN_ERR_MSG_REGVALUE) -> str:
     # Registry values included in Registry expections might be arbitrarly large,
     return s[:max_len] + f"... (trimmed original value from {len(s)} length)"

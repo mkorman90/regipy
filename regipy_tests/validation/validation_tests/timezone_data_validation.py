@@ -3,10 +3,7 @@ from regipy_tests.validation.validation import ValidationCase
 
 
 def test_timezone_data(c: ValidationCase):
-    assert {
-        (x["name"], x["value"])
-        for x in c.plugin_output["\\ControlSet001\\Control\\TimeZoneInformation"]
-    } == {
+    assert {(x["name"], x["value"]) for x in c.plugin_output["\\ControlSet001\\Control\\TimeZoneInformation"]} == {
         ("DaylightBias", 4294967236),
         ("Bias", 300),
         ("StandardBias", 0),

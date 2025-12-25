@@ -1,6 +1,6 @@
 import logging
+from dataclasses import asdict
 
-import attr
 from regipy.exceptions import (
     RegistryKeyNotFoundException,
     RegistryParsingException,
@@ -22,18 +22,14 @@ class ServicesPlugin(Plugin):
     def run(self):
         self.entries = {}
         logger.debug("Started Services enumeration Plugin...")
-        for control_set_services_path in self.registry_hive.get_control_sets(
-            SERVICES_PATH
-        ):
+        for control_set_services_path in self.registry_hive.get_control_sets(SERVICES_PATH):
             try:
                 subkey = self.registry_hive.get_key(control_set_services_path)
             except RegistryKeyNotFoundException as ex:
                 logger.error(ex)
                 continue
             self.entries[control_set_services_path] = {
-                "timestamp": convert_wintime(
-                    subkey.header.last_modified, as_json=self.as_json
-                )
+                "timestamp": convert_wintime(subkey.header.last_modified, as_json=self.as_json)
             }
             services = []
             for service in subkey.iter_subkeys():
@@ -41,9 +37,7 @@ class ServicesPlugin(Plugin):
                 parameters = []
                 if service.values_count > 0:
                     try:
-                        values = [
-                            attr.asdict(x) for x in service.iter_values(as_json=True)
-                        ]
+                        values = [asdict(x) for x in service.iter_values(as_json=True)]
                     except RegistryParsingException as ex:
                         logger.error(
                             f"Exception while parsing data for service {service.name[:10] if service.name else None}: {ex}"
@@ -51,25 +45,19 @@ class ServicesPlugin(Plugin):
 
                     if service.subkey_count:
                         try:
-                            service_parameters_path = r"{}\{}".format(
-                                control_set_services_path, service.name
-                            )
+                            service_parameters_path = rf"{control_set_services_path}\{service.name}"
                             for parameter in self.registry_hive.recurse_subkeys(
                                 nk_record=service,
                                 path_root=service_parameters_path,
                                 as_json=True,
                             ):
-                                parameters.append(attr.asdict(parameter))
+                                parameters.append(asdict(parameter))
                         except RegistryParsingException as ex:
-                            logger.info(
-                                f"Exception while parsing parameters for service {service.name}: {ex}"
-                            )
+                            logger.info(f"Exception while parsing parameters for service {service.name}: {ex}")
 
                 entry = {
                     "name": service.name,
-                    "last_modified": convert_wintime(
-                        service.header.last_modified, as_json=self.as_json
-                    ),
+                    "last_modified": convert_wintime(service.header.last_modified, as_json=self.as_json),
                     "values": values,
                     "parameters": parameters,
                 }

@@ -1,10 +1,10 @@
 import logging
 from datetime import datetime, timezone
 
+from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
-from regipy.exceptions import RegistryKeyNotFoundException
 
 logger = logging.getLogger(__name__)
 
@@ -47,17 +47,13 @@ class WinVersionPlugin(Plugin):
             logger.error(f"Could not find {self.NAME} subkey at {WIN_VER_PATH}: {ex}")
             return None
 
-        self.entries = {
-            WIN_VER_PATH: {
-                "last_write": convert_wintime(key.header.last_modified).isoformat()
-            }
-        }
+        self.entries = {WIN_VER_PATH: {"last_write": convert_wintime(key.header.last_modified).isoformat()}}
 
         for val in key.iter_values():
             if val.name in os_list:
                 if val.name == "InstallDate":
-                    self.entries[WIN_VER_PATH][val.name] = datetime.fromtimestamp(
-                        val.value, timezone.utc
-                    ).strftime("%Y-%m-%d %H:%M:%S")
+                    self.entries[WIN_VER_PATH][val.name] = datetime.fromtimestamp(val.value, timezone.utc).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
                 else:
                     self.entries[WIN_VER_PATH][val.name] = val.value

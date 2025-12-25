@@ -21,9 +21,9 @@
 
 import datetime
 import io as sio
+import logging
 import struct
 
-import logging
 import pytz
 
 CACHE_MAGIC_NT5_2 = 0xBADC0FFE
@@ -66,7 +66,7 @@ logger = logging.getLogger(__name__)
 
 
 # Shim Cache format used by Windows 5.2 and 6.0 (Server 2003 through Vista/Server 2008)
-class CacheEntryNt5(object):
+class CacheEntryNt5:
     def __init__(self, is_32_bit, data=None):
         self.w_length = None
         self.w_maximum_length = None
@@ -93,7 +93,6 @@ class CacheEntryNt5(object):
         self.dw_file_size_high = entry[6]
 
     def size(self):
-
         if self.is_32_bit:
             return NT5_2_ENTRY_SIZE32
         else:
@@ -101,7 +100,7 @@ class CacheEntryNt5(object):
 
 
 # Shim Cache format used by Windows 6.1 (Win7 through Server 2008 R2).
-class CacheEntryNt6(object):
+class CacheEntryNt6:
     def __init__(self, is_32_bit, data=None):
         self.w_length = None
         self.w_maximum_length = None
@@ -162,7 +161,6 @@ def unique_list(li):
 
 # Read the Shim Cache format, return a list of last modified dates/paths.
 def get_shimcache_entries(cachebin, as_json=False):
-
     if len(cachebin) < 16:
         # Data size less than minimum header size.
         return None
@@ -172,16 +170,13 @@ def get_shimcache_entries(cachebin, as_json=False):
 
     # This is a Windows 2k3/Vista/2k8 Shim Cache format,
     if magic == CACHE_MAGIC_NT5_2:
-
         # Shim Cache types can come in 32-bit or 64-bit formats. We can
         # determine this because 64-bit entries are serialized with u_int64
         # pointers. This means that in a 64-bit entry, valid UNICODE_STRING
         # sizes are followed by a NULL DWORD. Check for this here.
         test_size = struct.unpack("<H", cachebin[8:10])[0]
         test_max_size = struct.unpack("<H", cachebin[10:12])[0]
-        if (
-            test_max_size - test_size == 2 and struct.unpack("<L", cachebin[12:16])[0]
-        ) == 0:
+        if (test_max_size - test_size == 2 and struct.unpack("<L", cachebin[12:16])[0]) == 0:
             logger.debug("[+] Found 64bit Windows 2k3/Vista/2k8 Shim Cache data...")
             entry = CacheEntryNt5(False)
             yield from read_nt5_entries(cachebin, entry, as_json=as_json)
@@ -194,12 +189,8 @@ def get_shimcache_entries(cachebin, as_json=False):
 
     # This is a Windows 7/2k8-R2 Shim Cache.
     elif magic == CACHE_MAGIC_NT6_1:
-        test_size = struct.unpack(
-            "<H", cachebin[CACHE_HEADER_SIZE_NT6_1: CACHE_HEADER_SIZE_NT6_1 + 2]
-        )[0]
-        test_max_size = struct.unpack(
-            "<H", cachebin[CACHE_HEADER_SIZE_NT6_1 + 2: CACHE_HEADER_SIZE_NT6_1 + 4]
-        )[0]
+        test_size = struct.unpack("<H", cachebin[CACHE_HEADER_SIZE_NT6_1 : CACHE_HEADER_SIZE_NT6_1 + 2])[0]
+        test_max_size = struct.unpack("<H", cachebin[CACHE_HEADER_SIZE_NT6_1 + 2 : CACHE_HEADER_SIZE_NT6_1 + 4])[0]
 
         # Shim Cache types can come in 32-bit or 64-bit formats.
         # We can determine this because 64-bit entries are serialized with
@@ -209,7 +200,7 @@ def get_shimcache_entries(cachebin, as_json=False):
             test_max_size - test_size == 2
             and struct.unpack(
                 "<L",
-                cachebin[CACHE_HEADER_SIZE_NT6_1 + 4: CACHE_HEADER_SIZE_NT6_1 + 8],
+                cachebin[CACHE_HEADER_SIZE_NT6_1 + 4 : CACHE_HEADER_SIZE_NT6_1 + 8],
             )[0]
         ) == 0:
             logger.debug("[+] Found 64bit Windows 7/2k8-R2 Shim Cache data...")
@@ -226,48 +217,31 @@ def get_shimcache_entries(cachebin, as_json=False):
         yield from read_winxp_entries(cachebin, as_json=as_json)
 
     # Check the data set to see if it matches the Windows 8 format.
-    elif (
-        len(cachebin) > WIN8_STATS_SIZE
-        and cachebin[WIN8_STATS_SIZE: WIN8_STATS_SIZE + 4] == WIN8_MAGIC
-    ):
+    elif len(cachebin) > WIN8_STATS_SIZE and cachebin[WIN8_STATS_SIZE : WIN8_STATS_SIZE + 4] == WIN8_MAGIC:
         logger.debug("[+] Found Windows 8/2k12 Apphelp Cache data...")
         yield from read_win8_entries(cachebin, WIN8_MAGIC, as_json=as_json)
 
     # Windows 8.1 will use a different magic dword, check for it
-    elif (
-        len(cachebin) > WIN8_STATS_SIZE
-        and cachebin[WIN8_STATS_SIZE: WIN8_STATS_SIZE + 4] == WIN81_MAGIC
-    ):
+    elif len(cachebin) > WIN8_STATS_SIZE and cachebin[WIN8_STATS_SIZE : WIN8_STATS_SIZE + 4] == WIN81_MAGIC:
         logger.debug("[+] Found Windows 8.1 Apphelp Cache data...")
         yield from read_win8_entries(cachebin, WIN81_MAGIC, as_json=as_json)
 
     # Windows 10 will use a different magic dword, check for it
-    elif (
-        len(cachebin) > WIN10_STATS_SIZE
-        and cachebin[WIN10_STATS_SIZE: WIN10_STATS_SIZE + 4] == WIN10_MAGIC
-    ):
+    elif len(cachebin) > WIN10_STATS_SIZE and cachebin[WIN10_STATS_SIZE : WIN10_STATS_SIZE + 4] == WIN10_MAGIC:
         logger.debug("[+] Found Windows 10 Apphelp Cache data...")
         yield from read_win10_entries(cachebin, WIN10_MAGIC, as_json=as_json)
 
     # Windows 10 creators update moved the damn magic 4 bytes forward...
-    elif (
-        len(cachebin) > WIN10_STATS_SIZE
-        and cachebin[WIN10_STATS_SIZE + 4: WIN10_STATS_SIZE + 8] == WIN10_MAGIC
-    ):
+    elif len(cachebin) > WIN10_STATS_SIZE and cachebin[WIN10_STATS_SIZE + 4 : WIN10_STATS_SIZE + 8] == WIN10_MAGIC:
         logger.debug("[+] Found Windows 10 Apphelp Cache data... (creators update)")
-        yield from read_win10_entries(
-            cachebin, WIN10_MAGIC, creators_update=True, as_json=as_json
-        )
+        yield from read_win10_entries(cachebin, WIN10_MAGIC, creators_update=True, as_json=as_json)
 
     else:
-        raise Exception(
-            "Got an unrecognized magic value of 0x{:x}... bailing".format(magic)
-        )
+        raise Exception(f"Got an unrecognized magic value of 0x{magic:x}... bailing")
 
 
 # Read Windows 8/2k12/8.1 Apphelp Cache entry formats.
 def read_win8_entries(bin_data, ver_magic, as_json=False):
-
     entry_meta_len = 12
 
     # Skip past the stats in the header
@@ -282,11 +256,7 @@ def read_win8_entries(bin_data, ver_magic, as_json=False):
 
         # Check the magic tag
         if magic != ver_magic:
-            raise Exception(
-                "Invalid version magic tag found: {}".format(
-                    struct.unpack("I", magic)[0]
-                )
-            )
+            raise Exception("Invalid version magic tag found: {}".format(struct.unpack("I", magic)[0]))
 
         entry_data = sio.BytesIO(data.read(entry_len))
 
@@ -304,9 +274,7 @@ def read_win8_entries(bin_data, ver_magic, as_json=False):
             entry_data.seek(package_len, 1)
 
         # Read the remaining entry data
-        flags, unk_1, low_datetime, high_datetime, unk_2 = struct.unpack(
-            "<LLLLL", entry_data.read(20)
-        )
+        flags, unk_1, low_datetime, high_datetime, unk_2 = struct.unpack("<LLLLL", entry_data.read(20))
 
         # Check the flag set in CSRSS
         if flags & CSRSS_FLAG:
@@ -325,12 +293,11 @@ def read_win8_entries(bin_data, ver_magic, as_json=False):
 
 # Read Windows 10 Apphelp Cache entry format
 def read_win10_entries(bin_data, ver_magic, creators_update=False, as_json=False):
-
     entry_meta_len = 12
 
     # Skip past the stats in the header
     if creators_update:
-        cache_data = bin_data[WIN10_STATS_SIZE + 4:]
+        cache_data = bin_data[WIN10_STATS_SIZE + 4 :]
     else:
         cache_data = bin_data[WIN10_STATS_SIZE:]
 
@@ -343,11 +310,7 @@ def read_win10_entries(bin_data, ver_magic, creators_update=False, as_json=False
 
         # Check the magic tag
         if magic != ver_magic:
-            raise Exception(
-                "Invalid version magic tag found: {}".format(
-                    struct.unpack("<I", magic)[0]
-                )
-            )
+            raise Exception("Invalid version magic tag found: {}".format(struct.unpack("<I", magic)[0]))
 
         entry_data = sio.BytesIO(data.read(entry_len))
 
@@ -390,8 +353,7 @@ def read_nt5_entries(bin_data, entry, as_json=False):
         (num_entries * entry_size) + CACHE_HEADER_SIZE_NT5_2,
         entry_size,
     ):
-
-        entry.update(bin_data[offset: offset + entry_size])
+        entry.update(bin_data[offset : offset + entry_size])
 
         if entry.dw_file_size_low > 3:
             contains_file_size = True
@@ -403,23 +365,16 @@ def read_nt5_entries(bin_data, entry, as_json=False):
         (num_entries * entry_size) + CACHE_HEADER_SIZE_NT5_2,
         entry_size,
     ):
+        entry.update(bin_data[offset : offset + entry_size])
 
-        entry.update(bin_data[offset: offset + entry_size])
-
-        last_mod_date = convert_filetime(
-            entry.dw_low_date_time, entry.dw_high_date_time
-        )
-        path = bin_data[entry.offsets: entry.offset + entry.w_length].decode(
-            "utf-16le", "replace"
-        )
+        last_mod_date = convert_filetime(entry.dw_low_date_time, entry.dw_high_date_time)
+        path = bin_data[entry.offsets : entry.offset + entry.w_length].decode("utf-16le", "replace")
 
         # It contains file size data.
         exec_flag = None
         if contains_file_size:
             yield {
-                "last_mod_date": (
-                    last_mod_date.isoformat() if as_json else last_mod_date
-                ),
+                "last_mod_date": (last_mod_date.isoformat() if as_json else last_mod_date),
                 "path": path,
                 "file_size": entry.dw_file_size_low,
             }
@@ -433,9 +388,7 @@ def read_nt5_entries(bin_data, entry, as_json=False):
                 exec_flag = "False"
 
             yield {
-                "last_mod_date": (
-                    last_mod_date.isoformat() if as_json else last_mod_date
-                ),
+                "last_mod_date": (last_mod_date.isoformat() if as_json else last_mod_date),
                 "path": path,
                 "exec_flag": exec_flag,
             }
@@ -456,14 +409,9 @@ def read_nt6_entries(bin_data, entry, as_json=False):
         num_entries * entry_size + CACHE_HEADER_SIZE_NT6_1,
         entry_size,
     ):
-
-        entry.update(bin_data[offset: offset + entry_size])
-        last_mod_date = convert_filetime(
-            entry.dw_low_date_time, entry.dw_high_date_time
-        )
-        path = bin_data[entry.offset: entry.offset + entry.w_length].decode(
-            "utf-16le", "replace"
-        )
+        entry.update(bin_data[offset : offset + entry_size])
+        last_mod_date = convert_filetime(entry.dw_low_date_time, entry.dw_high_date_time)
+        path = bin_data[entry.offset : entry.offset + entry.w_length].decode("utf-16le", "replace")
 
         # Test to see if the file may have been executed.
         if entry.file_flags & CSRSS_FLAG:
@@ -481,7 +429,6 @@ def read_nt6_entries(bin_data, entry, as_json=False):
 # Read the WinXP Shim Cache data. Some entries can be missing data but still
 # contain useful information, so try to get as much as we can.
 def read_winxp_entries(bin_data, as_json=False):
-
     num_entries = struct.unpack("<L", bin_data[8:12])[0]
     if num_entries == 0:
         return None
@@ -492,12 +439,12 @@ def read_winxp_entries(bin_data, as_json=False):
         WINXP_ENTRY_SIZE32,
     ):
         # No size values are included in these entries, so search for utf-16 terminator.
-        path_len = bin_data[offset: offset + (MAX_PATH + 8)].find(b"\x00\x00")
+        path_len = bin_data[offset : offset + (MAX_PATH + 8)].find(b"\x00\x00")
 
         # if path is corrupt, procede to next entry.
         if path_len == 0:
             continue
-        path = bin_data[offset: offset + path_len + 1].decode("utf-16le")
+        path = bin_data[offset : offset + path_len + 1].decode("utf-16le")
 
         if len(path) == 0:
             continue
@@ -505,16 +452,16 @@ def read_winxp_entries(bin_data, as_json=False):
         entry_data = offset + (MAX_PATH + 8)
 
         # Get last mod time.
-        last_mod_time = struct.unpack("<2L", bin_data[entry_data: entry_data + 8])
+        last_mod_time = struct.unpack("<2L", bin_data[entry_data : entry_data + 8])
         last_mod_time = convert_filetime(last_mod_time[0], last_mod_time[1])
 
         # Get last file size.
-        file_size = struct.unpack("<2L", bin_data[entry_data + 8: entry_data + 16])[0]
+        file_size = struct.unpack("<2L", bin_data[entry_data + 8 : entry_data + 16])[0]
         if file_size == 0:
             file_size = BAD_ENTRY_DATA
 
         # Get last update time.
-        exec_time = struct.unpack("<2L", bin_data[entry_data + 16: entry_data + 24])
+        exec_time = struct.unpack("<2L", bin_data[entry_data + 16 : entry_data + 24])
         exec_time = convert_filetime(exec_time[0], exec_time[1])
 
         yield {
@@ -526,7 +473,7 @@ def read_winxp_entries(bin_data, as_json=False):
 
 
 def parse_output(output):
-    new_output_list = list()
+    new_output_list = []
     for row in output:
         exec_flag = False
         if row[4] == "True":

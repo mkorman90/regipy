@@ -1,9 +1,8 @@
 import logging
 
+from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
-from regipy.exceptions import RegistryKeyNotFoundException
-
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +31,7 @@ class ProcessorArchitecturePlugin(Plugin):
             try:
                 processor = self.registry_hive.get_key(processor_subkey)
             except RegistryKeyNotFoundException as ex:
-                logger.error(
-                    f"Could not find {self.NAME} subkey at {processor_subkey}: {ex}"
-                )
+                logger.error(f"Could not find {self.NAME} subkey at {processor_subkey}: {ex}")
                 continue
             self.entries[processor_subkey] = {}
             for val in processor.iter_values():

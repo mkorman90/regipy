@@ -12,11 +12,7 @@ def test_backup_restore_plugin_output(c: ValidationCase):
         "\\ControlSet001\\Control\\BackupRestore\\FilesNotToBackup",
     }
 
-    assert set(
-        c.plugin_output[
-            "\\ControlSet001\\Control\\BackupRestore\\FilesNotToBackup"
-        ].keys()
-    ) == {
+    assert set(c.plugin_output["\\ControlSet001\\Control\\BackupRestore\\FilesNotToBackup"].keys()) == {
         "BITS_metadata",
         "Temporary Files",
         "last_write",

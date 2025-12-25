@@ -1,14 +1,13 @@
 import binascii
 import datetime as dt
-
-from typing import List, Optional, Union
-
 import logging
-
-import attr
+from dataclasses import asdict, dataclass, field
+from io import BytesIO
+from typing import Optional, Union
 
 from construct import (
     Bytes,
+    ConstError,
     CString,
     EnumIntegerString,
     GreedyRange,
@@ -16,46 +15,43 @@ from construct import (
     Int32ul,
     Int64ul,
     StreamError,
-    ConstError,
 )
-from io import BytesIO
-
 
 from regipy.exceptions import (
     NoRegistrySubkeysException,
-    RegistryKeyNotFoundException,
-    RegistryValueNotFoundException,
     RegipyGeneralException,
-    UnidentifiedHiveException,
+    RegistryKeyNotFoundException,
     RegistryParsingException,
+    RegistryValueNotFoundException,
+    UnidentifiedHiveException,
 )
 from regipy.hive_types import SUPPORTED_HIVE_TYPES
 from regipy.security_utils import convert_sid, get_acls
 from regipy.structs import (
-    REGF_HEADER,
-    HBIN_HEADER,
+    BIG_DATA_BLOCK,
     CM_KEY_NODE,
-    LF_LH_SK_ELEMENT,
-    VALUE_KEY,
-    INDEX_ROOT,
-    REGF_HEADER_SIZE,
-    INDEX_ROOT_SIGNATURE,
-    LEAF_INDEX_SIGNATURE,
+    DEFAULT_VALUE,
     FAST_LEAF_SIGNATURE,
     HASH_LEAF_SIGNATURE,
-    BIG_DATA_BLOCK,
+    HBIN_HEADER,
     INDEX_LEAF,
-    DEFAULT_VALUE,
-    SECURITY_KEY_v1_1,
+    INDEX_ROOT,
+    INDEX_ROOT_SIGNATURE,
+    LEAF_INDEX_SIGNATURE,
+    LF_LH_SK_ELEMENT,
+    REGF_HEADER,
+    REGF_HEADER_SIZE,
     SECURITY_DESCRIPTOR,
     SID,
+    VALUE_KEY,
     VALUE_TYPE_ENUM,
+    SECURITY_KEY_v1_1,
 )
 from regipy.utils import (
+    MAX_LEN,
     boomerang_stream,
     convert_wintime,
     identify_hive_type,
-    MAX_LEN,
     trim_registry_data_for_error_msg,
     try_decode_binary,
 )
@@ -63,53 +59,53 @@ from regipy.utils import (
 logger = logging.getLogger(__name__)
 
 
-@attr.s
+@dataclass
 class Cell:
     """
     Represents a Registry cell header
     """
 
-    offset: int = attr.ib()
-    cell_type: str = attr.ib()
-    size: int = attr.ib()
+    offset: int
+    cell_type: str
+    size: int
 
 
-@attr.s
+@dataclass
 class VKRecord:
     """
     The VK Record contains a value
     """
 
-    value_type: EnumIntegerString = attr.ib()
-    value_type_str: str = attr.ib()
-    value: bytes = attr.ib()
-    size: int = attr.ib(default=0)
-    is_corrupted: bool = attr.ib(default=False)
+    value_type: EnumIntegerString
+    value_type_str: str
+    value: bytes
+    size: int = 0
+    is_corrupted: bool = False
 
 
-@attr.s
+@dataclass
 class LIRecord:
-    data: bytes = attr.ib()
+    data: bytes
 
 
-@attr.s
+@dataclass
 class Value:
-    name: str = attr.ib()
-    value: Union[str, int, bytes] = attr.ib()
-    value_type: str = attr.ib()
-    is_corrupted: bool = attr.ib(default=False)
+    name: str
+    value: Union[str, int, bytes]
+    value_type: str
+    is_corrupted: bool = False
 
 
-@attr.s
+@dataclass
 class Subkey:
-    subkey_name: str = attr.ib()
-    path: str = attr.ib()
-    timestamp: dt.datetime = attr.ib()
-    values_count: int = attr.ib()
-    values: List[Value] = attr.ib(factory=list)
+    subkey_name: str
+    path: str
+    timestamp: dt.datetime
+    values_count: int
+    values: list[Value] = field(default_factory=list)
 
     # This field will be used if a partial hive was given, if not it would be None.
-    actual_path: Optional[str] = attr.ib(default=None)
+    actual_path: Optional[str] = None
 
 
 class RIRecord:
@@ -154,16 +150,13 @@ class RegistryHive:
                 self.hive_type = hive_type
             else:
                 raise UnidentifiedHiveException(
-                    f"{hive_type} is not a supported hive type: "
-                    f"only the following are supported: {SUPPORTED_HIVE_TYPES}"
+                    f"{hive_type} is not a supported hive type: only the following are supported: {SUPPORTED_HIVE_TYPES}"
                 )
         else:
             try:
                 self.hive_type = identify_hive_type(self.name)
             except UnidentifiedHiveException:
-                logger.info(
-                    f"Hive type for {hive_path} was not identified: {self.name}"
-                )
+                logger.info(f"Hive type for {hive_path} was not identified: {self.name}")
 
         if partial_hive_path:
             self.partial_hive_path = partial_hive_path
@@ -193,11 +186,7 @@ class RegistryHive:
         if nk_record.header.subkey_count:
             for subkey in nk_record.iter_subkeys():
                 if path_root:
-                    subkey_path = (
-                        r"{}\{}".format(path_root, subkey.name)
-                        if path_root
-                        else r"\{}".format(subkey.name)
-                    )
+                    subkey_path = rf"{path_root}\{subkey.name}" if path_root else rf"\{subkey.name}"
                 else:
                     subkey_path = f"\\{subkey.name}"
 
@@ -215,20 +204,14 @@ class RegistryHive:
                     )
 
                 values = []
-                if fetch_values:
-                    if subkey.values_count:
-                        try:
-                            if as_json:
-                                values = [
-                                    attr.asdict(x)
-                                    for x in subkey.iter_values(as_json=as_json)
-                                ]
-                            else:
-                                values = list(subkey.iter_values(as_json=as_json))
-                        except RegistryParsingException:
-                            logger.exception(
-                                f"Failed to parse hive value at path: {trim_registry_data_for_error_msg(path_root)}"
-                            )
+                if fetch_values and subkey.values_count:
+                    try:
+                        if as_json:
+                            values = [asdict(x) for x in subkey.iter_values(as_json=as_json)]
+                        else:
+                            values = list(subkey.iter_values(as_json=as_json))
+                    except RegistryParsingException:
+                        logger.exception(f"Failed to parse hive value at path: {trim_registry_data_for_error_msg(path_root)}")
 
                 ts = convert_wintime(subkey.header.last_modified)
                 yield Subkey(
@@ -237,11 +220,7 @@ class RegistryHive:
                     timestamp=ts.isoformat() if as_json else ts,
                     values=values,
                     values_count=subkey.values_count,
-                    actual_path=(
-                        f"{self.partial_hive_path}{subkey_path}"
-                        if self.partial_hive_path
-                        else None
-                    ),
+                    actual_path=(f"{self.partial_hive_path}{subkey_path}" if self.partial_hive_path else None),
                 )
 
         if is_init:
@@ -250,16 +229,11 @@ class RegistryHive:
             if nk_record.values_count:
                 try:
                     if as_json:
-                        values = [
-                            attr.asdict(x)
-                            for x in nk_record.iter_values(as_json=as_json)
-                        ]
+                        values = [asdict(x) for x in nk_record.iter_values(as_json=as_json)]
                     else:
                         values = list(nk_record.iter_values(as_json=as_json))
                 except RegistryParsingException as ex:
-                    logger.exception(
-                        f"Failed to parse hive value at path: {trim_registry_data_for_error_msg(path_root)}: {ex}"
-                    )
+                    logger.exception(f"Failed to parse hive value at path: {trim_registry_data_for_error_msg(path_root)}: {ex}")
                     values = []
 
             ts = convert_wintime(nk_record.header.last_modified)
@@ -270,11 +244,7 @@ class RegistryHive:
                 timestamp=ts.isoformat() if as_json else ts,
                 values=values,
                 values_count=len(values),
-                actual_path=(
-                    f"{self.partial_hive_path}\\{subkey_path}"
-                    if self.partial_hive_path
-                    else None
-                ),
+                actual_path=(f"{self.partial_hive_path}\\{subkey_path}" if self.partial_hive_path else None),
             )
 
     def get_hbin_at_offset(self, offset=0):
@@ -291,11 +261,9 @@ class RegistryHive:
             if key_path.startswith(self.partial_hive_path):
                 key_path = key_path.partition(self.partial_hive_path)[-1]
             else:
-                raise RegistryKeyNotFoundException(
-                    f"Did not find subkey at {key_path}, because this is a partial hive"
-                )
+                raise RegistryKeyNotFoundException(f"Did not find subkey at {key_path}, because this is a partial hive")
 
-        logger.debug("Getting key: {}".format(key_path))
+        logger.debug(f"Getting key: {key_path}")
 
         # If the key path is \ we are just refering to root
         if key_path == "\\":
@@ -312,9 +280,7 @@ class RegistryHive:
         subkey = self.root.get_subkey(key_path_parts.pop(0), raise_on_missing=False)
 
         if not subkey:
-            raise RegistryKeyNotFoundException(
-                "Did not find subkey at {}".format(key_path)
-            )
+            raise RegistryKeyNotFoundException(f"Did not find subkey at {key_path}")
 
         if not key_path_parts:
             return subkey
@@ -325,9 +291,7 @@ class RegistryHive:
             subkey = subkey.get_subkey(path_part, raise_on_missing=False)
 
             if not subkey:
-                raise RegistryKeyNotFoundException(
-                    "Did not find {} at {}".format(path_part, new_path)
-                )
+                raise RegistryKeyNotFoundException(f"Did not find {path_part} at {new_path}")
         return subkey
 
     def get_control_sets(self, registry_path):
@@ -343,11 +307,8 @@ class RegistryHive:
                 found_control_sets.append(self.get_key(cs))
             except RegistryKeyNotFoundException:
                 continue
-        result = [
-            r"\{}\{}".format(subkey.name, registry_path)
-            for subkey in found_control_sets
-        ]
-        logger.debug("Found control sets: {}".format(result))
+        result = [rf"\{subkey.name}\{registry_path}" for subkey in found_control_sets]
+        logger.debug(f"Found control sets: {result}")
         return result
 
 
@@ -374,9 +335,7 @@ class HBin:
             cell_type = Bytes(2).parse_stream(stream)
 
             # Yield the cell
-            yield Cell(
-                cell_type=cell_type.decode(), offset=stream.tell(), size=bytes_to_read
-            )
+            yield Cell(cell_type=cell_type.decode(), offset=stream.tell(), size=bytes_to_read)
 
             # Go to the next cell
             offset += stream.tell() + bytes_to_read
@@ -398,9 +357,7 @@ class NKRecord:
             self.name = self.header.key_name_string.decode("ascii", errors="replace")
         else:
             # Unicode (UTF-16) key name
-            self.name = self.header.key_name_string.decode(
-                "utf-16-le", errors="replace"
-            )
+            self.name = self.header.key_name_string.decode("utf-16-le", errors="replace")
             logger.debug(f'Unicode key name identified: "{self.name}"')
 
         self.subkey_count = self.header.subkey_count
@@ -409,9 +366,7 @@ class NKRecord:
 
     def get_subkey(self, key_name, raise_on_missing=True):
         if not self.subkey_count and raise_on_missing:
-            raise NoRegistrySubkeysException(
-                "No subkeys for {}".format(self.header.key_name_string)
-            )
+            raise NoRegistrySubkeysException(f"No subkeys for {self.header.key_name_string}")
 
         for subkey in self.iter_subkeys():
             # This should not happen
@@ -422,12 +377,9 @@ class NKRecord:
                 return subkey
 
         if raise_on_missing:
-            raise NoRegistrySubkeysException(
-                "No subkey {} for {}".format(key_name, self.header.key_name_string)
-            )
+            raise NoRegistrySubkeysException(f"No subkey {key_name} for {self.header.key_name_string}")
 
     def iter_subkeys(self):
-
         if not self.header.subkey_count:
             return None
 
@@ -439,9 +391,7 @@ class NKRecord:
         try:
             signature = Bytes(2).parse_stream(self._stream)
         except StreamError as ex:
-            raise RegistryParsingException(
-                f"Bad subkey at offset {target_offset}: {ex}"
-            )
+            raise RegistryParsingException(f"Bad subkey at offset {target_offset}: {ex}")
 
         # LF,  LH and RI contain subkeys
         if signature in [
@@ -456,9 +406,7 @@ class NKRecord:
             if ri_record.header.element_count > 0:
                 for element in ri_record.header.elements:
                     # We skip 6 because of the signature as well as the cell header
-                    element_target_offset = (
-                        REGF_HEADER_SIZE + 4 + element.subkey_list_offset
-                    )
+                    element_target_offset = REGF_HEADER_SIZE + 4 + element.subkey_list_offset
                     self._stream.seek(element_target_offset)
                     yield from self._parse_subkeys(self._stream)
 
@@ -477,9 +425,7 @@ class NKRecord:
         elif signature == LEAF_INDEX_SIGNATURE:
             subkeys = INDEX_LEAF.parse_stream(stream)
         else:
-            raise RegistryParsingException(
-                f"Expected a known signature, got: {signature} at offset {stream.tell()}"
-            )
+            raise RegistryParsingException(f"Expected a known signature, got: {signature} at offset {stream.tell()}")
 
         for subkey in subkeys.elements:
             stream.seek(REGF_HEADER_SIZE + subkey.key_node_offset)
@@ -553,9 +499,7 @@ class NKRecord:
                 vk_offset = Int32ul.parse_stream(self._stream)
             except StreamError:
                 logger.info(f"Skipping bad registry VK at {self._stream.tell()}")
-                raise RegistryParsingException(
-                    f"Bad registry VK at {self._stream.tell()}"
-                )
+                raise RegistryParsingException(f"Bad registry VK at {self._stream.tell()}")
 
             with boomerang_stream(self._stream) as substream:
                 actual_vk_offset = REGF_HEADER_SIZE + 4 + vk_offset
@@ -563,9 +507,7 @@ class NKRecord:
                 try:
                     vk = VALUE_KEY.parse_stream(substream)
                 except (ConstError, StreamError):
-                    logger.error(
-                        f"Could not parse VK at {substream.tell()}, registry hive is probably corrupted."
-                    )
+                    logger.error(f"Could not parse VK at {substream.tell()}, registry hive is probably corrupted.")
                     return
 
                 value = self.read_value(vk, substream)
@@ -587,19 +529,13 @@ class NKRecord:
                 # We currently do not support these, We are going to make the best effort to dump as string.
                 # This int casting will always work because the data_type is construct's EnumIntegerString
                 if int(vk.data_type) > 0xFFFF0000:
-                    data_type = VALUE_TYPE_ENUM.parse(
-                        Int32ul.build(int(vk.data_type) & 0xFFFF)
-                    )
-                    logger.info(
-                        f"Value at {hex(actual_vk_offset)} contains DEVPROP structure of type {data_type}"
-                    )
+                    data_type = VALUE_TYPE_ENUM.parse(Int32ul.build(int(vk.data_type) & 0xFFFF))
+                    logger.info(f"Value at {hex(actual_vk_offset)} contains DEVPROP structure of type {data_type}")
 
                 # Skip this unknown data type, research pending :)
                 # TODO: Add actual parsing
                 elif int(vk.data_type) == 0x200000:
-                    logger.info(
-                        f"Skipped unknown data type value at {actual_vk_offset}"
-                    )
+                    logger.info(f"Skipped unknown data type value at {actual_vk_offset}")
                     continue
                 else:
                     data_type = str(vk.data_type)
@@ -611,13 +547,9 @@ class NKRecord:
                         actual_value = vk.data_offset
                     elif vk.data_size > 0x3FD8 and value.value[:2] == b"db":
                         data = self._parse_indirect_block(substream, value)
-                        actual_value = try_decode_binary(
-                            data, as_json=as_json, trim_values=trim_values
-                        )
+                        actual_value = try_decode_binary(data, as_json=as_json, trim_values=trim_values)
                     else:
-                        actual_value = try_decode_binary(
-                            value.value, as_json=as_json, trim_values=trim_values
-                        )
+                        actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 elif data_type in ["REG_BINARY", "REG_NONE"]:
                     if vk.data_size >= 0x80000000:
                         # data is contained in the data_offset field
@@ -627,9 +559,7 @@ class NKRecord:
                             actual_value = self._parse_indirect_block(substream, value)
 
                             actual_value = (
-                                try_decode_binary(
-                                    actual_value, as_json=True, trim_values=trim_values
-                                )
+                                try_decode_binary(actual_value, as_json=True, trim_values=trim_values)
                                 if as_json
                                 else actual_value
                             )
@@ -638,28 +568,14 @@ class NKRecord:
                             continue
                     else:
                         # Return the actual data
-                        actual_value = (
-                            binascii.b2a_hex(value.value).decode()[:max_len]
-                            if trim_values
-                            else value.value
-                        )
+                        actual_value = binascii.b2a_hex(value.value).decode()[:max_len] if trim_values else value.value
                 elif data_type == "REG_SZ":
-                    actual_value = try_decode_binary(
-                        value.value, as_json=as_json, trim_values=trim_values
-                    )
+                    actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 elif data_type == "REG_DWORD":
                     # If the data size is bigger than 0x80000000, data is actually stored in the VK data offset.
-                    actual_value = (
-                        vk.data_offset
-                        if vk.data_size >= 0x80000000
-                        else Int32ul.parse(value.value)
-                    )
+                    actual_value = vk.data_offset if vk.data_size >= 0x80000000 else Int32ul.parse(value.value)
                 elif data_type == "REG_QWORD":
-                    actual_value = (
-                        vk.data_offset
-                        if vk.data_size >= 0x80000000
-                        else Int64ul.parse(value.value)
-                    )
+                    actual_value = vk.data_offset if vk.data_size >= 0x80000000 else Int64ul.parse(value.value)
                 elif data_type == "REG_MULTI_SZ":
                     parsed_value = GreedyRange(CString("utf-16-le")).parse(value.value)
                     # Because the ListContainer object returned by Construct cannot be turned into a list,
@@ -671,19 +587,11 @@ class NKRecord:
                     "REG_RESOURCE_REQUIREMENTS_LIST",
                     "REG_RESOURCE_LIST",
                 ]:
-                    actual_value = (
-                        binascii.b2a_hex(value.value).decode()[:max_len]
-                        if trim_values
-                        else value.value
-                    )
+                    actual_value = binascii.b2a_hex(value.value).decode()[:max_len] if trim_values else value.value
                 elif data_type == "REG_FILETIME":
-                    actual_value = convert_wintime(
-                        Int64ul.parse(value.value), as_json=as_json
-                    )
+                    actual_value = convert_wintime(Int64ul.parse(value.value), as_json=as_json)
                 else:
-                    actual_value = try_decode_binary(
-                        value.value, as_json=as_json, trim_values=trim_values
-                    )
+                    actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 yield Value(
                     name=value_name,
                     value_type=data_type,
@@ -713,26 +621,20 @@ class NKRecord:
                 return value.value
 
         if raise_on_missing:
-            raise RegistryValueNotFoundException(
-                "Did not find the value {} on subkey {}".format(value_name, self.name)
-            )
+            raise RegistryValueNotFoundException(f"Did not find the value {value_name} on subkey {self.name}")
         return None
 
     def get_values(self, as_json=False, trim_values=False):
-        return [x for x in self.iter_values(as_json=as_json, trim_values=trim_values)]
+        return list(self.iter_values(as_json=as_json, trim_values=trim_values))
 
     def get_security_key_info(self):
         self._stream.seek(REGF_HEADER_SIZE + self.header.security_key_offset)
         # TODO: If parsing fails, parse with SECURITY_KEY_v1_2
         security_key = SECURITY_KEY_v1_1.parse_stream(self._stream)
-        security_descriptor = SECURITY_DESCRIPTOR.parse(
-            security_key.security_descriptor
-        )
+        security_descriptor = SECURITY_DESCRIPTOR.parse(security_key.security_descriptor)
 
         with boomerang_stream(self._stream) as s:
-            security_base_offset = (
-                REGF_HEADER_SIZE + self.header.security_key_offset + 24
-            )
+            security_base_offset = REGF_HEADER_SIZE + self.header.security_key_offset + 24
 
             s.seek(security_base_offset + security_descriptor.owner)
             owner_sid = convert_sid(SID.parse_stream(s))
@@ -775,14 +677,8 @@ class NKRecord:
             "name": self.name,
             "subkey_count": self.subkey_count,
             "value_count": self.values_count,
-            "values": (
-                {x["name"]: x["value"] for x in self.iter_values()}
-                if self.values_count
-                else None
-            ),
-            "subkeys": (
-                {x["name"] for x in self.iter_subkeys()} if self.subkey_count else None
-            ),
+            "values": ({x["name"]: x["value"] for x in self.iter_values()} if self.values_count else None),
+            "subkeys": ({x["name"] for x in self.iter_subkeys()} if self.subkey_count else None),
             "timestamp": convert_wintime(self.header.last_modified, as_json=True),
             "volatile_subkeys": self.volatile_subkeys_count,
         }

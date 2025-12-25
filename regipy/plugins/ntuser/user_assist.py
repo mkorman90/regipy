@@ -1,5 +1,4 @@
 import codecs
-
 import logging
 
 from construct import Bytes, Const, ConstError, Int32ul, Int64ul, Struct
@@ -69,13 +68,11 @@ class UserAssistPlugin(Plugin):
     def run(self):
         for guid in GUIDS:
             try:
-                subkey = self.registry_hive.get_key(
-                    r"{}\{}".format(USER_ASSIST_KEY_PATH, guid)
-                )
+                subkey = self.registry_hive.get_key(rf"{USER_ASSIST_KEY_PATH}\{guid}")
                 count_subkey = subkey.get_subkey("Count")
 
                 if not count_subkey.values_count:
-                    logger.debug("Skipping {}".format(guid))
+                    logger.debug(f"Skipping {guid}")
                     continue
 
                 for value in count_subkey.iter_values(trim_values=False):
@@ -95,9 +92,7 @@ class UserAssistPlugin(Plugin):
                         try:
                             parsed_entry = WIN7_USER_ASSIST.parse(data)
                         except ConstError as ex:
-                            logger.error(
-                                f"Could not parse user assist entry named {name}: {ex}"
-                            )
+                            logger.error(f"Could not parse user assist entry named {name}: {ex}")
                             continue
 
                         entry = {
@@ -116,9 +111,7 @@ class UserAssistPlugin(Plugin):
                         try:
                             parsed_entry = WIN_XP_USER_ASSIST.parse(data)
                         except ConstError as ex:
-                            logger.error(
-                                f"Could not parse user assist entry named {name}: {ex}"
-                            )
+                            logger.error(f"Could not parse user assist entry named {name}: {ex}")
                             continue
 
                         entry = {

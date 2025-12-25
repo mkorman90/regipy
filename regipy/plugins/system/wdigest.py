@@ -24,12 +24,8 @@ class WDIGESTPlugin(Plugin):
                 self.entries.append(
                     {
                         "subkey": subkey_path,
-                        "use_logon_credential": subkey.get_value(
-                            "UseLogonCredential", as_json=self.as_json
-                        ),
-                        "timestamp": convert_wintime(
-                            subkey.header.last_modified, as_json=self.as_json
-                        ),
+                        "use_logon_credential": subkey.get_value("UseLogonCredential", as_json=self.as_json),
+                        "timestamp": convert_wintime(subkey.header.last_modified, as_json=self.as_json),
                     }
                 )
             except RegistryValueNotFoundException as ex:

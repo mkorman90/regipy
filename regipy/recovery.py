@@ -1,22 +1,19 @@
+import logging
 import os
 from io import BytesIO
-
-import logging
 
 from construct import Int32ul
 
 from regipy import boomerang_stream
 from regipy.exceptions import RegistryRecoveryException
-from regipy.hive_types import HVLE_TRANSACTION_LOG_MAGIC, DIRT_TRANSACTION_LOG_MAGIC
+from regipy.hive_types import DIRT_TRANSACTION_LOG_MAGIC, HVLE_TRANSACTION_LOG_MAGIC
 from regipy.registry import RegistryHive
-from regipy.structs import TRANSACTION_LOG, REGF_HEADER_SIZE
+from regipy.structs import REGF_HEADER_SIZE, TRANSACTION_LOG
 
 logger = logging.getLogger(__name__)
 
 
-def _parse_hvle_block(
-    hive_path, transaction_log_stream, log_size, expected_sequence_number
-):
+def _parse_hvle_block(hive_path, transaction_log_stream, log_size, expected_sequence_number):
     """
 
     :param hive_path:
@@ -39,9 +36,7 @@ def _parse_hvle_block(
 
         logger.info(f"Parsing HvLE block at {hex(hvle_block_start_offset)}")
         parsed_hvle_block = TRANSACTION_LOG.parse_stream(transaction_log_stream)
-        logger.info(
-            f"Currently at start of dirty pages: {transaction_log_stream.tell()}"
-        )
+        logger.info(f"Currently at start of dirty pages: {transaction_log_stream.tell()}")
         logger.info(f"seq number: {parsed_hvle_block.sequence_number}")
         logger.info(f"dirty pages: {parsed_hvle_block.dirty_pages_count}")
 
@@ -73,9 +68,7 @@ def _parse_hvle_block(
         restored_hive_buffer.seek(40)
         restored_hive_buffer.write(Int32ul.build(parsed_hvle_block.hive_bin_size))
 
-        transaction_log_stream.seek(
-            hvle_block_start_offset + parsed_hvle_block.log_size
-        )
+        transaction_log_stream.seek(hvle_block_start_offset + parsed_hvle_block.log_size)
         hvle_block_start_offset = hvle_block_start_offset + parsed_hvle_block.log_size
 
     return restored_hive_buffer, recovered_dirty_pages_count
@@ -114,9 +107,7 @@ def _parse_dirt_block(hive_path, transaction_log, hbins_data_size):
         bit_counter += 1
 
     for registry_offset, transaction_log_offset in offsets:
-        logger.debug(
-            f"Reading 512 bytes from {transaction_log_offset} writing to {registry_offset}"
-        )
+        logger.debug(f"Reading 512 bytes from {transaction_log_offset} writing to {registry_offset}")
 
         restored_hive_buffer.seek(registry_offset)
         transaction_log.seek(transaction_log_offset)
@@ -149,13 +140,9 @@ def _parse_transaction_log(registry_hive, hive_path, transaction_log_path):
         elif magic == DIRT_TRANSACTION_LOG_MAGIC:
             # This is an old transaction log - DIRT
             hbins_data_size = registry_hive.header.hive_bins_data_size
-            restored_hive_buffer, recovered_dirty_pages_count = _parse_dirt_block(
-                hive_path, transaction_log, hbins_data_size
-            )
+            restored_hive_buffer, recovered_dirty_pages_count = _parse_dirt_block(hive_path, transaction_log, hbins_data_size)
         else:
-            raise RegistryRecoveryException(
-                f"The transaction log vector magic was not expected: {magic}"
-            )
+            raise RegistryRecoveryException(f"The transaction log vector magic was not expected: {magic}")
     return restored_hive_buffer, recovered_dirty_pages_count
 
 
@@ -184,18 +171,14 @@ def apply_transaction_logs(
 
     if secondary_log_path:
         registry_hive = RegistryHive(hive_path)
-        restored_hive_buffer, recovered_dirty_pages_count = _parse_transaction_log(
-            registry_hive, hive_path, secondary_log_path
-        )
+        restored_hive_buffer, recovered_dirty_pages_count = _parse_transaction_log(registry_hive, hive_path, secondary_log_path)
         # Write to disk the modified registry hive
         with open(restored_hive_path, "wb") as f:
             restored_hive_buffer.seek(0)
             f.write(restored_hive_buffer.read())
 
         recovered_dirty_pages_total_count += recovered_dirty_pages_count
-        logger.info(
-            f"Recovered {recovered_dirty_pages_count} pages from secondary transaction log"
-        )
+        logger.info(f"Recovered {recovered_dirty_pages_count} pages from secondary transaction log")
 
     # Parse the primary transaction log
     log_size = os.path.getsize(primary_log_path)
@@ -203,12 +186,8 @@ def apply_transaction_logs(
 
     # If no secondary transaction log was give, apply the first transaction log on the original hive
     target_hive = restored_hive_path if secondary_log_path else hive_path
-    restored_hive_buffer, recovered_dirty_pages_count = _parse_transaction_log(
-        registry_hive, target_hive, primary_log_path
-    )
-    logger.info(
-        f"Recovered {recovered_dirty_pages_count} pages from primary transaction log"
-    )
+    restored_hive_buffer, recovered_dirty_pages_count = _parse_transaction_log(registry_hive, target_hive, primary_log_path)
+    logger.info(f"Recovered {recovered_dirty_pages_count} pages from primary transaction log")
 
     recovered_dirty_pages_total_count += recovered_dirty_pages_count
 

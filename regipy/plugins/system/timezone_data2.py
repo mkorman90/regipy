@@ -1,13 +1,10 @@
-import struct
-import binascii
-
 import logging
+import struct
 
+from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
-from regipy.exceptions import RegistryKeyNotFoundException
-
 
 logger = logging.getLogger(__name__)
 
@@ -26,20 +23,12 @@ class TimezoneDataPlugin2(Plugin):
             try:
                 tzdata = self.registry_hive.get_key(tzdata_subkey)
             except RegistryKeyNotFoundException as ex:
-                logger.error(
-                    f"Could not find {self.NAME} subkey at {tzdata_subkey}: {ex}"
-                )
+                logger.error(f"Could not find {self.NAME} subkey at {tzdata_subkey}: {ex}")
                 continue
-            self.entries[tzdata_subkey] = [
-                x for x in tzdata.iter_values(as_json=self.as_json)
-            ]
-            self.entries[tzdata_subkey] = {
-                "last_write": convert_wintime(tzdata.header.last_modified).isoformat()
-            }
+            self.entries[tzdata_subkey] = list(tzdata.iter_values(as_json=self.as_json))
+            self.entries[tzdata_subkey] = {"last_write": convert_wintime(tzdata.header.last_modified).isoformat()}
             for val in tzdata.iter_values():
                 if val.name in ("ActiveTimeBias", "Bias", "DaylightBias"):
-                    self.entries[tzdata_subkey][val.name] = struct.unpack(
-                        ">l", struct.pack(">L", val.value & 0xFFFFFFFF)
-                    )[0]
+                    self.entries[tzdata_subkey][val.name] = struct.unpack(">l", struct.pack(">L", val.value & 0xFFFFFFFF))[0]
                 else:
                     self.entries[tzdata_subkey][val.name] = val.value

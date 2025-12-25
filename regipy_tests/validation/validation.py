@@ -1,9 +1,8 @@
 from dataclasses import dataclass
+from typing import Callable, Optional, Union
 
-from typing import Callable, Dict, List, Optional, Type, Union
 from regipy.plugins.plugin import Plugin
 from regipy.registry import RegistryHive
-
 
 VALIDATION_CASES = set()
 
@@ -18,20 +17,19 @@ class ValidationResult:
 
 
 class ValidationCase:
-
     input_hive: RegistryHive = None
     plugin: Plugin = None
 
-    plugin_instance: Type[Plugin] = None
+    plugin_instance: type[Plugin] = None
 
     # Will hold the output of the plugin execution
-    plugin_output: Union[List, Dict] = None
+    plugin_output: Union[list, dict] = None
 
     # These entries will be tested for presence in the plugin output
-    expected_entries: List[Dict] = []
+    expected_entries: list[dict] = []
 
     # The result here will be matched to the
-    exact_expected_result: Optional[Union[Dict, List]] = None
+    exact_expected_result: Optional[Union[dict, list]] = None
 
     # Optionally Implement a custom test for your plugin, which will be called during the validation step
     # This test can replace the validation of entries, but not the count.
@@ -48,18 +46,14 @@ class ValidationCase:
         self.input_hive = input_hive
 
     def validate(self):
-        print(
-            f"\tStarting validation for {self.plugin.NAME} ({self.__class__.__name__})"
-        )
+        print(f"\tStarting validation for {self.plugin.NAME} ({self.__class__.__name__})")
         self.plugin_instance = self.plugin(self.input_hive, as_json=True)
         self.plugin_instance.run()
         self.plugin_output = self.plugin_instance.entries
 
-        assert (
-            self.exact_expected_result is not None
-            or self.expected_entries is not None
-            or self.custom_test is not None
-        ), "Some output must be tested!"
+        assert self.exact_expected_result is not None or self.expected_entries is not None or self.custom_test is not None, (
+            "Some output must be tested!"
+        )
 
         entries_found = True
         for entry in self.expected_entries:
@@ -69,9 +63,7 @@ class ValidationCase:
         assert entries_found
 
         if self.exact_expected_result:
-            assert (
-                self.plugin_output == self.exact_expected_result
-            ), "Expected exact plugin output!"
+            assert self.plugin_output == self.exact_expected_result, "Expected exact plugin output!"
 
         if self.custom_test is not None:
             self.custom_test()
@@ -79,9 +71,9 @@ class ValidationCase:
         # If we are verifying an exact result, there is no need to verify entries count
         if not self.exact_expected_result:
             output_entries_count = len(self.plugin_output)
-            assert (
-                self.expected_entries_count == output_entries_count
-            ), f"No match for expected entries count: expected {self.expected_entries_count}, got {output_entries_count}"
+            assert self.expected_entries_count == output_entries_count, (
+                f"No match for expected entries count: expected {self.expected_entries_count}, got {output_entries_count}"
+            )
 
         print(f"\tValidation passed for {self.plugin.NAME}")
         return ValidationResult(

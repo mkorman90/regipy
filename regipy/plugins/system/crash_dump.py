@@ -1,9 +1,9 @@
 import logging
 
+from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
-from regipy.exceptions import RegistryKeyNotFoundException
 
 logger = logging.getLogger(__name__)
 
@@ -34,19 +34,11 @@ class CrashDumpPlugin(Plugin):
             try:
                 architecture = self.registry_hive.get_key(architecture_subkey)
             except RegistryKeyNotFoundException as ex:
-                logger.error(
-                    f"Could not find {self.NAME} subkey at {architecture_subkey}: {ex}"
-                )
+                logger.error(f"Could not find {self.NAME} subkey at {architecture_subkey}: {ex}")
                 continue
-            self.entries[architecture_subkey] = {
-                "last_write": convert_wintime(
-                    architecture.header.last_modified
-                ).isoformat()
-            }
+            self.entries[architecture_subkey] = {"last_write": convert_wintime(architecture.header.last_modified).isoformat()}
             for val in architecture.iter_values():
                 if val.name in crash_items:
                     self.entries[architecture_subkey][val.name] = val.value
                 if val.name == "CrashDumpEnabled":
-                    self.entries[architecture_subkey]["CrashDumpEnabledStr"] = (
-                        dump_enabled.get(str(val.value), "")
-                    )
+                    self.entries[architecture_subkey]["CrashDumpEnabledStr"] = dump_enabled.get(str(val.value), "")

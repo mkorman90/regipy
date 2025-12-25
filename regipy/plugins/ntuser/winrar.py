@@ -21,9 +21,7 @@ class WinRARPlugin(Plugin):
         try:
             open_subkey = self.registry_hive.get_key(WINRAR_ARCHIVE_OPEN_HIST)
 
-            timestamp = convert_wintime(
-                open_subkey.header.last_modified, as_json=self.as_json
-            )
+            timestamp = convert_wintime(open_subkey.header.last_modified, as_json=self.as_json)
             for value in open_subkey.iter_values(as_json=self.as_json):
                 self.entries.append(
                     {
@@ -35,16 +33,12 @@ class WinRARPlugin(Plugin):
                 )
 
         except RegistryKeyNotFoundException as ex:
-            logger.error(
-                f"Could not find {self.NAME} plugin data at: {WINRAR_ARCHIVE_OPEN_HIST}: {ex}"
-            )
+            logger.error(f"Could not find {self.NAME} plugin data at: {WINRAR_ARCHIVE_OPEN_HIST}: {ex}")
 
         try:
             create_subkey = self.registry_hive.get_key(WINRAR_ARCHIVE_CREATION_HIST)
 
-            timestamp = convert_wintime(
-                create_subkey.header.last_modified, as_json=self.as_json
-            )
+            timestamp = convert_wintime(create_subkey.header.last_modified, as_json=self.as_json)
             for value in create_subkey.iter_values(as_json=self.as_json):
                 self.entries.append(
                     {
@@ -56,16 +50,12 @@ class WinRARPlugin(Plugin):
                 )
 
         except RegistryKeyNotFoundException as ex:
-            logger.error(
-                f"Could not find {self.NAME} plugin data at: {WINRAR_ARCHIVE_CREATION_HIST}: {ex}"
-            )
+            logger.error(f"Could not find {self.NAME} plugin data at: {WINRAR_ARCHIVE_CREATION_HIST}: {ex}")
 
         try:
             extract_subkey = self.registry_hive.get_key(WINRAR_ARCHIVE_EXTRACT_HIST)
 
-            timestamp = convert_wintime(
-                extract_subkey.header.last_modified, as_json=self.as_json
-            )
+            timestamp = convert_wintime(extract_subkey.header.last_modified, as_json=self.as_json)
             for value in extract_subkey.iter_values(as_json=self.as_json):
                 self.entries.append(
                     {
@@ -77,6 +67,4 @@ class WinRARPlugin(Plugin):
                 )
 
         except RegistryKeyNotFoundException as ex:
-            logger.error(
-                f"Could not find {self.NAME} plugin data at: {WINRAR_ARCHIVE_EXTRACT_HIST}: {ex}"
-            )
+            logger.error(f"Could not find {self.NAME} plugin data at: {WINRAR_ARCHIVE_EXTRACT_HIST}: {ex}")

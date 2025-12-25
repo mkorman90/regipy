@@ -18,9 +18,7 @@ class ShimCachePlugin(Plugin):
         logger.debug("Started Shim Cache Plugin...")
 
         for subkey_path in self.registry_hive.get_control_sets(COMPUTER_NAME_PATH):
-            appcompat_cache = self.registry_hive.get_key(subkey_path).get_subkey(
-                "AppCompatCache"
-            )
+            appcompat_cache = self.registry_hive.get_key(subkey_path).get_subkey("AppCompatCache")
 
             if not appcompat_cache:
                 logger.info("No shimcache data was found")

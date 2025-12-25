@@ -27,10 +27,6 @@ class PrintDemonPlugin(Plugin):
                 {
                     "timestamp": last_write,
                     "port_name": port.name,
-                    "parameters": (
-                        port.value
-                        if isinstance(port.value, int)
-                        else port.value.split(",")
-                    ),
+                    "parameters": (port.value if isinstance(port.value, int) else port.value.split(",")),
                 }
             )

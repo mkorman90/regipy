@@ -48,10 +48,7 @@ class AmCachePlugin(Plugin):
     COMPATIBLE_HIVE = AMCACHE_HIVE_TYPE
 
     def parse_amcache_file_entry(self, subkey):
-        entry = {
-            underscore(x.name): x.value
-            for x in subkey.iter_values(as_json=self.as_json)
-        }
+        entry = {underscore(x.name): x.value for x in subkey.iter_values(as_json=self.as_json)}
 
         # Sometimes the value names might be numeric instead. Translate them:
         for k, v in AMCACHE_FIELD_NUMERIC_MAPPINGS.items():
@@ -70,16 +67,10 @@ class AmCachePlugin(Plugin):
         if "program_id" in entry:
             entry["program_id"] = entry["program_id"][4:]
 
-        entry["timestamp"] = convert_wintime(
-            subkey.header.last_modified, as_json=self.as_json
-        )
+        entry["timestamp"] = convert_wintime(subkey.header.last_modified, as_json=self.as_json)
 
         if "size" in entry:
-            entry["size"] = (
-                int(entry["size"], 16)
-                if isinstance(entry["size"], str)
-                else entry["size"]
-            )
+            entry["size"] = int(entry["size"], 16) if isinstance(entry["size"], str) else entry["size"]
 
         is_pefile = entry.get("is_pe_file")
         if is_pefile is not None:
@@ -109,9 +100,7 @@ class AmCachePlugin(Plugin):
             amcache_file_subkey = None
 
         try:
-            amcache_inventory_file_subkey = self.registry_hive.get_key(
-                r"\Root\InventoryApplicationFile"
-            )
+            amcache_inventory_file_subkey = self.registry_hive.get_key(r"\Root\InventoryApplicationFile")
         except RegistryKeyNotFoundException:
             logger.info(r"Could not find \Root\InventoryApplicationFile subkey")
             amcache_inventory_file_subkey = None

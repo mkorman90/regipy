@@ -13,6 +13,10 @@ Regipy is a python library for parsing offline registry hives (Hive files with R
     * Compare registry hives
     * Execute plugins from a robust plugin system (i.e: amcache, shimcache, extract computer name...)
 
+## Requirements
+
+- Python 3.9 or higher
+
 ## Installation
 
 Regipy latest version can be installed from pypi:
@@ -21,12 +25,39 @@ Regipy latest version can be installed from pypi:
 pip install regipy[full]
 ```
 
-NOTE: ``regipy[full]`` installs dependencies that require compilation tools and might take some time. 
+NOTE: ``regipy[full]`` installs dependencies that require compilation tools and might take some time.
 It is possible to install a version with relaxed dependencies, by omitting the ``[full]``.
 
 Also, it is possible to install from source by cloning the repository and executing:
 ```bash
 pip install --editable .[full]
+```
+
+## Development
+
+To set up a development environment:
+
+```bash
+# Clone the repository
+git clone https://github.com/mkorman90/regipy.git
+cd regipy
+
+# Install with development dependencies
+pip install -e ".[full,dev]"
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+Run tests:
+```bash
+pytest regipy_tests/
+```
+
+Run linting:
+```bash
+ruff check .
+ruff format --check .
 ```
 
 

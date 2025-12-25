@@ -33,22 +33,10 @@ class UACStatusPlugin(Plugin):
             return None
 
         self.entries = {
-            "last_write": convert_wintime(
-                subkey.header.last_modified, as_json=self.as_json
-            ),
-            "enable_limited_user_accounts": subkey.get_value(
-                "EnableLUA", as_json=self.as_json
-            ),
-            "enable_virtualization": subkey.get_value(
-                "EnableVirtualization", as_json=self.as_json
-            ),
-            "filter_admin_token": subkey.get_value(
-                "FilterAdministratorToken", as_json=self.as_json
-            ),
-            "consent_prompt_admin": subkey.get_value(
-                "ConsentPromptBehaviorAdmin", as_json=self.as_json
-            ),
-            "consent_prompt_user": subkey.get_value(
-                "ConsentPromptBehaviorUser", as_json=self.as_json
-            ),
+            "last_write": convert_wintime(subkey.header.last_modified, as_json=self.as_json),
+            "enable_limited_user_accounts": subkey.get_value("EnableLUA", as_json=self.as_json),
+            "enable_virtualization": subkey.get_value("EnableVirtualization", as_json=self.as_json),
+            "filter_admin_token": subkey.get_value("FilterAdministratorToken", as_json=self.as_json),
+            "consent_prompt_admin": subkey.get_value("ConsentPromptBehaviorAdmin", as_json=self.as_json),
+            "consent_prompt_user": subkey.get_value("ConsentPromptBehaviorUser", as_json=self.as_json),
         }

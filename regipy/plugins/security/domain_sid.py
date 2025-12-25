@@ -3,14 +3,13 @@ Windows machine domain name and SID extractor plugin
 """
 
 import logging
-
 from typing import Optional
 
 from regipy.hive_types import SECURITY_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
+from regipy.security_utils import convert_sid
 from regipy.structs import SID
 from regipy.utils import convert_wintime
-from regipy.security_utils import convert_sid
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +35,7 @@ class DomainSidPlugin(Plugin):
         name_value = name_key.get_value()
 
         # Skip UNICODE_STRING struct header and strip trailing \x0000
-        domain_name = (
-            name_value[8:].decode("utf-16-le", errors="replace").rstrip("\x00")
-        )
+        domain_name = name_value[8:].decode("utf-16-le", errors="replace").rstrip("\x00")
 
         sid_key = self.registry_hive.get_key(DOMAIN_SID_PATH)
 
@@ -62,8 +59,6 @@ class DomainSidPlugin(Plugin):
                 "domain_name": domain_name,
                 "domain_sid": domain_sid,
                 "machine_sid": machine_sid,
-                "timestamp": convert_wintime(
-                    sid_key.header.last_modified, as_json=self.as_json
-                ),
+                "timestamp": convert_wintime(sid_key.header.last_modified, as_json=self.as_json),
             }
         )

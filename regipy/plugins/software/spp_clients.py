@@ -1,9 +1,9 @@
 import logging
 
+from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
-from regipy.exceptions import RegistryKeyNotFoundException
 
 logger = logging.getLogger(__name__)
 
@@ -26,16 +26,10 @@ class SppClientsPlugin(Plugin):
         try:
             key = self.registry_hive.get_key(SPP_CLIENT_PATH)
         except RegistryKeyNotFoundException as ex:
-            logger.error(
-                f"Could not find {self.NAME} subkey at {SPP_CLIENT_PATH}: {ex}"
-            )
+            logger.error(f"Could not find {self.NAME} subkey at {SPP_CLIENT_PATH}: {ex}")
             return None
 
-        self.entries = {
-            SPP_CLIENT_PATH: {
-                "last_write": convert_wintime(key.header.last_modified).isoformat()
-            }
-        }
+        self.entries = {SPP_CLIENT_PATH: {"last_write": convert_wintime(key.header.last_modified).isoformat()}}
 
         for val in key.iter_values():
             if val.name in value_list:

@@ -19,9 +19,7 @@ class NetworkDrivesPlugin(Plugin):
         try:
             network_drives = self.registry_hive.get_key(NETWORK_DRIVES)
             for mapped_drive in network_drives.iter_subkeys():
-                timestamp = convert_wintime(
-                    mapped_drive.header.last_modified, as_json=self.as_json
-                )
+                timestamp = convert_wintime(mapped_drive.header.last_modified, as_json=self.as_json)
                 self.entries.append(
                     {
                         "last_write": timestamp,
@@ -31,6 +29,4 @@ class NetworkDrivesPlugin(Plugin):
                 )
 
         except RegistryKeyNotFoundException as ex:
-            logger.error(
-                f"Could not find {self.NAME} plugin data at: {NETWORK_DRIVES}: {ex}"
-            )
+            logger.error(f"Could not find {self.NAME} plugin data at: {NETWORK_DRIVES}: {ex}")

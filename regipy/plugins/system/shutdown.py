@@ -1,11 +1,9 @@
 import logging
 
+from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
-from regipy.exceptions import RegistryKeyNotFoundException
-from regipy.utils import convert_wintime
-from regipy.utils import convert_filetime2
-
+from regipy.utils import convert_filetime2, convert_wintime
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +22,9 @@ class ShutdownPlugin(Plugin):
             try:
                 shutdown = self.registry_hive.get_key(shutdown_subkey)
             except RegistryKeyNotFoundException as ex:
-                logger.error(
-                    f"Could not find {self.NAME} subkey at {shutdown_subkey}: {ex}"
-                )
+                logger.error(f"Could not find {self.NAME} subkey at {shutdown_subkey}: {ex}")
                 continue
-            self.entries[shutdown_subkey] = {
-                "last_write": convert_wintime(shutdown.header.last_modified).isoformat()
-            }
+            self.entries[shutdown_subkey] = {"last_write": convert_wintime(shutdown.header.last_modified).isoformat()}
             for val in shutdown.iter_values():
                 if val.name == "ShutdownTime":
                     self.entries[shutdown_subkey]["date"] = convert_filetime2(val.value)

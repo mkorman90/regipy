@@ -1,14 +1,13 @@
 import binascii
-import logging
 import datetime as dt
+import logging
+from collections.abc import Iterator
 
 import pytz
 from click import progressbar
-from typing import Iterator
 
-from regipy import RegistryHive, NKRecord, Subkey
+from regipy import NKRecord, RegistryHive, Subkey
 from regipy.utils import MAX_LEN
-
 
 logger = logging.getLogger(__name__)
 
@@ -37,25 +36,17 @@ def get_filtered_subkeys(
     if end_date:
         end_date = pytz.utc.localize(dt.datetime.fromisoformat(end_date))
 
-    with progressbar(
-        registry_hive.recurse_subkeys(name_key_entry, fetch_values=False)
-    ) as reg_subkeys:
+    with progressbar(registry_hive.recurse_subkeys(name_key_entry, fetch_values=False)) as reg_subkeys:
         for subkey_count, subkey in enumerate(reg_subkeys):
-            if start_date:
-                if subkey.timestamp < start_date:
-                    skipped_entries_count += 1
-                    logger.debug(
-                        f"Skipping entry {subkey} which has a timestamp prior to start_date"
-                    )
-                    continue
+            if start_date and subkey.timestamp < start_date:
+                skipped_entries_count += 1
+                logger.debug(f"Skipping entry {subkey} which has a timestamp prior to start_date")
+                continue
 
-            if end_date:
-                if subkey.timestamp > end_date:
-                    skipped_entries_count += 1
-                    logger.debug(
-                        f"Skipping entry {subkey} which has a timestamp after the end_date"
-                    )
-                    continue
+            if end_date and subkey.timestamp > end_date:
+                skipped_entries_count += 1
+                logger.debug(f"Skipping entry {subkey} which has a timestamp after the end_date")
+                continue
 
             nk = registry_hive.get_key(subkey.path)
             yield Subkey(
@@ -65,9 +56,7 @@ def get_filtered_subkeys(
                 values=list(nk.iter_values(as_json=True)) if fetch_values else [],
                 values_count=subkey.values_count,
             )
-        logger.info(
-            f"{skipped_entries_count} out of {subkey_count} subkeys were filtered out due to timestamp constrains"
-        )
+        logger.info(f"{skipped_entries_count} out of {subkey_count} subkeys were filtered out due to timestamp constrains")
 
 
 def _normalize_subkey_fields(field) -> str:

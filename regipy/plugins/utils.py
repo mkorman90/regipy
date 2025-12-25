@@ -1,11 +1,9 @@
 import json
 import logging
-
-import attr
+from dataclasses import asdict
 
 from regipy import NKRecord
 from regipy.plugins.plugin import PLUGINS
-
 
 logger = logging.getLogger(__name__)
 
@@ -27,13 +25,11 @@ def dump_hive_to_json(
     """
     with open(output_path, mode="w") as writer:
         for subkey_count, entry in enumerate(
-            registry_hive.recurse_subkeys(
-                name_key_entry, as_json=True, fetch_values=fetch_values
-            )
+            registry_hive.recurse_subkeys(name_key_entry, as_json=True, fetch_values=fetch_values)
         ):
             writer.write(
                 json.dumps(
-                    attr.asdict(entry),
+                    asdict(entry),
                     separators=(
                         ",",
                         ":",

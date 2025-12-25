@@ -25,16 +25,13 @@ class BAMPlugin(Plugin):
                 for subkey_path in self.registry_hive.get_control_sets(path):
                     subkey = self.registry_hive.get_key(subkey_path)
                     for sid_subkey in subkey.iter_subkeys():
-
                         sid = sid_subkey.name
                         logger.debug(f"Parsing BAM for {sid}")
                         sequence_number = None
                         version = None
                         entries = []
 
-                        for value in sid_subkey.get_values(
-                            trim_values=self.trim_values
-                        ):
+                        for value in sid_subkey.get_values(trim_values=self.trim_values):
                             if value.name == "SequenceNumber":
                                 sequence_number = value.value
                             elif value.name == "Version":

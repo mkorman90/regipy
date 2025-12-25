@@ -1,6 +1,5 @@
 import lzma
 import os
-
 from pathlib import Path
 from tempfile import mktemp
 
@@ -9,9 +8,8 @@ import pytest
 
 def extract_lzma(path):
     tempfile_path = mktemp()
-    with open(tempfile_path, "wb") as tmp:
-        with lzma.open(path) as f:
-            tmp.write(f.read())
+    with open(tempfile_path, "wb") as tmp, lzma.open(path) as f:
+        tmp.write(f.read())
     return tempfile_path
 
 
@@ -92,9 +90,7 @@ def transaction_ntuser(test_data_dir):
 
 @pytest.fixture(scope="module")
 def transaction_log(test_data_dir):
-    temp_path = extract_lzma(
-        os.path.join(test_data_dir, "transactions_ntuser.dat.log1.xz")
-    )
+    temp_path = extract_lzma(os.path.join(test_data_dir, "transactions_ntuser.dat.log1.xz"))
     yield temp_path
     os.remove(temp_path)
 

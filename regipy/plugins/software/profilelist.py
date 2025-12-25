@@ -3,8 +3,7 @@ import logging
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
-from regipy.utils import convert_wintime, convert_filetime
-
+from regipy.utils import convert_filetime, convert_wintime
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +25,7 @@ class ProfileListPlugin(Plugin):
         for profile in subkey.iter_subkeys():
             self.entries.append(
                 {
-                    "last_write": convert_wintime(
-                        profile.header.last_modified, as_json=self.as_json
-                    ),
+                    "last_write": convert_wintime(profile.header.last_modified, as_json=self.as_json),
                     "path": profile.get_value("ProfileImagePath"),
                     "flags": profile.get_value("Flags"),
                     "full_profile": profile.get_value("FullProfile"),
