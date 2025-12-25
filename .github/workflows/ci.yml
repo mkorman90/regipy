@@ -106,3 +106,35 @@ jobs:
       - name: Run mypy
         run: mypy regipy/ --ignore-missing-imports
         continue-on-error: true  # Allow failures while adding type hints incrementally
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[full,dev]"
+          pip install pip-audit cyclonedx-bom
+
+      - name: Run pip-audit (vulnerability scan)
+        run: pip-audit --strict
+
+      - name: Generate SBOM (CycloneDX)
+        run: |
+          cyclonedx-py environment -o sbom.json --of JSON
+          cyclonedx-py environment -o sbom.xml --of XML
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            sbom.json
+            sbom.xml
