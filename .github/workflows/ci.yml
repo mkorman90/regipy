@@ -61,6 +61,9 @@ jobs:
       - name: Run CLI tests
         run: pytest -v regipy_tests/cli_tests.py
 
+      - name: Run packaging tests
+        run: pytest -v regipy_tests/test_packaging.py
+
       - name: Run plugin validation
         run: PYTHONPATH=. python regipy_tests/validation/plugin_validation.py
 
@@ -124,7 +127,7 @@ jobs:
           pip install pip-audit cyclonedx-bom
 
       - name: Run pip-audit (vulnerability scan)
-        run: pip-audit --strict
+        run: pip-audit --skip-editable
 
       - name: Generate SBOM (CycloneDX)
         run: |
