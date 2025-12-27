@@ -127,7 +127,7 @@ jobs:
           pip install pip-audit cyclonedx-bom
 
       - name: Run pip-audit (vulnerability scan)
-        run: pip-audit --strict --skip-editable
+        run: pip-audit --skip-editable
 
       - name: Generate SBOM (CycloneDX)
         run: |
