@@ -4,7 +4,6 @@ MountedDevices plugin - Parses mounted device information
 
 import logging
 import re
-from typing import Optional
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE

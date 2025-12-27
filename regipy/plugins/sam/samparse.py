@@ -2,16 +2,15 @@
 SAM Parse plugin - Parses user account information from SAM hive
 """
 
+import contextlib
 import logging
 import struct
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SAM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
-from regipy.security_utils import convert_sid
-from regipy.structs import SID
 from regipy.utils import convert_wintime
 
 logger = logging.getLogger(__name__)
@@ -159,10 +158,8 @@ class SAMParsePlugin(Plugin):
                     rid = value.value_type_raw if hasattr(value, "value_type_raw") else None
                     if rid is None:
                         # Try to get from the raw type
-                        try:
+                        with contextlib.suppress(Exception):
                             rid = value._vk_record.data_type
-                        except Exception:
-                            pass
                     if rid:
                         mapping[rid] = {"username": username, "last_write": last_write}
                     break
@@ -264,9 +261,7 @@ class SAMParsePlugin(Plugin):
             comment_offset = struct.unpack("<I", data[0x24:0x28])[0] + 0xCC
             comment_length = struct.unpack("<I", data[0x28:0x2C])[0]
             if comment_offset + comment_length <= len(data) and comment_length > 0:
-                entry["comment"] = data[comment_offset : comment_offset + comment_length].decode(
-                    "utf-16-le", errors="replace"
-                )
+                entry["comment"] = data[comment_offset : comment_offset + comment_length].decode("utf-16-le", errors="replace")
 
             # User Comment at offset 0x30
             user_comment_offset = struct.unpack("<I", data[0x30:0x34])[0] + 0xCC
@@ -296,9 +291,7 @@ class SAMParsePlugin(Plugin):
             script_offset = struct.unpack("<I", data[0x60:0x64])[0] + 0xCC
             script_length = struct.unpack("<I", data[0x64:0x68])[0]
             if script_offset + script_length <= len(data) and script_length > 0:
-                entry["script_path"] = data[script_offset : script_offset + script_length].decode(
-                    "utf-16-le", errors="replace"
-                )
+                entry["script_path"] = data[script_offset : script_offset + script_length].decode("utf-16-le", errors="replace")
 
             # Profile Path at offset 0x6C
             profile_offset = struct.unpack("<I", data[0x6C:0x70])[0] + 0xCC

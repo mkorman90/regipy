@@ -138,7 +138,7 @@ class WindowsDefenderPlugin(Plugin):
             "IpAddresses": "ip_exclusions",
         }
 
-        for exclusion_type, output_key in exclusion_types.items():
+        for exclusion_type in exclusion_types:
             path = f"{DEFENDER_EXCLUSIONS_PATH}\\{exclusion_type}"
             try:
                 exclusions_key = self.registry_hive.get_key(path)

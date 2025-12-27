@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from collections import defaultdict
@@ -6,8 +7,6 @@ from dataclasses import asdict
 from pathlib import Path
 
 from tabulate import tabulate
-
-import json
 
 from regipy.plugins.plugin import PLUGINS
 from regipy.registry import RegistryHive

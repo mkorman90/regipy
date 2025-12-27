@@ -50,6 +50,7 @@ class PuTTYPlugin(Plugin):
             # Session names are URL-encoded
             try:
                 from urllib.parse import unquote
+
                 decoded_name = unquote(session_name)
             except Exception:
                 decoded_name = session_name
@@ -91,12 +92,10 @@ class PuTTYPlugin(Plugin):
                 elif name == "PortForwardings":
                     if val:
                         entry["port_forwardings"] = val
-                elif name == "LogFileName":
-                    if val:
-                        entry["log_filename"] = val
-                elif name == "WinTitle":
-                    if val:
-                        entry["window_title"] = val
+                elif name == "LogFileName" and val:
+                    entry["log_filename"] = val
+                elif name == "WinTitle" and val:
+                    entry["window_title"] = val
 
             self.entries.append(entry)
 
@@ -151,11 +150,10 @@ class PuTTYPlugin(Plugin):
         }
 
         for value in jumplist_key.iter_values():
-            if value.name == "Recent sessions":
+            if value.name == "Recent sessions" and value.value:
                 # Value is a comma-separated list of session names
-                if value.value:
-                    sessions = [s.strip() for s in value.value.split(",") if s.strip()]
-                    entry["recent_sessions"] = sessions
+                sessions = [s.strip() for s in value.value.split(",") if s.strip()]
+                entry["recent_sessions"] = sessions
 
         if entry["recent_sessions"]:
             self.entries.append(entry)

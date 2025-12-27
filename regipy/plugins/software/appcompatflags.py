@@ -66,7 +66,7 @@ class AppCompatFlagsPlugin(Plugin):
 
             # Parse the layers string
             if isinstance(value.value, str):
-                layers = [l.strip() for l in value.value.split() if l.strip() and l.strip() != "~"]
+                layers = [layer.strip() for layer in value.value.split() if layer.strip() and layer.strip() != "~"]
                 app_entry["parsed_layers"] = layers
 
             entry["applications"].append(app_entry)
@@ -97,10 +97,12 @@ class AppCompatFlagsPlugin(Plugin):
 
             for value in subkey.iter_values():
                 # Value names are shim database identifiers
-                entry["shims"].append({
-                    "name": value.name,
-                    "value": value.value,
-                })
+                entry["shims"].append(
+                    {
+                        "name": value.name,
+                        "value": value.value,
+                    }
+                )
 
             if entry["shims"]:
                 self.entries.append(entry)
