@@ -217,7 +217,14 @@ def registry_dump(
     "would mean this is actually a HKCU hive, starting from HKCU/Software",
 )
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Verbosity")
-def run_plugins(hive_path, output_path, plugins, hive_type, partial_hive_path, verbose):
+@click.option(
+    "--include-unvalidated",
+    is_flag=True,
+    default=False,
+    help="Include plugins that don't have validation test cases. "
+    "These plugins may return incomplete or inaccurate data. Use at your own risk.",
+)
+def run_plugins(hive_path, output_path, plugins, hive_type, partial_hive_path, verbose, include_unvalidated):
     _setup_logging(verbose=verbose)
     registry_hive = RegistryHive(hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path)
     click.secho(f"Loaded {len(PLUGINS)} plugins", fg="white")
@@ -237,8 +244,19 @@ def run_plugins(hive_path, output_path, plugins, hive_type, partial_hive_path, v
             )
             return
 
+    if include_unvalidated:
+        click.secho(
+            "Warning: Including unvalidated plugins. These may return incomplete or inaccurate data.",
+            fg="yellow",
+        )
+
     # Run relevant plugins
-    plugin_results = run_relevant_plugins(registry_hive, as_json=True, plugins=plugins)
+    plugin_results = run_relevant_plugins(
+        registry_hive,
+        as_json=True,
+        plugins=plugins,
+        include_unvalidated=include_unvalidated,
+    )
 
     # If output path was set, dump results to disk
     if output_path:

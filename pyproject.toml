@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "regipy"
-version = "6.1.0"
+version = "6.2.0"
 description = "Python Registry Parser"
 readme = "docs/README.rst"
 license = {text = "MIT"}
@@ -71,6 +71,9 @@ Issues = "https://github.com/mkorman90/regipy/issues"
 [tool.setuptools]
 packages = ["regipy", "regipy.plugins", "regipy.plugins.ntuser", "regipy.plugins.system", "regipy.plugins.system.external", "regipy.plugins.software", "regipy.plugins.sam", "regipy.plugins.security", "regipy.plugins.amcache", "regipy.plugins.bcd", "regipy.plugins.usrclass"]
 include-package-data = true
+
+[tool.setuptools.package-data]
+"regipy.plugins" = ["validated_plugins.json"]
 
 [tool.ruff]
 target-version = "py39"

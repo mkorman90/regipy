@@ -59,7 +59,7 @@ def test_cli_run_plugins(ntuser_hive):
     result = runner.invoke(run_plugins, [ntuser_hive, "-o", output_file_path])
     assert result.exit_code == 0
 
-    assert result.output.strip() == "Loaded 53 plugins\nFinished: 13/53 plugins matched the hive type"
+    assert result.output.strip() == "Loaded 75 plugins\nFinished: 13/75 plugins matched the hive type"
 
     with open(output_file_path) as f:
         output = json.loads(f.read())
