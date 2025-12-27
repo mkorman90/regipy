@@ -54,8 +54,6 @@ from .validation.validation_tests import timezone_data2_validation
 from .validation.validation_tests import winrar_plugin_validation
 from .validation.validation_tests import winver_plugin_validation
 from .validation.validation_tests import wsl_plugin_validation
-
-# New plugin validations
 from .validation.validation_tests import usb_devices_plugin_validation
 from .validation.validation_tests import mounted_devices_plugin_validation
 from .validation.validation_tests import pagefile_plugin_validation
