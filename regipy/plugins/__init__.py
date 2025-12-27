@@ -52,3 +52,33 @@ from .software.spp_clients import SppClientsPlugin
 from .system.backuprestore import BackupRestorePlugin
 from .system.timezone_data2 import TimezoneDataPlugin2
 from .ntuser.wsl import WSLPlugin
+
+# New NTUSER plugins
+from .ntuser.recentdocs import RecentDocsPlugin
+from .ntuser.comdlg32 import ComDlg32Plugin
+from .ntuser.runmru import RunMRUPlugin
+from .ntuser.muicache import MUICachePlugin
+from .ntuser.appkeys import AppKeysPlugin
+from .ntuser.sysinternals import SysinternalsPlugin
+from .ntuser.putty import PuTTYPlugin
+
+# New SOFTWARE plugins
+from .software.appinitdlls import AppInitDLLsPlugin
+from .software.appcertdlls import AppCertDLLsPlugin
+from .software.appcompatflags import AppCompatFlagsPlugin
+from .software.apppaths import AppPathsPlugin
+from .software.defender import WindowsDefenderPlugin
+from .software.pslogging import PowerShellLoggingPlugin
+from .software.execpolicy import ExecutionPolicyPlugin
+from .software.networklist import NetworkListPlugin
+
+# New SYSTEM plugins
+from .system.usb_devices import USBDevicesPlugin
+from .system.mountdev import MountedDevicesPlugin
+from .system.shares import SharesPlugin
+from .system.pagefile import PagefilePlugin
+from .system.lsa_packages import LSAPackagesPlugin
+from .system.pending_file_rename import PendingFileRenamePlugin
+
+# New SAM plugins
+from .sam.samparse import SAMParsePlugin
