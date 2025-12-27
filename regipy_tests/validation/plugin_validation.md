@@ -69,9 +69,7 @@
 | wsl                           | Get WSL information                                                                      | WSLPlugin                       | WSLPluginValidationCase                       | True      |
 
 ## Plugins without validation
-**Starting regipy v6.1.0 - plugins without validation are excluded by default.** Use `--include-unvalidated` flag in CLI or `include_unvalidated=True` in `run_relevant_plugins()` to include them.
-
-The validation state is stored in `regipy/plugins/validation_status.py` in the `VALIDATED_PLUGINS` set. Plugins not in this set are considered unvalidated and may return incomplete or inaccurate data.
+**Starting regipy v5.0.0 - plugin validation replaces tests and is mandatary, being enforced by the build process**
 
 | plugin_name         | plugin_description                                | plugin_class_name       | test_case_name   | success   |
 |---------------------|---------------------------------------------------|-------------------------|------------------|-----------|
