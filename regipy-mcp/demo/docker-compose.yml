@@ -1,0 +1,31 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: regipy-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  regipy-mcp:
+    build:
+      context: ..
+      dockerfile: demo/Dockerfile
+    container_name: regipy-mcp-server
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../demo/hives:/hives:ro
+    environment:
+      - REGIPY_HIVE_DIRECTORY=/hives
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+volumes:
+  ollama_data:
