@@ -54,3 +54,12 @@ from .validation.validation_tests import timezone_data2_validation
 from .validation.validation_tests import winrar_plugin_validation
 from .validation.validation_tests import winver_plugin_validation
 from .validation.validation_tests import wsl_plugin_validation
+from .validation.validation_tests import usb_devices_plugin_validation
+from .validation.validation_tests import mounted_devices_plugin_validation
+from .validation.validation_tests import pagefile_plugin_validation
+from .validation.validation_tests import lsa_packages_plugin_validation
+from .validation.validation_tests import app_paths_plugin_validation
+from .validation.validation_tests import networklist_plugin_validation
+from .validation.validation_tests import execution_policy_plugin_validation
+from .validation.validation_tests import windows_defender_plugin_validation
+from .validation.validation_tests import samparse_plugin_validation

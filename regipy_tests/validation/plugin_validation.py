@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from collections import defaultdict
@@ -30,6 +31,7 @@ SHOULD_DEBUG = False
 
 test_data_dir = str(Path(__file__).parent.parent.joinpath("data"))
 validation_results_output_file = str(Path(__file__).parent.joinpath("plugin_validation.md"))
+validated_plugins_json_file = str(Path(__file__).parent.parent.parent.joinpath("regipy/plugins/validated_plugins.json"))
 
 
 class PluginValidationCaseFailureException(Exception):
@@ -74,16 +76,16 @@ def run_validations_for_hive_file(hive_file_name, validation_cases) -> list[Vali
 
 def main():
     # Map all existing validation cases
-    validation_cases: dict[str, ValidationCase] = {v.plugin.NAME: v for v in VALIDATION_CASES}
-    plugins_without_validation: set = {p.NAME for p in PLUGINS}.difference(set(validation_cases.keys()))
+    validation_cases_map: dict[str, ValidationCase] = {v.plugin.NAME: v for v in VALIDATION_CASES}
+    plugins_without_validation: set = {p.NAME for p in PLUGINS}.difference(set(validation_cases_map.keys()))
 
-    print(f"[*] Loaded {len(validation_cases)} validation cases")
+    print(f"[*] Loaded {len(validation_cases_map)} validation cases")
 
     if len(sys.argv) == 2:
         plugin_name = sys.argv[1]
-        if plugin_name in validation_cases:
+        if plugin_name in validation_cases_map:
             print(f"Running validation for plugin {plugin_name}")
-            validation_case: ValidationCase = validation_cases[plugin_name]
+            validation_case: ValidationCase = validation_cases_map[plugin_name]
             with load_hive(validation_case.test_hive_file_name) as registry_hive:
                 validate_case(validation_case, registry_hive)
                 return
@@ -95,9 +97,9 @@ def main():
     registry_hive_map = defaultdict(list)
     for plugin in PLUGINS:
         plugin_name = plugin.NAME
-        if plugin_name in validation_cases:
+        if plugin_name in validation_cases_map:
             print(f"[+] Plugin {plugin_name} has validation case")
-            plugin_validation_case = validation_cases[plugin_name]
+            plugin_validation_case = validation_cases_map[plugin_name]
 
             # Get hive filename from file, in the future group plugin validation by hive file
             hive_file_name = plugin_validation_case.test_hive_file_name
@@ -193,6 +195,12 @@ class {p.__name__}ValidationCase(ValidationCase):
     print(f" ** Updated the validation results in {validation_results_output_file} **")
     with open(validation_results_output_file, "w") as f:
         f.write(markdown_content)
+
+    # Generate validated_plugins.json for the package
+    validated_plugin_names = sorted(validation_cases_map.keys())
+    print(f" ** Updated validated plugins JSON in {validated_plugins_json_file} **")
+    with open(validated_plugins_json_file, "w") as f:
+        json.dump(validated_plugin_names, f, indent=4)
 
 
 if __name__ == "__main__":
