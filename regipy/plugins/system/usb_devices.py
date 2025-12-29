@@ -89,32 +89,20 @@ class USBDevicesPlugin(Plugin):
                     "last_write": convert_wintime(instance_key.header.last_modified, as_json=self.as_json),
                 }
 
-                for value in instance_key.iter_values():
-                    name = value.name
-                    val = value.value
-
-                    if name == "DeviceDesc":
-                        # Remove resource reference if present
-                        if isinstance(val, str) and ";" in val:
-                            val = val.split(";")[-1]
-                        entry["device_desc"] = val
-                    elif name == "FriendlyName":
-                        entry["friendly_name"] = val
-                    elif name == "Mfg":
-                        if isinstance(val, str) and ";" in val:
-                            val = val.split(";")[-1]
-                        entry["manufacturer"] = val
-                    elif name == "Service":
-                        entry["service"] = val
-                    elif name == "Class":
-                        entry["class"] = val
-                    elif name == "ClassGUID":
-                        entry["class_guid"] = val
-                    elif name == "Driver":
-                        entry["driver"] = val
-                    elif name == "ContainerID":
-                        entry["container_id"] = val
-                    elif name == "HardwareID":
-                        entry["hardware_id"] = val
+                extract_values(
+                    instance_key,
+                    {
+                        "DeviceDesc": ("device_desc", strip_resource_ref),
+                        "FriendlyName": "friendly_name",
+                        "Mfg": ("manufacturer", strip_resource_ref),
+                        "Service": "service",
+                        "Class": "class",
+                        "ClassGUID": "class_guid",
+                        "Driver": "driver",
+                        "ContainerID": "container_id",
+                        "HardwareID": "hardware_id",
+                    },
+                    entry,
+                )
 
                 self.entries.append(entry)

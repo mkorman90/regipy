@@ -7,6 +7,7 @@ import logging
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
+from regipy.plugins.utils import extract_values
 from regipy.utils import convert_wintime
 
 logger = logging.getLogger(__name__)
@@ -62,36 +63,35 @@ class PuTTYPlugin(Plugin):
                 "last_write": convert_wintime(subkey.header.last_modified, as_json=self.as_json),
             }
 
+            # Extract required fields
+            extract_values(
+                subkey,
+                {
+                    "HostName": "hostname",
+                    "PortNumber": "port",
+                    "UserName": "username",
+                    "Protocol": ("protocol", self._get_protocol_name),
+                },
+                entry,
+            )
+
+            # Extract optional fields (only if non-empty)
             for value in subkey.iter_values():
                 name = value.name
                 val = value.value
 
-                if name == "HostName":
-                    entry["hostname"] = val
-                elif name == "PortNumber":
-                    entry["port"] = val
-                elif name == "UserName":
-                    entry["username"] = val
-                elif name == "Protocol":
-                    entry["protocol"] = self._get_protocol_name(val)
-                elif name == "ProxyHost":
-                    if val:
-                        entry["proxy_host"] = val
-                elif name == "ProxyPort":
-                    if val and val != 0:
-                        entry["proxy_port"] = val
-                elif name == "ProxyUsername":
-                    if val:
-                        entry["proxy_username"] = val
-                elif name == "PublicKeyFile":
-                    if val:
-                        entry["public_key_file"] = val
-                elif name == "RemoteCommand":
-                    if val:
-                        entry["remote_command"] = val
-                elif name == "PortForwardings":
-                    if val:
-                        entry["port_forwardings"] = val
+                if name == "ProxyHost" and val:
+                    entry["proxy_host"] = val
+                elif name == "ProxyPort" and val and val != 0:
+                    entry["proxy_port"] = val
+                elif name == "ProxyUsername" and val:
+                    entry["proxy_username"] = val
+                elif name == "PublicKeyFile" and val:
+                    entry["public_key_file"] = val
+                elif name == "RemoteCommand" and val:
+                    entry["remote_command"] = val
+                elif name == "PortForwardings" and val:
+                    entry["port_forwardings"] = val
                 elif name == "LogFileName" and val:
                     entry["log_filename"] = val
                 elif name == "WinTitle" and val:

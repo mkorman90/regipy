@@ -7,6 +7,7 @@ import logging
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
+from regipy.plugins.utils import extract_values
 from regipy.utils import convert_wintime
 
 logger = logging.getLogger(__name__)
@@ -56,34 +57,30 @@ class WindowsDefenderPlugin(Plugin):
             "last_write": convert_wintime(defender_key.header.last_modified, as_json=self.as_json),
         }
 
-        for value in defender_key.iter_values():
-            name = value.name
-            val = value.value
-
-            if name == "DisableAntiSpyware":
-                entry["antispyware_disabled"] = val == 1
-            elif name == "DisableAntiVirus":
-                entry["antivirus_disabled"] = val == 1
-            elif name == "ProductStatus":
-                entry["product_status"] = val
-            elif name == "InstallLocation":
-                entry["install_location"] = val
+        extract_values(
+            defender_key,
+            {
+                "DisableAntiSpyware": ("antispyware_disabled", lambda v: v == 1),
+                "DisableAntiVirus": ("antivirus_disabled", lambda v: v == 1),
+                "ProductStatus": "product_status",
+                "InstallLocation": "install_location",
+            },
+            entry,
+        )
 
         # Parse Real-Time Protection subkey
         try:
             rtp_key = self.registry_hive.get_key(f"{DEFENDER_PATH}\\Real-Time Protection")
-            for value in rtp_key.iter_values():
-                name = value.name
-                val = value.value
-
-                if name == "DisableRealtimeMonitoring":
-                    entry["realtime_monitoring_disabled"] = val == 1
-                elif name == "DisableBehaviorMonitoring":
-                    entry["behavior_monitoring_disabled"] = val == 1
-                elif name == "DisableOnAccessProtection":
-                    entry["on_access_protection_disabled"] = val == 1
-                elif name == "DisableScanOnRealtimeEnable":
-                    entry["scan_on_realtime_enable_disabled"] = val == 1
+            extract_values(
+                rtp_key,
+                {
+                    "DisableRealtimeMonitoring": ("realtime_monitoring_disabled", lambda v: v == 1),
+                    "DisableBehaviorMonitoring": ("behavior_monitoring_disabled", lambda v: v == 1),
+                    "DisableOnAccessProtection": ("on_access_protection_disabled", lambda v: v == 1),
+                    "DisableScanOnRealtimeEnable": ("scan_on_realtime_enable_disabled", lambda v: v == 1),
+                },
+                entry,
+            )
         except RegistryKeyNotFoundException:
             pass
 
@@ -103,26 +100,26 @@ class WindowsDefenderPlugin(Plugin):
             "last_write": convert_wintime(policy_key.header.last_modified, as_json=self.as_json),
         }
 
-        for value in policy_key.iter_values():
-            name = value.name
-            val = value.value
-
-            if name == "DisableAntiSpyware":
-                entry["policy_antispyware_disabled"] = val == 1
-            elif name == "DisableAntiVirus":
-                entry["policy_antivirus_disabled"] = val == 1
-            elif name == "DisableRoutinelyTakingAction":
-                entry["routine_action_disabled"] = val == 1
+        extract_values(
+            policy_key,
+            {
+                "DisableAntiSpyware": ("policy_antispyware_disabled", lambda v: v == 1),
+                "DisableAntiVirus": ("policy_antivirus_disabled", lambda v: v == 1),
+                "DisableRoutinelyTakingAction": ("routine_action_disabled", lambda v: v == 1),
+            },
+            entry,
+        )
 
         # Check for Real-Time Protection policy
         try:
             rtp_policy_key = self.registry_hive.get_key(f"{DEFENDER_POLICY_PATH}\\Real-Time Protection")
-            for value in rtp_policy_key.iter_values():
-                name = value.name
-                val = value.value
-
-                if name == "DisableRealtimeMonitoring":
-                    entry["policy_realtime_monitoring_disabled"] = val == 1
+            extract_values(
+                rtp_policy_key,
+                {
+                    "DisableRealtimeMonitoring": ("policy_realtime_monitoring_disabled", lambda v: v == 1),
+                },
+                entry,
+            )
         except RegistryKeyNotFoundException:
             pass
 
