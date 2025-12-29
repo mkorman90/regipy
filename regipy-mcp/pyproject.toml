@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "regipy-mcp"
+version = "0.1.0"
+description = "MCP server for regipy - Windows Registry forensic analysis via LLM tools"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [
+    { name = "Martin Korman", email = "martin@centauri.co.il" },
+]
+keywords = ["windows", "registry", "forensics", "mcp", "llm", "dfir"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+]
+dependencies = [
+    "regipy>=4.0.0",
+    "mcp>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+]
+demo = [
+    "httpx>=0.25",
+]
+
+[project.scripts]
+regipy-mcp = "regipy_mcp.server:main"
+
+[project.urls]
+Homepage = "https://github.com/mkorman90/regipy"
+Repository = "https://github.com/mkorman90/regipy"
+Issues = "https://github.com/mkorman90/regipy/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["regipy_mcp"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
