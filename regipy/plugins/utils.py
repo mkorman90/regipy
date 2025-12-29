@@ -1,6 +1,7 @@
 import json
 import logging
 from dataclasses import asdict
+from typing import Any, Callable, Union
 
 from regipy import NKRecord
 from regipy.plugins.plugin import PLUGINS
@@ -10,6 +11,46 @@ from regipy.plugins.validation_status import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# Type alias for value mapping specification
+# Can be:
+#   - str: simple rename (registry "Foo" -> entry "foo")
+#   - tuple[str, Callable]: rename + transform function
+ValueSpec = Union[str, tuple[str, Callable[[Any], Any]]]
+
+
+def extract_values(
+    registry_key,
+    value_map: dict[str, ValueSpec],
+    entry: dict[str, Any],
+) -> None:
+    """
+    Extract registry values into an entry dict using a declarative mapping.
+
+    Args:
+        registry_key: Registry key to iterate values from
+        value_map: Mapping of registry value names to output specifications
+        entry: Dict to populate with extracted values
+
+    Example value_map:
+        {
+            "ProfileName": "profile_name",  # Simple rename
+            "Enabled": ("enabled", lambda v: v == 1),  # Convert with function
+            "DateCreated": ("date_created", parse_date_func),  # Custom transform
+        }
+    """
+    for value in registry_key.iter_values():
+        name = value.name
+        if name not in value_map:
+            continue
+
+        spec = value_map[name]
+        if isinstance(spec, str):
+            entry[spec] = value.value
+        else:
+            output_name, converter = spec
+            entry[output_name] = converter(value.value)
 
 
 def dump_hive_to_json(

@@ -10,6 +10,7 @@ from typing import Optional
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
+from regipy.plugins.utils import extract_values
 from regipy.utils import convert_wintime
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,17 @@ NETWORK_LIST_PATH = r"\Microsoft\Windows NT\CurrentVersion\NetworkList"
 PROFILES_PATH = r"\Microsoft\Windows NT\CurrentVersion\NetworkList\Profiles"
 SIGNATURES_PATH = r"\Microsoft\Windows NT\CurrentVersion\NetworkList\Signatures"
 NLAS_PATH = r"\Microsoft\Windows NT\CurrentVersion\NetworkList\Nla\Wireless"
+
+# Lookup tables for network types
+CATEGORY_TYPES = {0: "Public", 1: "Private", 2: "Domain"}
+NAME_TYPES = {0x06: "Wired", 0x17: "Broadband", 0x47: "Wireless"}
+
+
+def format_mac_address(val) -> Optional[str]:
+    """Format bytes as MAC address (XX:XX:XX:XX:XX:XX)"""
+    if isinstance(val, bytes) and len(val) == 6:
+        return ":".join(f"{b:02X}" for b in val)
+    return val
 
 
 def parse_network_date(data: bytes) -> Optional[str]:
@@ -86,30 +98,16 @@ class NetworkListPlugin(Plugin):
                 "last_write": convert_wintime(subkey.header.last_modified, as_json=self.as_json),
             }
 
-            for value in subkey.iter_values():
-                name = value.name
-                val = value.value
-
-                if name == "ProfileName":
-                    entry["profile_name"] = val
-                elif name == "Description":
-                    entry["description"] = val
-                elif name == "Managed":
-                    entry["managed"] = val == 1
-                elif name == "Category":
-                    # 0 = Public, 1 = Private, 2 = Domain
-                    categories = {0: "Public", 1: "Private", 2: "Domain"}
-                    entry["category"] = categories.get(val, f"Unknown ({val})")
-                elif name == "CategoryType":
-                    entry["category_type"] = val
-                elif name == "NameType":
-                    # 0x06 = Wired, 0x17 = Broadband, 0x47 = Wireless
-                    name_types = {0x06: "Wired", 0x17: "Broadband", 0x47: "Wireless"}
-                    entry["name_type"] = name_types.get(val, f"Unknown ({val})")
-                elif name == "DateCreated":
-                    entry["date_created"] = parse_network_date(val)
-                elif name == "DateLastConnected":
-                    entry["date_last_connected"] = parse_network_date(val)
+            extract_values(subkey, {
+                "ProfileName": "profile_name",
+                "Description": "description",
+                "Managed": ("managed", lambda v: v == 1),
+                "Category": ("category", lambda v: CATEGORY_TYPES.get(v, f"Unknown ({v})")),
+                "CategoryType": "category_type",
+                "NameType": ("name_type", lambda v: NAME_TYPES.get(v, f"Unknown ({v})")),
+                "DateCreated": ("date_created", parse_network_date),
+                "DateLastConnected": ("date_last_connected", parse_network_date),
+            }, entry)
 
             self.entries.append(entry)
 
@@ -136,24 +134,13 @@ class NetworkListPlugin(Plugin):
                     "last_write": convert_wintime(subkey.header.last_modified, as_json=self.as_json),
                 }
 
-                for value in subkey.iter_values():
-                    name = value.name
-                    val = value.value
-
-                    if name == "ProfileGuid":
-                        entry["profile_guid"] = val
-                    elif name == "Description":
-                        entry["description"] = val
-                    elif name == "Source":
-                        entry["source"] = val
-                    elif name == "DefaultGatewayMac":
-                        if isinstance(val, bytes) and len(val) == 6:
-                            entry["default_gateway_mac"] = ":".join(f"{b:02X}" for b in val)
-                        else:
-                            entry["default_gateway_mac_raw"] = val
-                    elif name == "DnsSuffix":
-                        entry["dns_suffix"] = val
-                    elif name == "FirstNetwork":
-                        entry["first_network"] = val
+                extract_values(subkey, {
+                    "ProfileGuid": "profile_guid",
+                    "Description": "description",
+                    "Source": "source",
+                    "DefaultGatewayMac": ("default_gateway_mac", format_mac_address),
+                    "DnsSuffix": "dns_suffix",
+                    "FirstNetwork": "first_network",
+                }, entry)
 
                 self.entries.append(entry)

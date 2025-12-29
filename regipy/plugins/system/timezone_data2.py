@@ -30,5 +30,11 @@ class TimezoneDataPlugin2(Plugin):
             for val in tzdata.iter_values():
                 if val.name in ("ActiveTimeBias", "Bias", "DaylightBias"):
                     self.entries[tzdata_subkey][val.name] = struct.unpack(">l", struct.pack(">L", val.value & 0xFFFFFFFF))[0]
+                elif isinstance(val.value, bytes):
+                    # Decode bytes (often UTF-16 encoded strings like TimeZoneKeyName)
+                    try:
+                        self.entries[tzdata_subkey][val.name] = val.value.decode("utf-16-le").rstrip("\x00")
+                    except UnicodeDecodeError:
+                        self.entries[tzdata_subkey][val.name] = val.value.hex()
                 else:
                     self.entries[tzdata_subkey][val.name] = val.value

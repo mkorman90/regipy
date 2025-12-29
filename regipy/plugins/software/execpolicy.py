@@ -7,6 +7,7 @@ import logging
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
+from regipy.plugins.utils import extract_values
 from regipy.utils import convert_wintime
 
 logger = logging.getLogger(__name__)
@@ -58,14 +59,10 @@ class ExecutionPolicyPlugin(Plugin):
             "last_write": convert_wintime(ps_key.header.last_modified, as_json=self.as_json),
         }
 
-        for value in ps_key.iter_values():
-            name = value.name
-            val = value.value
-
-            if name == "ExecutionPolicy":
-                entry["execution_policy"] = val
-            elif name == "Path":
-                entry["path"] = val
+        extract_values(ps_key, {
+            "ExecutionPolicy": "execution_policy",
+            "Path": "path",
+        }, entry)
 
         self.entries.append(entry)
 
@@ -83,14 +80,10 @@ class ExecutionPolicyPlugin(Plugin):
             "last_write": convert_wintime(gp_key.header.last_modified, as_json=self.as_json),
         }
 
-        for value in gp_key.iter_values():
-            name = value.name
-            val = value.value
-
-            if name == "ExecutionPolicy":
-                entry["execution_policy"] = val
-            elif name == "EnableScripts":
-                entry["scripts_enabled"] = val == 1
+        extract_values(gp_key, {
+            "ExecutionPolicy": "execution_policy",
+            "EnableScripts": ("scripts_enabled", lambda v: v == 1),
+        }, entry)
 
         if "execution_policy" in entry or "scripts_enabled" in entry:
             self.entries.append(entry)
@@ -109,22 +102,14 @@ class ExecutionPolicyPlugin(Plugin):
             "last_write": convert_wintime(wsh_key.header.last_modified, as_json=self.as_json),
         }
 
-        for value in wsh_key.iter_values():
-            name = value.name
-            val = value.value
-
-            if name == "Enabled":
-                entry["enabled"] = val != 0
-            elif name == "Remote":
-                entry["remote_enabled"] = val == 1
-            elif name == "TrustPolicy":
-                entry["trust_policy"] = val
-            elif name == "IgnoreUserSettings":
-                entry["ignore_user_settings"] = val == 1
-            elif name == "LogSecuritySuccesses":
-                entry["log_security_successes"] = val == 1
-            elif name == "DisplayLogo":
-                entry["display_logo"] = val == 1
+        extract_values(wsh_key, {
+            "Enabled": ("enabled", lambda v: v != 0),
+            "Remote": ("remote_enabled", lambda v: v == 1),
+            "TrustPolicy": "trust_policy",
+            "IgnoreUserSettings": ("ignore_user_settings", lambda v: v == 1),
+            "LogSecuritySuccesses": ("log_security_successes", lambda v: v == 1),
+            "DisplayLogo": ("display_logo", lambda v: v == 1),
+        }, entry)
 
         if len(entry) > 3:
             self.entries.append(entry)
