@@ -98,16 +98,20 @@ class NetworkListPlugin(Plugin):
                 "last_write": convert_wintime(subkey.header.last_modified, as_json=self.as_json),
             }
 
-            extract_values(subkey, {
-                "ProfileName": "profile_name",
-                "Description": "description",
-                "Managed": ("managed", lambda v: v == 1),
-                "Category": ("category", lambda v: CATEGORY_TYPES.get(v, f"Unknown ({v})")),
-                "CategoryType": "category_type",
-                "NameType": ("name_type", lambda v: NAME_TYPES.get(v, f"Unknown ({v})")),
-                "DateCreated": ("date_created", parse_network_date),
-                "DateLastConnected": ("date_last_connected", parse_network_date),
-            }, entry)
+            extract_values(
+                subkey,
+                {
+                    "ProfileName": "profile_name",
+                    "Description": "description",
+                    "Managed": ("managed", lambda v: v == 1),
+                    "Category": ("category", lambda v: CATEGORY_TYPES.get(v, f"Unknown ({v})")),
+                    "CategoryType": "category_type",
+                    "NameType": ("name_type", lambda v: NAME_TYPES.get(v, f"Unknown ({v})")),
+                    "DateCreated": ("date_created", parse_network_date),
+                    "DateLastConnected": ("date_last_connected", parse_network_date),
+                },
+                entry,
+            )
 
             self.entries.append(entry)
 
@@ -134,13 +138,17 @@ class NetworkListPlugin(Plugin):
                     "last_write": convert_wintime(subkey.header.last_modified, as_json=self.as_json),
                 }
 
-                extract_values(subkey, {
-                    "ProfileGuid": "profile_guid",
-                    "Description": "description",
-                    "Source": "source",
-                    "DefaultGatewayMac": ("default_gateway_mac", format_mac_address),
-                    "DnsSuffix": "dns_suffix",
-                    "FirstNetwork": "first_network",
-                }, entry)
+                extract_values(
+                    subkey,
+                    {
+                        "ProfileGuid": "profile_guid",
+                        "Description": "description",
+                        "Source": "source",
+                        "DefaultGatewayMac": ("default_gateway_mac", format_mac_address),
+                        "DnsSuffix": "dns_suffix",
+                        "FirstNetwork": "first_network",
+                    },
+                    entry,
+                )
 
                 self.entries.append(entry)

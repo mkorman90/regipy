@@ -34,16 +34,22 @@ class TestExtractValues:
 
     def test_multiple_simple_renames(self):
         """Test multiple string rename mappings"""
-        key = _make_mock_key([
-            ("ProfileName", "MyNetwork"),
-            ("Description", "Home WiFi"),
-        ])
+        key = _make_mock_key(
+            [
+                ("ProfileName", "MyNetwork"),
+                ("Description", "Home WiFi"),
+            ]
+        )
         entry = {}
 
-        extract_values(key, {
-            "ProfileName": "profile_name",
-            "Description": "description",
-        }, entry)
+        extract_values(
+            key,
+            {
+                "ProfileName": "profile_name",
+                "Description": "description",
+            },
+            entry,
+        )
 
         assert entry == {
             "profile_name": "MyNetwork",
@@ -55,9 +61,13 @@ class TestExtractValues:
         key = _make_mock_key([("Enabled", 1)])
         entry = {}
 
-        extract_values(key, {
-            "Enabled": ("enabled", lambda v: v == 1),
-        }, entry)
+        extract_values(
+            key,
+            {
+                "Enabled": ("enabled", lambda v: v == 1),
+            },
+            entry,
+        )
 
         assert entry == {"enabled": True}
 
@@ -66,9 +76,13 @@ class TestExtractValues:
         key = _make_mock_key([("Enabled", 0)])
         entry = {}
 
-        extract_values(key, {
-            "Enabled": ("enabled", lambda v: v == 1),
-        }, entry)
+        extract_values(
+            key,
+            {
+                "Enabled": ("enabled", lambda v: v == 1),
+            },
+            entry,
+        )
 
         assert entry == {"enabled": False}
 
@@ -78,9 +92,13 @@ class TestExtractValues:
         key = _make_mock_key([("Category", 1)])
         entry = {}
 
-        extract_values(key, {
-            "Category": ("category", lambda v: categories.get(v, f"Unknown ({v})")),
-        }, entry)
+        extract_values(
+            key,
+            {
+                "Category": ("category", lambda v: categories.get(v, f"Unknown ({v})")),
+            },
+            entry,
+        )
 
         assert entry == {"category": "Private"}
 
@@ -90,18 +108,24 @@ class TestExtractValues:
         key = _make_mock_key([("Category", 99)])
         entry = {}
 
-        extract_values(key, {
-            "Category": ("category", lambda v: categories.get(v, f"Unknown ({v})")),
-        }, entry)
+        extract_values(
+            key,
+            {
+                "Category": ("category", lambda v: categories.get(v, f"Unknown ({v})")),
+            },
+            entry,
+        )
 
         assert entry == {"category": "Unknown (99)"}
 
     def test_unmapped_values_ignored(self):
         """Test that values not in value_map are ignored"""
-        key = _make_mock_key([
-            ("ProfileName", "MyNetwork"),
-            ("UnknownField", "SomeValue"),
-        ])
+        key = _make_mock_key(
+            [
+                ("ProfileName", "MyNetwork"),
+                ("UnknownField", "SomeValue"),
+            ]
+        )
         entry = {}
 
         extract_values(key, {"ProfileName": "profile_name"}, entry)
@@ -142,18 +166,24 @@ class TestExtractValues:
 
     def test_mixed_simple_and_callable(self):
         """Test mixing simple rename and callable converters"""
-        key = _make_mock_key([
-            ("ProfileName", "MyNetwork"),
-            ("Enabled", 1),
-            ("Category", 2),
-        ])
+        key = _make_mock_key(
+            [
+                ("ProfileName", "MyNetwork"),
+                ("Enabled", 1),
+                ("Category", 2),
+            ]
+        )
         entry = {}
 
-        extract_values(key, {
-            "ProfileName": "profile_name",
-            "Enabled": ("enabled", lambda v: v != 0),
-            "Category": ("category", lambda v: {0: "Public", 1: "Private", 2: "Domain"}.get(v)),
-        }, entry)
+        extract_values(
+            key,
+            {
+                "ProfileName": "profile_name",
+                "Enabled": ("enabled", lambda v: v != 0),
+                "Category": ("category", lambda v: {0: "Public", 1: "Private", 2: "Domain"}.get(v)),
+            },
+            entry,
+        )
 
         assert entry == {
             "profile_name": "MyNetwork",
@@ -163,17 +193,22 @@ class TestExtractValues:
 
     def test_converter_with_bytes(self):
         """Test converter that handles bytes (like MAC address)"""
+
         def format_mac(val):
             if isinstance(val, bytes) and len(val) == 6:
                 return ":".join(f"{b:02X}" for b in val)
             return val
 
-        key = _make_mock_key([("MacAddress", b"\x00\x1A\x2B\x3C\x4D\x5E")])
+        key = _make_mock_key([("MacAddress", b"\x00\x1a\x2b\x3c\x4d\x5e")])
         entry = {}
 
-        extract_values(key, {
-            "MacAddress": ("mac_address", format_mac),
-        }, entry)
+        extract_values(
+            key,
+            {
+                "MacAddress": ("mac_address", format_mac),
+            },
+            entry,
+        )
 
         assert entry == {"mac_address": "00:1A:2B:3C:4D:5E"}
 
@@ -182,24 +217,34 @@ class TestExtractValues:
         key = _make_mock_key([("DateCreated", b"\x00")])
         entry = {}
 
-        extract_values(key, {
-            "DateCreated": ("date_created", lambda v: None if len(v) < 16 else "parsed"),
-        }, entry)
+        extract_values(
+            key,
+            {
+                "DateCreated": ("date_created", lambda v: None if len(v) < 16 else "parsed"),
+            },
+            entry,
+        )
 
         assert entry == {"date_created": None}
 
     def test_converter_with_integer_values(self):
         """Test various integer value conversions"""
-        key = _make_mock_key([
-            ("Bias", -300),
-            ("DaylightBias", -60),
-        ])
+        key = _make_mock_key(
+            [
+                ("Bias", -300),
+                ("DaylightBias", -60),
+            ]
+        )
         entry = {}
 
-        extract_values(key, {
-            "Bias": ("bias_minutes", lambda v: v),
-            "DaylightBias": ("daylight_bias_minutes", lambda v: v),
-        }, entry)
+        extract_values(
+            key,
+            {
+                "Bias": ("bias_minutes", lambda v: v),
+                "DaylightBias": ("daylight_bias_minutes", lambda v: v),
+            },
+            entry,
+        )
 
         assert entry == {
             "bias_minutes": -300,

@@ -59,10 +59,14 @@ class ExecutionPolicyPlugin(Plugin):
             "last_write": convert_wintime(ps_key.header.last_modified, as_json=self.as_json),
         }
 
-        extract_values(ps_key, {
-            "ExecutionPolicy": "execution_policy",
-            "Path": "path",
-        }, entry)
+        extract_values(
+            ps_key,
+            {
+                "ExecutionPolicy": "execution_policy",
+                "Path": "path",
+            },
+            entry,
+        )
 
         self.entries.append(entry)
 
@@ -80,10 +84,14 @@ class ExecutionPolicyPlugin(Plugin):
             "last_write": convert_wintime(gp_key.header.last_modified, as_json=self.as_json),
         }
 
-        extract_values(gp_key, {
-            "ExecutionPolicy": "execution_policy",
-            "EnableScripts": ("scripts_enabled", lambda v: v == 1),
-        }, entry)
+        extract_values(
+            gp_key,
+            {
+                "ExecutionPolicy": "execution_policy",
+                "EnableScripts": ("scripts_enabled", lambda v: v == 1),
+            },
+            entry,
+        )
 
         if "execution_policy" in entry or "scripts_enabled" in entry:
             self.entries.append(entry)
@@ -102,14 +110,18 @@ class ExecutionPolicyPlugin(Plugin):
             "last_write": convert_wintime(wsh_key.header.last_modified, as_json=self.as_json),
         }
 
-        extract_values(wsh_key, {
-            "Enabled": ("enabled", lambda v: v != 0),
-            "Remote": ("remote_enabled", lambda v: v == 1),
-            "TrustPolicy": "trust_policy",
-            "IgnoreUserSettings": ("ignore_user_settings", lambda v: v == 1),
-            "LogSecuritySuccesses": ("log_security_successes", lambda v: v == 1),
-            "DisplayLogo": ("display_logo", lambda v: v == 1),
-        }, entry)
+        extract_values(
+            wsh_key,
+            {
+                "Enabled": ("enabled", lambda v: v != 0),
+                "Remote": ("remote_enabled", lambda v: v == 1),
+                "TrustPolicy": "trust_policy",
+                "IgnoreUserSettings": ("ignore_user_settings", lambda v: v == 1),
+                "LogSecuritySuccesses": ("log_security_successes", lambda v: v == 1),
+                "DisplayLogo": ("display_logo", lambda v: v == 1),
+            },
+            entry,
+        )
 
         if len(entry) > 3:
             self.entries.append(entry)
