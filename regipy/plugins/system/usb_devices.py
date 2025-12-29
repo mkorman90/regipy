@@ -3,15 +3,24 @@ USB Devices plugin - Parses USB device history (Enum\\USB)
 """
 
 import logging
+from typing import Optional
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
+from regipy.plugins.utils import extract_values
 from regipy.utils import convert_wintime
 
 logger = logging.getLogger(__name__)
 
 ENUM_USB_PATH = r"Enum\USB"
+
+
+def strip_resource_ref(val) -> Optional[str]:
+    """Remove resource reference prefix if present (e.g., '@oem123.inf,...;Device Name')"""
+    if isinstance(val, str) and ";" in val:
+        return val.split(";")[-1]
+    return val
 
 
 class USBDevicesPlugin(Plugin):

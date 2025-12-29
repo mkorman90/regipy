@@ -7,6 +7,7 @@ import logging
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
+from regipy.plugins.utils import extract_values
 from regipy.utils import convert_wintime
 
 logger = logging.getLogger(__name__)
@@ -59,14 +60,14 @@ class PowerShellLoggingPlugin(Plugin):
             "last_write": convert_wintime(ps_key.header.last_modified, as_json=self.as_json),
         }
 
-        for value in ps_key.iter_values():
-            name = value.name
-            val = value.value
-
-            if name == "EnableScripts":
-                entry["scripts_enabled"] = val == 1
-            elif name == "ExecutionPolicy":
-                entry["execution_policy"] = val
+        extract_values(
+            ps_key,
+            {
+                "EnableScripts": ("scripts_enabled", lambda v: v == 1),
+                "ExecutionPolicy": "execution_policy",
+            },
+            entry,
+        )
 
         if len(entry) > 3:
             self.entries.append(entry)
@@ -85,14 +86,14 @@ class PowerShellLoggingPlugin(Plugin):
             "last_write": convert_wintime(sb_key.header.last_modified, as_json=self.as_json),
         }
 
-        for value in sb_key.iter_values():
-            name = value.name
-            val = value.value
-
-            if name == "EnableScriptBlockLogging":
-                entry["enabled"] = val == 1
-            elif name == "EnableScriptBlockInvocationLogging":
-                entry["invocation_logging_enabled"] = val == 1
+        extract_values(
+            sb_key,
+            {
+                "EnableScriptBlockLogging": ("enabled", lambda v: v == 1),
+                "EnableScriptBlockInvocationLogging": ("invocation_logging_enabled", lambda v: v == 1),
+            },
+            entry,
+        )
 
         self.entries.append(entry)
 
@@ -110,12 +111,13 @@ class PowerShellLoggingPlugin(Plugin):
             "last_write": convert_wintime(ml_key.header.last_modified, as_json=self.as_json),
         }
 
-        for value in ml_key.iter_values():
-            name = value.name
-            val = value.value
-
-            if name == "EnableModuleLogging":
-                entry["enabled"] = val == 1
+        extract_values(
+            ml_key,
+            {
+                "EnableModuleLogging": ("enabled", lambda v: v == 1),
+            },
+            entry,
+        )
 
         # Check for module names subkey
         try:
@@ -144,15 +146,14 @@ class PowerShellLoggingPlugin(Plugin):
             "last_write": convert_wintime(tr_key.header.last_modified, as_json=self.as_json),
         }
 
-        for value in tr_key.iter_values():
-            name = value.name
-            val = value.value
-
-            if name == "EnableTranscripting":
-                entry["enabled"] = val == 1
-            elif name == "OutputDirectory":
-                entry["output_directory"] = val
-            elif name == "EnableInvocationHeader":
-                entry["invocation_header_enabled"] = val == 1
+        extract_values(
+            tr_key,
+            {
+                "EnableTranscripting": ("enabled", lambda v: v == 1),
+                "OutputDirectory": "output_directory",
+                "EnableInvocationHeader": ("invocation_header_enabled", lambda v: v == 1),
+            },
+            entry,
+        )
 
         self.entries.append(entry)
