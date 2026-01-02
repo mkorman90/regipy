@@ -6,30 +6,19 @@ This server enables Claude to analyze Windows registry hives and answer
 forensic questions about system configuration, user activity, and persistence.
 """
 
+import logging
 import os
-import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from datetime import datetime
-import logging
 
 from mcp.server.fastmcp import FastMCP
-from regipy.registry import RegistryHive
-from regipy.plugins.plugin import PLUGINS
-from regipy.plugins.utils import run_relevant_plugins
-from regipy.hive_types import (
-    SYSTEM_HIVE_TYPE,
-    SOFTWARE_HIVE_TYPE,
-    NTUSER_HIVE_TYPE,
-    SAM_HIVE_TYPE,
-    SECURITY_HIVE_TYPE,
-    AMCACHE_HIVE_TYPE,
-    USRCLASS_HIVE_TYPE,
-    BCD_HIVE_TYPE,
-)
 
 # Import all plugins so they auto-register via __init_subclass__
 import regipy.plugins  # noqa
+from regipy.plugins.plugin import PLUGINS
+from regipy.plugins.utils import run_relevant_plugins
+from regipy.registry import RegistryHive
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -208,7 +197,7 @@ def list_available_plugins(hive_type: Optional[str] = None) -> str:
         List of plugins with descriptions and compatibility info
     """
     # Get loaded hive types
-    loaded_types = set(hive.hive_type for hive in _loaded_hives.values())
+    loaded_types = {hive.hive_type for hive in _loaded_hives.values()}
 
     # Group plugins by hive type
     plugins_by_type = {}
@@ -271,7 +260,7 @@ def run_plugin(plugin_name: str) -> dict:
     # Find the plugin class
     plugin_class = None
     for p in PLUGINS:
-        if p.NAME == plugin_name:
+        if plugin_name == p.NAME:
             plugin_class = p
             break
 
@@ -329,7 +318,7 @@ def run_all_plugins_for_hive(hive_type: str) -> dict:
     compatible_hives = _get_hives_by_type(hive_type)
 
     if not compatible_hives:
-        available_types = set(h.hive_type for h in _loaded_hives.values())
+        available_types = {h.hive_type for h in _loaded_hives.values()}
         return {
             "error": f"No {hive_type} hive loaded",
             "available_types": sorted(available_types)
@@ -450,7 +439,7 @@ def get_registry_key(key_path: str, hive_type: Optional[str] = None) -> dict:
         hives_to_search = list(_loaded_hives.items())
 
     if not hives_to_search:
-        return {"error": f"No hives available for search"}
+        return {"error": "No hives available for search"}
 
     results = {}
     for path, hive in hives_to_search:

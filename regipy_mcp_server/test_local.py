@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Local test script for Regipy MCP Server
 Tests the server functions directly without Claude Desktop
 """
 
+import io
 import os
 import sys
-import io
 
 # Fix Windows console encoding
 if sys.platform == 'win32':
@@ -24,22 +23,21 @@ print("Regipy MCP Server - Local Test")
 print("=" * 70)
 
 # Import after setting environment variable
-from server import (
+from server import (  # noqa: E402
+    PLUGINS,
     _initialize_hives,
     _loaded_hives,
-    set_hive_directory,
+    answer_forensic_question,
     list_available_hives,
     list_available_plugins,
     run_plugin,
-    answer_forensic_question,
-    PLUGINS
 )
 
-print(f"\n✓ Server imported successfully")
+print("\n✓ Server imported successfully")
 print(f"✓ Discovered {len(PLUGINS)} plugins")
 
 # Initialize hives
-print(f"\n📂 Loading hives from: C:\\Users\\marti\\Downloads\\hives")
+print("\n📂 Loading hives from: C:\\Users\\marti\\Downloads\\hives")
 _initialize_hives()
 
 if _loaded_hives:
