@@ -47,7 +47,7 @@ def _load_hives_from_directory(directory: str) -> dict[str, RegistryHive]:
         return hives
 
     # Common registry hive file patterns
-    skip_extensions = {'.log', '.log1', '.log2', '.sav', '.regtrans-ms', '.blf', '.tmp'}
+    skip_extensions = {".log", ".log1", ".log2", ".sav", ".regtrans-ms", ".blf", ".tmp"}
 
     for file_path in directory_path.iterdir():
         if not file_path.is_file():
@@ -94,8 +94,7 @@ def _initialize_hives(hive_dir: Optional[str] = None):
 
 def _get_hives_by_type(hive_type: str) -> list[tuple[str, RegistryHive]]:
     """Get all loaded hives of a specific type."""
-    return [(path, hive) for path, hive in _loaded_hives.items()
-            if hive.hive_type == hive_type]
+    return [(path, hive) for path, hive in _loaded_hives.items() if hive.hive_type == hive_type]
 
 
 def _serialize_datetime(obj):
@@ -169,11 +168,9 @@ def list_available_hives() -> str:
         hive_type = hive.hive_type or "unknown"
         if hive_type not in by_type:
             by_type[hive_type] = []
-        by_type[hive_type].append({
-            'filename': Path(path).name,
-            'path': path,
-            'root_key': hive.root.name if hive.root else 'N/A'
-        })
+        by_type[hive_type].append(
+            {"filename": Path(path).name, "path": path, "root_key": hive.root.name if hive.root else "N/A"}
+        )
 
     result = [f"Available hives ({len(_loaded_hives)} total):\n"]
     for hive_type, hives in sorted(by_type.items()):
@@ -212,27 +209,24 @@ def list_available_plugins(hive_type: Optional[str] = None) -> str:
             plugins_by_type[compat_hive] = []
 
         can_run = compat_hive in loaded_types
-        plugins_by_type[compat_hive].append({
-            'name': plugin_class.NAME,
-            'description': plugin_class.DESCRIPTION or 'No description',
-            'can_run': can_run
-        })
+        plugins_by_type[compat_hive].append(
+            {"name": plugin_class.NAME, "description": plugin_class.DESCRIPTION or "No description", "can_run": can_run}
+        )
 
     # Format output
     result = []
     total_plugins = sum(len(plugins) for plugins in plugins_by_type.values())
-    runnable = sum(1 for plugins in plugins_by_type.values()
-                   for p in plugins if p['can_run'])
+    runnable = sum(1 for plugins in plugins_by_type.values() for p in plugins if p["can_run"])
 
     result.append(f"Total plugins: {total_plugins} ({runnable} can run with loaded hives)\n")
 
     for hive_type_name, plugins in sorted(plugins_by_type.items()):
-        can_run_count = sum(1 for p in plugins if p['can_run'])
+        can_run_count = sum(1 for p in plugins if p["can_run"])
         status = "✓ AVAILABLE" if can_run_count > 0 else "✗ No hive loaded"
         result.append(f"\n{hive_type_name} ({len(plugins)} plugins) - {status}:")
 
-        for plugin in sorted(plugins, key=lambda x: x['name']):
-            status_icon = "✓" if plugin['can_run'] else "✗"
+        for plugin in sorted(plugins, key=lambda x: x["name"]):
+            status_icon = "✓" if plugin["can_run"] else "✗"
             result.append(f"  {status_icon} {plugin['name']}")
             result.append(f"      {plugin['description']}")
 
@@ -266,19 +260,13 @@ def run_plugin(plugin_name: str) -> dict:
 
     if not plugin_class:
         available = [p.NAME for p in PLUGINS]
-        return {
-            "error": f"Plugin '{plugin_name}' not found",
-            "available_plugins": sorted(available)
-        }
+        return {"error": f"Plugin '{plugin_name}' not found", "available_plugins": sorted(available)}
 
     # Get hives of the compatible type
     compatible_hives = _get_hives_by_type(plugin_class.COMPATIBLE_HIVE)
 
     if not compatible_hives:
-        return {
-            "error": f"No {plugin_class.COMPATIBLE_HIVE} hive loaded",
-            "required_hive_type": plugin_class.COMPATIBLE_HIVE
-        }
+        return {"error": f"No {plugin_class.COMPATIBLE_HIVE} hive loaded", "required_hive_type": plugin_class.COMPATIBLE_HIVE}
 
     # Run plugin on all compatible hives
     all_results = {}
@@ -297,7 +285,7 @@ def run_plugin(plugin_name: str) -> dict:
         "plugin": plugin_name,
         "description": plugin_class.DESCRIPTION,
         "hive_type": plugin_class.COMPATIBLE_HIVE,
-        "results": all_results
+        "results": all_results,
     }
 
 
@@ -319,10 +307,7 @@ def run_all_plugins_for_hive(hive_type: str) -> dict:
 
     if not compatible_hives:
         available_types = {h.hive_type for h in _loaded_hives.values()}
-        return {
-            "error": f"No {hive_type} hive loaded",
-            "available_types": sorted(available_types)
-        }
+        return {"error": f"No {hive_type} hive loaded", "available_types": sorted(available_types)}
 
     # Run all plugins on all compatible hives
     all_results = {}
@@ -335,11 +320,7 @@ def run_all_plugins_for_hive(hive_type: str) -> dict:
             logger.error(f"Error running plugins on {path}: {e}")
             all_results[Path(path).name] = {"error": str(e)}
 
-    return {
-        "hive_type": hive_type,
-        "files_analyzed": len(all_results),
-        "results": all_results
-    }
+    return {"hive_type": hive_type, "files_analyzed": len(all_results), "results": all_results}
 
 
 @mcp.tool()
@@ -372,19 +353,19 @@ def answer_forensic_question(question: str) -> dict:
 
     # Map questions to plugins
     plugin_mapping = {
-        'hostname': ['computer_name', 'host_domain_name'],
-        'computer name': ['computer_name'],
-        'timezone': ['timezone_data'],
-        'persistence': ['software_plugin', 'ntuser_persistence'],
-        'installed': ['installed_programs_software', 'installed_programs_ntuser'],
-        'usb': ['usbstor_plugin', 'usb_devices'],
-        'windows version': ['winver_plugin'],
-        'os version': ['winver_plugin'],
-        'services': ['services'],
-        'user account': ['samparse'],
-        'network': ['network_data', 'networklist'],
-        'shimcache': ['shimcache'],
-        'execution': ['shimcache', 'amcache', 'user_assist'],
+        "hostname": ["computer_name", "host_domain_name"],
+        "computer name": ["computer_name"],
+        "timezone": ["timezone_data"],
+        "persistence": ["software_plugin", "ntuser_persistence"],
+        "installed": ["installed_programs_software", "installed_programs_ntuser"],
+        "usb": ["usbstor_plugin", "usb_devices"],
+        "windows version": ["winver_plugin"],
+        "os version": ["winver_plugin"],
+        "services": ["services"],
+        "user account": ["samparse"],
+        "network": ["network_data", "networklist"],
+        "shimcache": ["shimcache"],
+        "execution": ["shimcache", "amcache", "user_assist"],
     }
 
     # Find matching plugins
@@ -397,7 +378,7 @@ def answer_forensic_question(question: str) -> dict:
         return {
             "question": question,
             "suggestion": "Try asking: What is the hostname? What is the timezone? What are the persistence methods?",
-            "available_categories": list(plugin_mapping.keys())
+            "available_categories": list(plugin_mapping.keys()),
         }
 
     # Remove duplicates while preserving order
@@ -410,11 +391,7 @@ def answer_forensic_question(question: str) -> dict:
         if "error" not in plugin_result:
             results[plugin_name] = plugin_result
 
-    return {
-        "question": question,
-        "plugins_used": relevant_plugins,
-        "results": results
-    }
+    return {"question": question, "plugins_used": relevant_plugins, "results": results}
 
 
 @mcp.tool()
@@ -450,30 +427,16 @@ def get_registry_key(key_path: str, hive_type: Optional[str] = None) -> dict:
                     "found": True,
                     "path": subkey.path,
                     "timestamp": _serialize_datetime(subkey.timestamp),
-                    "values": [
-                        {
-                            "name": v.name,
-                            "value": v.value,
-                            "type": v.value_type
-                        }
-                        for v in (subkey.values or [])
-                    ],
-                    "subkey_count": len(list(subkey.iter_subkeys())) if hasattr(subkey, 'iter_subkeys') else 0
+                    "values": [{"name": v.name, "value": v.value, "type": v.value_type} for v in (subkey.values or [])],
+                    "subkey_count": len(list(subkey.iter_subkeys())) if hasattr(subkey, "iter_subkeys") else 0,
                 }
         except Exception as e:
             results[Path(path).name] = {"found": False, "error": str(e)}
 
     if not any(r.get("found") for r in results.values()):
-        return {
-            "key_path": key_path,
-            "found": False,
-            "searched_hives": [Path(p).name for p, _ in hives_to_search]
-        }
+        return {"key_path": key_path, "found": False, "searched_hives": [Path(p).name for p, _ in hives_to_search]}
 
-    return {
-        "key_path": key_path,
-        "results": results
-    }
+    return {"key_path": key_path, "results": results}
 
 
 if __name__ == "__main__":
@@ -482,9 +445,7 @@ if __name__ == "__main__":
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Regipy MCP Server - Windows Registry Analysis")
     parser.add_argument(
-        "--hives-dir",
-        type=str,
-        help="Directory containing registry hive files (default: from REGIPY_HIVE_DIRECTORY env var)"
+        "--hives-dir", type=str, help="Directory containing registry hive files (default: from REGIPY_HIVE_DIRECTORY env var)"
     )
     args = parser.parse_args()
 

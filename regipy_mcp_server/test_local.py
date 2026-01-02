@@ -9,11 +9,11 @@ import os
 import sys
 
 # Fix Windows console encoding
-if sys.platform == 'win32':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 # Set the hive directory
-os.environ['REGIPY_HIVE_DIRECTORY'] = r'C:\Users\marti\Downloads\hives'
+os.environ["REGIPY_HIVE_DIRECTORY"] = r"C:\Users\marti\Downloads\hives"
 
 # Add server to path
 sys.path.insert(0, os.path.dirname(__file__))
