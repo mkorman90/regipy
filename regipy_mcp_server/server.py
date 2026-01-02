@@ -324,74 +324,46 @@ def run_all_plugins_for_hive(hive_type: str) -> dict:
 
 
 @mcp.tool()
-def answer_forensic_question(question: str) -> dict:
+def list_relevant_plugins(question: str) -> dict:
     """
-    Answer common forensic questions by automatically running relevant plugins.
+    List plugins relevant to a forensic question.
 
-    This is a high-level tool that maps questions to the appropriate plugins.
-
-    Supported questions include:
-    - What is the hostname/computer name?
-    - What is the timezone?
-    - What are the persistence mechanisms?
-    - What programs are installed?
-    - What USB devices were connected?
-    - What is the Windows version?
-    - What services are configured?
-    - What are the user accounts?
+    Returns a list of available plugins with their descriptions that could help
+    answer the given question. Use this to discover which plugins to run, then
+    call run_plugin() for each one.
 
     Args:
         question: Natural language forensic question
 
     Returns:
-        Relevant plugin results answering the question
+        Dict with available plugins and their descriptions
     """
     if not _loaded_hives:
         return {"error": "No hives loaded. Use set_hive_directory first."}
 
-    question_lower = question.lower()
+    # Get loaded hive types
+    loaded_types = {hive.hive_type for hive in _loaded_hives.values()}
 
-    # Map questions to plugins
-    plugin_mapping = {
-        "hostname": ["computer_name", "host_domain_name"],
-        "computer name": ["computer_name"],
-        "timezone": ["timezone_data"],
-        "persistence": ["software_plugin", "ntuser_persistence"],
-        "installed": ["installed_programs_software", "installed_programs_ntuser"],
-        "usb": ["usbstor_plugin", "usb_devices"],
-        "windows version": ["winver_plugin"],
-        "os version": ["winver_plugin"],
-        "services": ["services"],
-        "user account": ["samparse"],
-        "network": ["network_data", "networklist"],
-        "shimcache": ["shimcache"],
-        "execution": ["shimcache", "amcache", "user_assist"],
+    # Build list of available plugins with their descriptions
+    available_plugins = []
+    for plugin_class in PLUGINS:
+        if plugin_class.COMPATIBLE_HIVE not in loaded_types:
+            continue
+
+        available_plugins.append(
+            {
+                "name": plugin_class.NAME,
+                "description": plugin_class.DESCRIPTION or "No description",
+                "hive_type": plugin_class.COMPATIBLE_HIVE,
+            }
+        )
+
+    return {
+        "question": question,
+        "available_plugins": available_plugins,
+        "total_count": len(available_plugins),
+        "instruction": "Based on the question, select relevant plugin(s) and call run_plugin() for each one.",
     }
-
-    # Find matching plugins
-    relevant_plugins = []
-    for keyword, plugins in plugin_mapping.items():
-        if keyword in question_lower:
-            relevant_plugins.extend(plugins)
-
-    if not relevant_plugins:
-        return {
-            "question": question,
-            "suggestion": "Try asking: What is the hostname? What is the timezone? What are the persistence methods?",
-            "available_categories": list(plugin_mapping.keys()),
-        }
-
-    # Remove duplicates while preserving order
-    relevant_plugins = list(dict.fromkeys(relevant_plugins))
-
-    # Run all relevant plugins
-    results = {}
-    for plugin_name in relevant_plugins:
-        plugin_result = run_plugin(plugin_name)
-        if "error" not in plugin_result:
-            results[plugin_name] = plugin_result
-
-    return {"question": question, "plugins_used": relevant_plugins, "results": results}
 
 
 @mcp.tool()
