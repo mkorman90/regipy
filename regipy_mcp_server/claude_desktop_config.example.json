@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "regipy": {
+      "command": "C:\\Users\\marti\\anaconda3\\envs\\regipy\\python.exe",
+      "args": [
+        "c:\\Users\\marti\\Documents\\GitHub\\regipy\\regipy_mcp_server\\server.py",
+        "--hives-dir",
+        "C:\\Users\\marti\\Downloads\\hives"
+      ]
+    }
+  }
+}
