@@ -60,7 +60,7 @@ from .ntuser.appkeys import AppKeysPlugin
 from .ntuser.sysinternals import SysinternalsPlugin
 from .ntuser.putty import PuTTYPlugin
 from .software.appinitdlls import AppInitDLLsPlugin
-from .software.appcertdlls import AppCertDLLsPlugin
+from .system.appcertdlls import AppCertDLLsPlugin
 from .software.appcompatflags import AppCompatFlagsPlugin
 from .software.apppaths import AppPathsPlugin
 from .software.defender import WindowsDefenderPlugin

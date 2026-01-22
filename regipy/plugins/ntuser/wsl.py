@@ -17,7 +17,7 @@ class WSLPlugin(Plugin):
     DESCRIPTION = "Get WSL information"
     COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
 
-    def get_wls_info(self, subkey, distribs=None):
+    def get_wsl_info(self, subkey, distribs=None):
         if distribs is None:
             distribs = []
 
@@ -92,7 +92,6 @@ class WSLPlugin(Plugin):
 
         try:
             for distrib in wsl_key.iter_subkeys():
-                distribs = self.get_wls_info(distrib)
-                self.entries[WSL_PATH]["distributions"] = distribs
+                self.get_wsl_info(distrib, self.entries[WSL_PATH]["distributions"])
         except Exception as e:
             logger.error(f"Error iterating over subkeys in {distrib.path}: {e}")
