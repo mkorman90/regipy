@@ -4,7 +4,6 @@ from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 from regipy.utils import convert_wintime
 from regipy.constants import KNOWN_GUIDS
-import re
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +82,44 @@ class ShellBagNtuserPlugin(Plugin):
         else:
             entry_string = f"{fwps_record.entry_type:d}"
         return entry_string
+
+    @staticmethod
+    def _create_entry(
+        value,
+        slot,
+        reg_path,
+        value_name,
+        node_slot,
+        shell_type,
+        path,
+        full_path=None,
+        location_description=None,
+        creation_time=None,
+        access_time=None,
+        modification_time=None,
+        last_write=None,
+        mru_order=None,
+        mru_order_location=None,
+        first_interacted=None,
+    ):
+        return {
+            "value": value,
+            "slot": slot,
+            "reg_path": reg_path,
+            "value_name": value_name,
+            "node_slot": node_slot,
+            "shell_type": shell_type,
+            "path": path,
+            "full path": full_path,
+            "location description": location_description,
+            "creation_time": creation_time,
+            "access_time": access_time,
+            "modification_time": modification_time,
+            "last_write": last_write,
+            "mru_order": mru_order,
+            "mru_order_location": mru_order_location,
+            "first_interacted": first_interacted,
+        }
 
     @staticmethod
     def _parse_shell_item_path_segment(self, shell_item):
@@ -230,8 +267,10 @@ class ShellBagNtuserPlugin(Plugin):
         else:
             node_slot = ""
 
+        processed_values = set()
         for v in key.iter_values(trim_values=False):
-            if re.match(r"\d+", v.name):
+            if v.name.isdigit():
+                processed_values.add(v.name)
                 slot = v.name
                 byte_stream = v.value
                 shell_items = pyfwsi.item_list()
@@ -275,29 +314,52 @@ class ShellBagNtuserPlugin(Plugin):
 
                     value_name = v.name
                     mru_order_location = mru_order.split("-").index(value_name)
-                    entry = {
-                        "value": value,
-                        "slot": slot,
-                        "reg_path": reg_path,
-                        "value_name": value_name,
-                        "node_slot": node_slot,
-                        "shell_type": shell_type,
-                        "path": path,
-                        "full path": full_path if full_path else None,
-                        "location description": (location_description if location_description else None),
-                        "creation_time": creation_time,
-                        "access_time": access_time,
-                        "modification_time": modification_time,
-                        "last_write": last_write,
-                        "mru_order": mru_order,
-                        "mru_order_location": mru_order_location,
-                    }
-
-                    self.entries.append(entry)
+                    self.entries.append(
+                        self._create_entry(
+                            value=value,
+                            slot=slot,
+                            reg_path=reg_path,
+                            value_name=value_name,
+                            node_slot=node_slot,
+                            shell_type=shell_type,
+                            path=path,
+                            full_path=full_path,
+                            location_description=location_description,
+                            creation_time=creation_time,
+                            access_time=access_time,
+                            modification_time=modification_time,
+                            last_write=last_write,
+                            mru_order=mru_order,
+                            mru_order_location=mru_order_location,
+                        )
+                    )
                     sk_reg_path = f"{reg_path}\\{value_name}"
-                    sk = self.registry_hive.get_key(sk_reg_path)
-                    self.iter_sk(sk, sk_reg_path, codepage, base_path, path)
+                    try:
+                        sk = self.registry_hive.get_key(sk_reg_path)
+                        self.iter_sk(sk, sk_reg_path, codepage, base_path, path)
+                    except RegistryKeyNotFoundException:
+                        pass  # Subkey doesn't exist, continue
                     path = base_path
+
+        # Issue #268: Handle childless subkeys - subkeys without corresponding numbered
+        # values contain "first interacted" timestamps for when a folder was initially accessed
+        for subkey in key.iter_subkeys():
+            if subkey.name not in processed_values:
+                childless_last_write = convert_wintime(subkey.header.last_modified, as_json=True)
+                self.entries.append(
+                    self._create_entry(
+                        value=None,
+                        slot=subkey.name,
+                        reg_path=f"{reg_path}\\{subkey.name}",
+                        value_name=subkey.name,
+                        node_slot=str(subkey.get_value("NodeSlot")) if subkey.get_value("NodeSlot") else "",
+                        shell_type="Childless",
+                        path=path or None,
+                        last_write=childless_last_write,
+                        first_interacted=childless_last_write,
+                    )
+                )
+                self.iter_sk(subkey, f"{reg_path}\\{subkey.name}", codepage, base_path, path)
 
     def run(self, codepage=DEFAULT_CODEPAGE):
         try:

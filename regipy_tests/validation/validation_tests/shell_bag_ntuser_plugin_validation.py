@@ -26,5 +26,6 @@ class ShellBagNtuserPluginValidationCase(ValidationCase):
             "location description": None,
             "mru_order": "0",
             "mru_order_location": 0,
+            "first_interacted": None,
         }
     ]

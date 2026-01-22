@@ -11,6 +11,8 @@ __pycache__/
 .idea
 .vscode
 
+.claude/*
+
 # Distribution / packaging
 .Python
 build/
