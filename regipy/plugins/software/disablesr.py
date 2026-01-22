@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 SYS_RESTORE_PATH = r"\Microsoft\Windows NT\CurrentVersion\SystemRestore"
-value_list = "DisableSR"
+value_list = ["DisableSR"]
 
 
 class DisableSRPlugin(Plugin):
