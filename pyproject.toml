@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "regipy"
-version = "6.2.0"
+version = "6.2.1"
 description = "Python Registry Parser"
 readme = "docs/README.rst"
 license = {text = "MIT"}
