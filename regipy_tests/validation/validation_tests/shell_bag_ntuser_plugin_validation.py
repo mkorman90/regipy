@@ -29,4 +29,3 @@ class ShellBagNtuserPluginValidationCase(ValidationCase):
             "first_interacted": None,
         }
     ]
-

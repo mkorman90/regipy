@@ -85,10 +85,22 @@ class ShellBagNtuserPlugin(Plugin):
 
     @staticmethod
     def _create_entry(
-        value, slot, reg_path, value_name, node_slot, shell_type, path,
-        full_path=None, location_description=None, creation_time=None,
-        access_time=None, modification_time=None, last_write=None,
-        mru_order=None, mru_order_location=None, first_interacted=None
+        value,
+        slot,
+        reg_path,
+        value_name,
+        node_slot,
+        shell_type,
+        path,
+        full_path=None,
+        location_description=None,
+        creation_time=None,
+        access_time=None,
+        modification_time=None,
+        last_write=None,
+        mru_order=None,
+        mru_order_location=None,
+        first_interacted=None,
     ):
         return {
             "value": value,
@@ -302,14 +314,25 @@ class ShellBagNtuserPlugin(Plugin):
 
                     value_name = v.name
                     mru_order_location = mru_order.split("-").index(value_name)
-                    self.entries.append(self._create_entry(
-                        value=value, slot=slot, reg_path=reg_path, value_name=value_name,
-                        node_slot=node_slot, shell_type=shell_type, path=path,
-                        full_path=full_path, location_description=location_description,
-                        creation_time=creation_time, access_time=access_time,
-                        modification_time=modification_time, last_write=last_write,
-                        mru_order=mru_order, mru_order_location=mru_order_location,
-                    ))
+                    self.entries.append(
+                        self._create_entry(
+                            value=value,
+                            slot=slot,
+                            reg_path=reg_path,
+                            value_name=value_name,
+                            node_slot=node_slot,
+                            shell_type=shell_type,
+                            path=path,
+                            full_path=full_path,
+                            location_description=location_description,
+                            creation_time=creation_time,
+                            access_time=access_time,
+                            modification_time=modification_time,
+                            last_write=last_write,
+                            mru_order=mru_order,
+                            mru_order_location=mru_order_location,
+                        )
+                    )
                     sk_reg_path = f"{reg_path}\\{value_name}"
                     try:
                         sk = self.registry_hive.get_key(sk_reg_path)
@@ -323,13 +346,19 @@ class ShellBagNtuserPlugin(Plugin):
         for subkey in key.iter_subkeys():
             if subkey.name not in processed_values:
                 childless_last_write = convert_wintime(subkey.header.last_modified, as_json=True)
-                self.entries.append(self._create_entry(
-                    value=None, slot=subkey.name, reg_path=f"{reg_path}\\{subkey.name}",
-                    value_name=subkey.name,
-                    node_slot=str(subkey.get_value("NodeSlot")) if subkey.get_value("NodeSlot") else "",
-                    shell_type="Childless", path=path or None,
-                    last_write=childless_last_write, first_interacted=childless_last_write,
-                ))
+                self.entries.append(
+                    self._create_entry(
+                        value=None,
+                        slot=subkey.name,
+                        reg_path=f"{reg_path}\\{subkey.name}",
+                        value_name=subkey.name,
+                        node_slot=str(subkey.get_value("NodeSlot")) if subkey.get_value("NodeSlot") else "",
+                        shell_type="Childless",
+                        path=path or None,
+                        last_write=childless_last_write,
+                        first_interacted=childless_last_write,
+                    )
+                )
                 self.iter_sk(subkey, f"{reg_path}\\{subkey.name}", codepage, base_path, path)
 
     def run(self, codepage=DEFAULT_CODEPAGE):
