@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["regipy-core", "regipy-bench"]
+members = ["regipy-core", "regipy-bench", "regipy-py"]
 
 [workspace.package]
 version = "0.0.1"

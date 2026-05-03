@@ -35,6 +35,10 @@ pub struct Hive {
     root_offset: u32,
 }
 
+// SAFETY: Hive is read-only after construction; both backings are Send+Sync.
+unsafe impl Send for Hive {}
+unsafe impl Sync for Hive {}
+
 enum Backing {
     Mmap(memmap2::Mmap),
     Owned(Vec<u8>),
@@ -77,6 +81,11 @@ impl Hive {
         self.backing.as_ref()
     }
 
+    /// Public access to the underlying byte buffer (for bindings/tools).
+    pub fn bytes(&self) -> &[u8] {
+        self.backing.as_ref()
+    }
+
     pub fn root(&self) -> Result<NkRecord<'_>> {
         // root_offset is offset into hbin data; +4 to skip cell-size header
         let cell_data_offset = REGF_HEADER_SIZE + self.root_offset as usize + 4;
@@ -98,7 +107,12 @@ pub struct NkRecord<'a> {
 }
 
 impl<'a> NkRecord<'a> {
-    fn parse_at(data: &'a [u8], offset: usize) -> Result<Self> {
+    /// File-absolute offset of the "nk" signature.
+    pub fn offset(&self) -> usize {
+        self.offset
+    }
+
+    pub fn parse_at(data: &'a [u8], offset: usize) -> Result<Self> {
         // offset points to the "nk" signature (2 bytes), then the fixed 74-byte body
         if data.len() < offset + 2 + 74 {
             return Err(Error::Eof(offset, 2 + 74));

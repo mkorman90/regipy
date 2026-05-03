@@ -1,0 +1,13 @@
+[package]
+name = "regipy-py"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "regipy_rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+regipy-core = { path = "../regipy-core" }
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py38"] }

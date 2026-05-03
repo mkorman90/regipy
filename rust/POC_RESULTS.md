@@ -5,6 +5,11 @@ Python regipy on key-only walks and **600×–10,000×+** faster on full
 walks-with-values. Per-key paths and value counts match Python exactly across
 all four test hives (152,161 keys, 288,959 values).
 
+**With PyO3 bindings** (target deployment: Python plugins on top, Rust
+underneath): **9–19× faster than current Python on keys**, **87–1,000×+
+faster on values**. Pure-Rust call from Python (no per-key Python objects) is
+within 18–40% of native Rust speed.
+
 ## What this POC does
 
 A minimal Rust port of regipy's hot path: parse REGF, walk the hbin/cell
@@ -89,6 +94,38 @@ edge cases regipy does, plus ASCII vs UTF-16 names.
 \** SOFTWARE/values: Python runs were terminated at ~3 minutes per run before
     completion. Lower-bound extrapolated from SYSTEM/values per-key/per-value
     cost.
+
+### Python-via-PyO3 (the deployment target)
+
+`regipy_rs` is a thin PyO3 binding over `regipy-core`. The `recurse_subkeys()`
+method walks in Rust and yields one Python dict per visited key. The
+`walk_stats()` method does the entire walk in Rust and returns only `(keys,
+values, max_depth)` — useful as a lower bound on what the boundary costs.
+
+| Hive | PyO3 stats (no Python objects) | PyO3 keys | PyO3 values |
+|------|------------------------------:|----------:|------------:|
+| NTUSER.DAT | 0.071 ms | 1.471 ms | 1.818 ms |
+| amcache.hve | 0.101 ms | 1.675 ms | 5.107 ms |
+| SYSTEM | 0.919 ms | 13.052 ms | 31.367 ms |
+| SOFTWARE | 5.829 ms | 57.028 ms | 109.870 ms |
+
+PyO3 vs current Python regipy:
+
+| Hive | Mode | PyO3 / Python | Speedup |
+|------|------|---------------|--------:|
+| NTUSER.DAT | keys | 1.471 / 13.94 | **9.5×** |
+| amcache.hve | keys | 1.675 / 14.23 | **8.5×** |
+| SYSTEM | keys | 13.052 / 244.74 | **18.8×** |
+| SOFTWARE | keys | 57.028 / 943.74 | **16.5×** |
+| NTUSER.DAT | values | 1.818 / 158.90 | **87×** |
+| amcache.hve | values | 5.107 / 754.62 | **148×** |
+| SYSTEM | values | 31.367 / 43,014 | **1,371×** |
+| SOFTWARE | values | 109.870 / >100,000 | **>900×** |
+
+Per-key Python boundary cost is roughly **0.4 μs/key** (the Python dict
+allocation per yielded item). The rest is in Rust. So the gap between PyO3
+and pure Rust on big hives is bounded by how many Python objects you
+materialize — *plugins that filter early stay close to native speed*.
 
 ### Throughput perspective
 
