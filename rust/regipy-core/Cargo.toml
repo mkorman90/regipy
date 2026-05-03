@@ -1,0 +1,12 @@
+[package]
+name = "regipy-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+memmap2 = "0.9"
+thiserror = "1"
+
+[lib]
+path = "src/lib.rs"

@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = ["regipy-core", "regipy-bench"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

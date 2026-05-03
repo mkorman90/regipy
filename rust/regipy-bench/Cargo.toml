@@ -1,0 +1,12 @@
+[package]
+name = "regipy-bench"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+regipy-core = { path = "../regipy-core" }
+
+[[bin]]
+name = "walk"
+path = "src/bin/walk.rs"
