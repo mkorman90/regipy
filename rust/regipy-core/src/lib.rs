@@ -719,11 +719,13 @@ impl<'a> VkRecord<'a> {
         buffer
     }
 
-    /// Type-aware decode of this value's data.
-    /// Matches `regipy.registry.iter_values` semantics, including the
-    /// "high-bit data_size means inline; emit data_offset as raw u32" quirk
-    /// for REG_SZ/REG_EXPAND_SZ/REG_LINK/REG_BINARY/REG_NONE.
+    /// Type-aware decode of this value's data, parameterized to match
+    /// `iter_values(as_json, trim_values)` in regipy.
     pub fn decode(&self) -> DecodedValue {
+        self.decode_with(true, true)
+    }
+
+    pub fn decode_with(&self, as_json: bool, trim_values: bool) -> DecodedValue {
         // DEVPROP fallback: per regipy, types > 0xFFFF0000 strip the high half.
         let mut data_type = self.data_type;
         if data_type > 0xFFFF_0000 {
@@ -739,21 +741,21 @@ impl<'a> VkRecord<'a> {
             match data_type {
                 value_type::REG_SZ
                 | value_type::REG_EXPAND_SZ
-                | value_type::REG_LINK
                 | value_type::REG_BINARY
                 | value_type::REG_NONE => {
                     return DecodedValue::Dword(self.data_offset);
                 }
-                value_type::REG_DWORD | value_type::REG_DWORD_BIG_ENDIAN => {
+                value_type::REG_DWORD => {
                     return DecodedValue::Dword(self.data_offset);
                 }
                 value_type::REG_QWORD => {
                     return DecodedValue::Qword(self.data_offset as u64);
                 }
                 _ => {
-                    // Fall through: REG_MULTI_SZ, REG_FILETIME, others —
+                    // Fall through: REG_LINK, REG_DWORD_BIG_ENDIAN,
+                    // REG_MULTI_SZ, REG_FILETIME, REG_RESOURCE_*, others —
                     // Python parses from value.value which (with huge size)
-                    // contains rest-of-file. data_bytes() returns the same.
+                    // contains rest-of-file.
                 }
             }
         }
@@ -768,12 +770,9 @@ impl<'a> VkRecord<'a> {
                 | value_type::REG_NONE
         );
         let bytes = self.data_bytes(reassemble_db);
+        let max_len = 256; // matches MAX_LEN in regipy.utils
 
         match data_type {
-            value_type::REG_NONE => DecodedValue::None,
-            value_type::REG_SZ => DecodedValue::String(decode_reg_sz(&bytes)),
-            value_type::REG_EXPAND_SZ => DecodedValue::ExpandString(decode_reg_sz(&bytes)),
-            value_type::REG_BINARY => DecodedValue::Binary(bytes.into_owned()),
             value_type::REG_DWORD => {
                 let v = if bytes.len() >= 4 {
                     u32::from_le_bytes(bytes[..4].try_into().unwrap())
@@ -782,16 +781,6 @@ impl<'a> VkRecord<'a> {
                 };
                 DecodedValue::Dword(v)
             }
-            value_type::REG_DWORD_BIG_ENDIAN => {
-                let v = if bytes.len() >= 4 {
-                    u32::from_be_bytes(bytes[..4].try_into().unwrap())
-                } else {
-                    0
-                };
-                DecodedValue::DwordBE(v)
-            }
-            value_type::REG_LINK => DecodedValue::Link(decode_reg_sz(&bytes)),
-            value_type::REG_MULTI_SZ => DecodedValue::MultiString(decode_multi_sz(&bytes)),
             value_type::REG_QWORD => {
                 let v = if bytes.len() >= 8 {
                     u64::from_le_bytes(bytes[..8].try_into().unwrap())
@@ -800,6 +789,7 @@ impl<'a> VkRecord<'a> {
                 };
                 DecodedValue::Qword(v)
             }
+            value_type::REG_MULTI_SZ => DecodedValue::MultiString(decode_multi_sz(&bytes)),
             value_type::REG_FILETIME => {
                 let v = if bytes.len() >= 8 {
                     u64::from_le_bytes(bytes[..8].try_into().unwrap())
@@ -808,38 +798,118 @@ impl<'a> VkRecord<'a> {
                 };
                 DecodedValue::Filetime(v)
             }
-            _ => DecodedValue::Raw(bytes.into_owned()),
+            // SZ-ish: regipy calls try_decode_binary on the bytes
+            value_type::REG_SZ | value_type::REG_EXPAND_SZ => {
+                match try_decode_binary(&bytes, as_json, trim_values, max_len) {
+                    Ok(s) => DecodedValue::String(s),
+                    Err(b) => DecodedValue::Binary(b),
+                }
+            }
+            // BINARY/NONE: hex-encode-and-trim (or raw bytes)
+            value_type::REG_BINARY | value_type::REG_NONE => {
+                if trim_values {
+                    let mut s = hex_encode(&bytes);
+                    s = trim_to_chars(&s, max_len);
+                    DecodedValue::String(s)
+                } else {
+                    DecodedValue::Binary(bytes.into_owned())
+                }
+            }
+            // RESOURCE_*: hex-encode-and-trim (or raw)
+            value_type::REG_RESOURCE_REQUIREMENTS_LIST | value_type::REG_RESOURCE_LIST => {
+                if trim_values {
+                    let mut s = hex_encode(&bytes);
+                    s = trim_to_chars(&s, max_len);
+                    DecodedValue::String(s)
+                } else {
+                    DecodedValue::Binary(bytes.into_owned())
+                }
+            }
+            // REG_LINK, REG_DWORD_BIG_ENDIAN, REG_FULL_RESOURCE_DESCRIPTOR,
+            // unknown: fall through to try_decode_binary (Python's else branch).
+            _ => match try_decode_binary(&bytes, as_json, trim_values, max_len) {
+                Ok(s) => DecodedValue::String(s),
+                Err(b) => DecodedValue::Binary(b),
+            },
         }
     }
 }
 
-/// Decode a possibly-NUL-terminated UTF-16-LE or UTF-8 string.
-/// Mirrors `try_decode_binary` semantics.
-fn decode_reg_sz(bytes: &[u8]) -> String {
-    // Try UTF-16-LE first (most common for REG_SZ on NT)
-    if bytes.len() % 2 == 0 && !bytes.is_empty() {
-        let units: Vec<u16> = bytes
+/// Mirrors regipy.utils.try_decode_binary exactly.
+///
+/// ```python
+/// def try_decode_binary(data, as_json=False, max_len=MAX_LEN, trim_values=True):
+///     try:
+///         value = data.decode("utf-16-le").rstrip("\x00")
+///     except UnicodeDecodeError:
+///         try:
+///             value = data.decode().rstrip("\x00")
+///         except Exception as ex:
+///             value = binascii.b2a_hex(data).decode() if as_json else data
+///     if trim_values:
+///         value = value[:max_len]
+///     return value
+/// ```
+///
+/// Returns a String when one of the decode steps succeeded or the hex
+/// fallback applies (always when `as_json=true`). When `as_json=false` and
+/// both UTF decodes fail, returns the raw bytes via `Err`.
+pub fn try_decode_binary(data: &[u8], as_json: bool, trim_values: bool, max_len: usize) -> std::result::Result<String, Vec<u8>> {
+    // Step 1: strict UTF-16-LE
+    if data.len() % 2 == 0 {
+        let units: Vec<u16> = data
             .chunks_exact(2)
             .map(|c| u16::from_le_bytes([c[0], c[1]]))
             .collect();
-        // If most code units look like ASCII, treat as UTF-16
-        let ascii_like = units.iter().filter(|u| **u > 0 && **u < 128).count();
-        if ascii_like * 2 >= units.len() || units.iter().any(|u| *u > 127) {
-            // Strip trailing NULs and decode lossily
-            let mut s = String::from_utf16_lossy(&units);
-            // Strip trailing NUL chars
-            while s.ends_with('\u{0}') {
-                s.pop();
+        if let Ok(s) = String::from_utf16(&units) {
+            let mut s = s.trim_end_matches('\u{0}').to_string();
+            if trim_values {
+                s = trim_to_chars(&s, max_len);
             }
-            return s;
+            return Ok(s);
         }
     }
-    // Fallback: ASCII / Latin-1 ish
-    let mut s = String::from_utf8_lossy(bytes).into_owned();
-    while s.ends_with('\u{0}') {
-        s.pop();
+    // Step 2: strict UTF-8
+    if let Ok(s) = std::str::from_utf8(data) {
+        let mut s = s.trim_end_matches('\u{0}').to_string();
+        if trim_values {
+            s = trim_to_chars(&s, max_len);
+        }
+        return Ok(s);
     }
-    s
+    // Step 3: hex (when as_json) or raw bytes
+    if as_json {
+        let mut s = hex_encode(data);
+        if trim_values {
+            s = trim_to_chars(&s, max_len);
+        }
+        return Ok(s);
+    }
+    Err(data.to_vec())
+}
+
+/// Hex-encode lowercase, no separator (matches binascii.b2a_hex).
+fn hex_encode(data: &[u8]) -> String {
+    let mut out = String::with_capacity(data.len() * 2);
+    for b in data {
+        out.push(hex_digit(b >> 4));
+        out.push(hex_digit(b & 0x0F));
+    }
+    out
+}
+
+#[inline]
+fn hex_digit(n: u8) -> char {
+    if n < 10 {
+        (b'0' + n) as char
+    } else {
+        (b'a' + n - 10) as char
+    }
+}
+
+/// Match Python's `s[:max_len]` (Unicode chars, not bytes).
+fn trim_to_chars(s: &str, max_len: usize) -> String {
+    s.chars().take(max_len).collect()
 }
 
 /// Decode REG_MULTI_SZ matching `GreedyRange(CString("utf-16-le"))` exactly.

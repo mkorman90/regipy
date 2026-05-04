@@ -43,52 +43,14 @@ def is_enabled() -> bool:
 
 
 def _coerce_value_for_dataclass(decoded, value_type, as_json: bool, trim_values: bool):
-    """Convert a decoded Rust value to the shape regipy's Python path produces.
-
-    Mirrors the ladder in `regipy.registry.NKRecord.iter_values` exactly.
-    `value_type` may be a string ("REG_SZ", ...) or an int (for unknown
-    types passed through verbatim, matching construct's EnumInteger).
+    """Final touch-up after Rust decode. Most values come through pre-shaped;
+    the only conversion still needed in Python is FILETIME → datetime,
+    because regipy uses pytz for timezone handling.
     """
-    from regipy.utils import MAX_LEN, convert_wintime, try_decode_binary
+    from regipy.utils import convert_wintime
 
-    # When value_type is an int (unknown to the enum), Python regipy goes to
-    # the final else-branch which calls try_decode_binary on the bytes.
-    if isinstance(value_type, int):
-        if isinstance(decoded, (bytes, bytearray)):
-            return try_decode_binary(bytes(decoded), as_json=as_json, trim_values=trim_values)
-        return decoded
-
-    if decoded is None:
-        return decoded
-
-    if value_type in ("REG_SZ", "REG_EXPAND_SZ", "REG_LINK"):
-        if isinstance(decoded, str) and trim_values:
-            return decoded[:MAX_LEN]
-        return decoded
-
-    if value_type == "REG_BINARY":
-        if as_json and trim_values and isinstance(decoded, (bytes, bytearray)):
-            return binascii.b2a_hex(decoded).decode()[:MAX_LEN]
-        return decoded
-
-    if value_type == "REG_NONE":
-        if as_json and trim_values and isinstance(decoded, (bytes, bytearray)):
-            return binascii.b2a_hex(decoded).decode()[:MAX_LEN]
-        return decoded
-
-    if value_type in ("REG_RESOURCE_REQUIREMENTS_LIST", "REG_RESOURCE_LIST", "REG_FULL_RESOURCE_DESCRIPTOR"):
-        # Python regipy returns hex-encoded string trimmed to MAX_LEN when trim_values.
-        if isinstance(decoded, (bytes, bytearray)):
-            if trim_values:
-                return binascii.b2a_hex(decoded).decode()[:MAX_LEN]
-            return bytes(decoded)
-        return decoded
-
-    if value_type == "REG_FILETIME":
-        if isinstance(decoded, int):
-            return convert_wintime(decoded, as_json=as_json)
-        return decoded
-
+    if not isinstance(value_type, int) and value_type == "REG_FILETIME" and isinstance(decoded, int):
+        return convert_wintime(decoded, as_json=as_json)
     return decoded
 
 
@@ -125,43 +87,63 @@ def _recurse_subkeys_rust(
     """Replacement for RegistryHive.recurse_subkeys using Rust under the hood.
 
     Yields `regipy.registry.Subkey` instances, identical in shape to the
-    construct-based path.
+    construct-based path. Hot-path optimized: when as_json=True (the common
+    case for tests and dump_hive_to_json), values are kept as dicts in the
+    exact `asdict(Value)` shape and are NOT round-tripped through the Value
+    dataclass.
     """
-    from regipy.registry import Subkey
+    from regipy.registry import Subkey, Value
     from regipy.utils import convert_wintime
 
-    rust_hive: regipy_rs.RegistryHive = registry_hive._rust_hive  # set by patched __init__
+    rust_hive: regipy_rs.RegistryHive = registry_hive._rust_hive
     partial_hive_path = registry_hive.partial_hive_path
 
+    if as_json:
+        for entry in rust_hive.recurse_subkeys(fetch_values=fetch_values):
+            ts = convert_wintime(entry["last_modified"], as_json=True)
+            values_list: list = []
+            if fetch_values and entry["values_count"] > 0:
+                for vd in entry["values"]:
+                    val = vd["value"]
+                    vt = vd["value_type"]
+                    if not isinstance(vt, int) and vt == "REG_FILETIME" and isinstance(val, int):
+                        val = convert_wintime(val, as_json=True)
+                    values_list.append({
+                        "name": vd["name"],
+                        "value": val,
+                        "value_type": vt,
+                        "is_corrupted": False,
+                    })
+            path = entry["path"]
+            yield Subkey(
+                subkey_name=entry["subkey_name"],
+                path=path,
+                timestamp=ts,
+                values=values_list,
+                values_count=entry["values_count"],
+                actual_path=(f"{partial_hive_path}{path}" if partial_hive_path else None),
+            )
+        return
+
+    # Non-as_json branch: yield Value dataclasses
     for entry in rust_hive.recurse_subkeys(fetch_values=fetch_values):
-        # entry is a dict: {path, subkey_name, values_count, last_modified, values: [..]}
-        timestamp = convert_wintime(entry["last_modified"], as_json=as_json)
-        path = entry["path"]
-        # Match Python: "\\<name>" instead of "\<name>" — already matches.
-        # Build values list
-        values_list: list = []
+        ts = convert_wintime(entry["last_modified"], as_json=False)
+        values_list = []
         if fetch_values and entry["values_count"] > 0:
             for vd in entry["values"]:
-                v_obj = _build_value_dataclass(vd, as_json=as_json, trim_values=True)
-                values_list.append(asdict(v_obj) if as_json else v_obj)
-
-        actual_path = (
-            f"{partial_hive_path}{path}" if partial_hive_path else None
-        )
-
-        # Match the partial-hive actual_path-with-leading-backslash variant
-        # used in is_init branch of construct path — only matters for init,
-        # but we already filter init here.
-
-        ts_iso = timestamp.isoformat() if (as_json and hasattr(timestamp, "isoformat")) else timestamp
-
+                val = vd["value"]
+                vt = vd["value_type"]
+                if not isinstance(vt, int) and vt == "REG_FILETIME" and isinstance(val, int):
+                    val = convert_wintime(val, as_json=False)
+                values_list.append(Value(name=vd["name"], value=val, value_type=vt, is_corrupted=False))
+        path = entry["path"]
         yield Subkey(
             subkey_name=entry["subkey_name"],
             path=path,
-            timestamp=ts_iso,
+            timestamp=ts,
             values=values_list,
             values_count=entry["values_count"],
-            actual_path=actual_path,
+            actual_path=(f"{partial_hive_path}{path}" if partial_hive_path else None),
         )
 
 

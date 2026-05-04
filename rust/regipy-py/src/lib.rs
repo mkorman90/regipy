@@ -231,15 +231,37 @@ impl PyWalkIter {
             let data = data_of(&slf.hive);
             if let Ok(nk) = NkRecord::parse_at(data, nk_offset) {
                 for v in nk.iter_values() {
+                    // Python regipy: `elif int(vk.data_type) == 0x200000: continue`
+                    // Skip these unknown values entirely.
+                    if v.data_type == 0x200000 {
+                        continue;
+                    }
                     let vd = PyDict::new_bound(py);
                     vd.set_item("name", v.name())?;
                     let decoded = v.decode();
-                    let raw_type = v.data_type & 0xFFFF;
-                    let name = value_type_name(raw_type);
-                    if name == "UNKNOWN" {
-                        vd.set_item("value_type", raw_type)?;
+                    // Match Python regipy's value_type rendering exactly:
+                    //   - data_type > 0xFFFF_0000 (DEVPROP): strip to lower 16 bits
+                    //     and re-parse via VALUE_TYPE_ENUM. Known → str name;
+                    //     unknown → int (EnumInteger).
+                    //   - else: str(vk.data_type). Known → str enum name;
+                    //     unknown → str of the integer ("131076" etc).
+                    if v.data_type > 0xFFFF_0000 {
+                        let stripped = v.data_type & 0xFFFF;
+                        let name = value_type_name(stripped);
+                        if name == "UNKNOWN" {
+                            // Emit as Python int (EnumInteger)
+                            vd.set_item("value_type", stripped)?;
+                        } else {
+                            vd.set_item("value_type", name)?;
+                        }
                     } else {
-                        vd.set_item("value_type", name)?;
+                        let name = value_type_name(v.data_type);
+                        if name == "UNKNOWN" {
+                            // Python str(EnumInteger) → str-form of int
+                            vd.set_item("value_type", v.data_type.to_string())?;
+                        } else {
+                            vd.set_item("value_type", name)?;
+                        }
                     }
                     vd.set_item("data_type_int", v.data_type)?;
                     vd.set_item("value", decoded_value_to_py(py, &decoded)?)?;

@@ -91,6 +91,58 @@ jobs:
           name: plugin-validation-docs
           path: regipy_tests/validation/plugin_validation.md
 
+  test-rust-backend:
+    # Optional Rust acceleration: builds the regipy-rs extension and re-runs the
+    # test suite + plugin validation under REGIPY_BACKEND=rust, plus a 1:1
+    # parity check that walks every key + every value of small/medium hives
+    # and asserts byte-exact equality with the construct backend.
+    # This job is purely additive — the existing `test` job above continues
+    # to run with the pure-Python construct backend.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/**/Cargo.lock', 'rust/**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install regipy + dev deps
+        run: |
+          python -m pip install --upgrade pip maturin
+          pip install -e ".[full,dev]"
+
+      - name: Build and install regipy-rs wheel
+        working-directory: rust/regipy-py
+        run: |
+          maturin build --release
+          pip install --force-reinstall ../target/wheels/regipy_rs-*.whl
+
+      - name: Run pytest with Rust backend
+        env: { REGIPY_BACKEND: rust }
+        run: pytest -v regipy_tests/tests.py regipy_tests/test_utils.py
+
+      - name: Run plugin validation with Rust backend
+        env: { REGIPY_BACKEND: rust }
+        run: PYTHONPATH=. python regipy_tests/validation/plugin_validation.py
+
+      - name: 1:1 parity check (DFIR safety gate)
+        run: PYTHONPATH=. python regipy_tests/parity/parity_check.py
+
   type-check:
     runs-on: ubuntu-latest
     steps:
