@@ -11,7 +11,7 @@ use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList};
 
-use regipy_core::{value_type_name, DecodedValue, Hive, NkHeader, NkRecord, RegfHeader};
+use regipy_core::{value_type_name, wintime_to_iso, DecodedValue, Hive, NkHeader, NkRecord, RegfHeader};
 
 fn map_err<E: std::fmt::Display>(e: E) -> PyErr {
     PyRuntimeError::new_err(e.to_string())
@@ -19,6 +19,68 @@ fn map_err<E: std::fmt::Display>(e: E) -> PyErr {
 
 fn data_of(hive: &Hive) -> &[u8] {
     hive.bytes()
+}
+
+/// Append per-value Value-shaped dicts into `out_list`, matching
+/// `regipy.registry.NKRecord.iter_values(as_json=as_json)` exactly:
+///   {name: str, value: ..., value_type: str|int, is_corrupted: bool}
+fn emit_value_dicts<'py>(
+    py: Python<'py>,
+    nk: &NkRecord<'_>,
+    as_json: bool,
+    out_list: &Bound<'py, PyList>,
+) -> PyResult<()> {
+    for v in nk.iter_values() {
+        // Python regipy: `elif int(vk.data_type) == 0x200000: continue`
+        if v.data_type == 0x200000 {
+            continue;
+        }
+        let vd = PyDict::new_bound(py);
+        vd.set_item("name", v.name())?;
+
+        // Match Python regipy's value_type rendering exactly:
+        //   - data_type > 0xFFFF_0000 (DEVPROP): strip to lower 16 bits
+        //     and re-parse via VALUE_TYPE_ENUM. Known → str name;
+        //     unknown → int (EnumInteger).
+        //   - else: str(vk.data_type). Known → str enum name;
+        //     unknown → str of the integer ("131076" etc).
+        if v.data_type > 0xFFFF_0000 {
+            let stripped = v.data_type & 0xFFFF;
+            let name = value_type_name(stripped);
+            if name == "UNKNOWN" {
+                vd.set_item("value_type", stripped)?;
+            } else {
+                vd.set_item("value_type", name)?;
+            }
+        } else {
+            let name = value_type_name(v.data_type);
+            if name == "UNKNOWN" {
+                vd.set_item("value_type", v.data_type.to_string())?;
+            } else {
+                vd.set_item("value_type", name)?;
+            }
+        }
+
+        let decoded = v.decode_with(as_json, true);
+        // FILETIME is the only type whose final shape (datetime vs ISO str)
+        // depends on as_json: in the as_json path we hand back the ISO
+        // string; in the non-as_json path we hand back the raw u64 and let
+        // the Python wrapper convert via pytz-aware datetime.
+        let value_obj: PyObject = match &decoded {
+            DecodedValue::Filetime(n) => {
+                if as_json {
+                    wintime_to_iso(*n).into_py(py)
+                } else {
+                    n.into_py(py)
+                }
+            }
+            other => decoded_value_to_py(py, other)?,
+        };
+        vd.set_item("value", value_obj)?;
+        vd.set_item("is_corrupted", false)?;
+        out_list.append(vd)?;
+    }
+    Ok(())
 }
 
 fn header_to_dict<'py>(py: Python<'py>, h: &RegfHeader) -> PyResult<Bound<'py, PyDict>> {
@@ -128,9 +190,25 @@ impl PyHive {
         }
     }
 
-    /// Recursive walk yielding dicts.
-    #[pyo3(signature = (fetch_values = true, as_json = false))]
-    fn recurse_subkeys(&self, fetch_values: bool, as_json: bool) -> PyResult<PyWalkIter> {
+    /// Recursive walk yielding Subkey-shaped dicts.
+    ///
+    /// Output shape per yielded dict:
+    ///   subkey_name: str
+    ///   path: str
+    ///   timestamp: str (ISO when as_json) or int (raw FILETIME)
+    ///   values_count: int
+    ///   values: list of Value-shaped dicts ({name, value, value_type, is_corrupted})
+    ///   actual_path: str | None
+    ///
+    /// All construction happens in Rust; the Python wrapper just instantiates
+    /// the regipy.registry.Subkey dataclass around the dict.
+    #[pyo3(signature = (fetch_values = true, as_json = false, partial_hive_path = None))]
+    fn recurse_subkeys(
+        &self,
+        fetch_values: bool,
+        as_json: bool,
+        partial_hive_path: Option<String>,
+    ) -> PyResult<PyWalkIter> {
         let root = self.inner.root().map_err(map_err)?;
         let mut entries: Vec<WalkEntry> = Vec::new();
         push_walk(&root, String::from("\\"), &mut entries, true);
@@ -140,12 +218,74 @@ impl PyHive {
             idx: 0,
             fetch_values,
             as_json,
+            partial_hive_path,
         })
+    }
+
+    /// Convert a Windows FILETIME u64 to an ISO datetime string.
+    #[staticmethod]
+    fn wintime_to_iso(wintime: u64) -> String {
+        wintime_to_iso(wintime)
     }
 
     fn walk_stats(&self) -> PyResult<(u64, u64, u32)> {
         let s = regipy_core::walk(&self.inner).map_err(map_err)?;
         Ok((s.keys, s.values, s.max_depth))
+    }
+
+    /// Emit Value-shaped dicts for the NK at file-offset `nk_offset`
+    /// (start of "nk" sig). Used by patched NKRecord.iter_values to route
+    /// plugin-direct value iteration through Rust.
+    #[pyo3(signature = (nk_offset, as_json = false))]
+    fn iter_values_at<'py>(
+        &self,
+        py: Python<'py>,
+        nk_offset: usize,
+        as_json: bool,
+    ) -> PyResult<Bound<'py, PyList>> {
+        let list = PyList::empty_bound(py);
+        let nk = NkRecord::parse_at(self.inner.bytes(), nk_offset).map_err(map_err)?;
+        emit_value_dicts(py, &nk, as_json, &list)?;
+        Ok(list)
+    }
+
+    /// Return list of (subkey_name, nk_offset) pairs for the NK at offset.
+    fn iter_subkeys_at<'py>(
+        &self,
+        py: Python<'py>,
+        nk_offset: usize,
+    ) -> PyResult<Bound<'py, PyList>> {
+        let list = PyList::empty_bound(py);
+        let nk = NkRecord::parse_at(self.inner.bytes(), nk_offset).map_err(map_err)?;
+        for sk in nk.iter_subkeys() {
+            let tup = pyo3::types::PyTuple::new_bound(py, &[
+                sk.name().into_py(py),
+                sk.offset().into_py(py),
+            ]);
+            list.append(tup)?;
+        }
+        Ok(list)
+    }
+
+    /// Find a direct subkey by case-insensitive name. Returns
+    /// (name, nk_offset) tuple or None.
+    fn get_subkey_at(
+        &self,
+        py: Python<'_>,
+        nk_offset: usize,
+        name: &str,
+    ) -> PyResult<PyObject> {
+        let nk = NkRecord::parse_at(self.inner.bytes(), nk_offset).map_err(map_err)?;
+        match nk.get_subkey(name) {
+            Some(sk) => {
+                let tup = pyo3::types::PyTuple::new_bound(py, &[
+                    sk.name().into_py(py),
+                    sk.offset().into_py(py),
+                ]);
+                Ok(tup.into())
+            }
+            None => Ok(py.None()),
+        }
     }
 }
 
@@ -201,6 +341,7 @@ pub struct PyWalkIter {
     idx: usize,
     fetch_values: bool,
     as_json: bool,
+    partial_hive_path: Option<String>,
 }
 
 #[pymethods]
@@ -220,55 +361,32 @@ impl PyWalkIter {
             (e.path.clone(), e.subkey_name.clone(), e.values_count, e.nk_offset, e.last_modified)
         };
 
+        // Build the full Subkey-shaped dict in Rust.
         let dict = PyDict::new_bound(py);
-        dict.set_item("path", &path)?;
         dict.set_item("subkey_name", &subkey_name)?;
+        dict.set_item("path", &path)?;
         dict.set_item("values_count", values_count)?;
-        dict.set_item("last_modified", last_modified)?;
 
+        // timestamp: ISO string when as_json, else raw u64 (Python wrapper
+        // converts to datetime via convert_wintime).
+        if slf.as_json {
+            dict.set_item("timestamp", wintime_to_iso(last_modified))?;
+        } else {
+            dict.set_item("timestamp", last_modified)?;
+        }
+
+        // actual_path
+        match &slf.partial_hive_path {
+            Some(p) => dict.set_item("actual_path", format!("{}{}", p, path))?,
+            None => dict.set_item("actual_path", py.None())?,
+        }
+
+        // values
         if slf.fetch_values && values_count > 0 {
             let values_list = PyList::empty_bound(py);
             let data = data_of(&slf.hive);
             if let Ok(nk) = NkRecord::parse_at(data, nk_offset) {
-                for v in nk.iter_values() {
-                    // Python regipy: `elif int(vk.data_type) == 0x200000: continue`
-                    // Skip these unknown values entirely.
-                    if v.data_type == 0x200000 {
-                        continue;
-                    }
-                    let vd = PyDict::new_bound(py);
-                    vd.set_item("name", v.name())?;
-                    let decoded = v.decode();
-                    // Match Python regipy's value_type rendering exactly:
-                    //   - data_type > 0xFFFF_0000 (DEVPROP): strip to lower 16 bits
-                    //     and re-parse via VALUE_TYPE_ENUM. Known → str name;
-                    //     unknown → int (EnumInteger).
-                    //   - else: str(vk.data_type). Known → str enum name;
-                    //     unknown → str of the integer ("131076" etc).
-                    if v.data_type > 0xFFFF_0000 {
-                        let stripped = v.data_type & 0xFFFF;
-                        let name = value_type_name(stripped);
-                        if name == "UNKNOWN" {
-                            // Emit as Python int (EnumInteger)
-                            vd.set_item("value_type", stripped)?;
-                        } else {
-                            vd.set_item("value_type", name)?;
-                        }
-                    } else {
-                        let name = value_type_name(v.data_type);
-                        if name == "UNKNOWN" {
-                            // Python str(EnumInteger) → str-form of int
-                            vd.set_item("value_type", v.data_type.to_string())?;
-                        } else {
-                            vd.set_item("value_type", name)?;
-                        }
-                    }
-                    vd.set_item("data_type_int", v.data_type)?;
-                    vd.set_item("value", decoded_value_to_py(py, &decoded)?)?;
-                    vd.set_item("size", v.data_size)?;
-                    let _ = slf.as_json;
-                    values_list.append(vd)?;
-                }
+                emit_value_dicts(py, &nk, slf.as_json, &values_list)?;
             }
             dict.set_item("values", values_list)?;
         } else {
@@ -355,29 +473,11 @@ impl PyKey {
         Ok(nk.get_subkey(name).map(|sk| PyKey::from_offset(self.hive.clone(), sk.offset())))
     }
 
-    fn iter_values<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyList>> {
+    #[pyo3(signature = (as_json = false))]
+    fn iter_values<'py>(&self, py: Python<'py>, as_json: bool) -> PyResult<Bound<'py, PyList>> {
         let list = PyList::empty_bound(py);
         let nk = self.parse()?;
-        for v in nk.iter_values() {
-            let d = PyDict::new_bound(py);
-            d.set_item("name", v.name())?;
-            // Match Python's `data_type = str(vk.data_type)` quirk:
-            // known enum members render as the construct symbol name
-            // ("REG_SZ", "REG_DWORD", ...). Unknown values pass through as
-            // the integer, matching construct's EnumInteger fallback.
-            let raw_type = v.data_type & 0xFFFF;
-            let name = value_type_name(raw_type);
-            if name == "UNKNOWN" {
-                d.set_item("value_type", raw_type)?;
-            } else {
-                d.set_item("value_type", name)?;
-            }
-            d.set_item("data_type_int", v.data_type)?;
-            let decoded = v.decode();
-            d.set_item("value", decoded_value_to_py(py, &decoded)?)?;
-            d.set_item("size", v.data_size)?;
-            list.append(d)?;
-        }
+        emit_value_dicts(py, &nk, as_json, &list)?;
         Ok(list)
     }
 

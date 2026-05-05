@@ -946,6 +946,84 @@ fn decode_multi_sz(bytes: &[u8]) -> Vec<String> {
     out.into_iter().filter(|s| !s.is_empty()).collect()
 }
 
+/// Convert FILETIME (100ns ticks) to microseconds, matching Python's
+/// `timedelta(microseconds=wintime/10)` exactly.
+///
+/// Python's `int / int` performs correctly-rounded multi-precision division
+/// to produce the closest f64 of the exact rational `wintime/10`, then
+/// `timedelta` normalizes that float to an integer via round-half-to-even.
+///
+/// In the IEEE 754 f64 range that FILETIME values land in (≈1.3e16),
+/// representable values are spaced by 2 (only even integers fit). The exact
+/// rational `q + r/10` (where `wintime = 10q + r`, `0 ≤ r ≤ 9`) is closest
+/// to:
+///   - `q`     when `q` is even (always wins by ≤1 vs. any odd-step neighbor)
+///   - `q + 1` when `q` is odd and `r > 0` (q+1 is the nearest even integer)
+///   - tie     when `q` is odd and `r = 0` (q-1 and q+1 are both at distance 1)
+///
+/// For the tie case we delegate to f64 round-to-nearest-even semantics by
+/// converting q through f64 — that picks whichever side has the even
+/// mantissa LSB, exactly as Python's `int → float` conversion does.
+fn wintime_to_us(wintime: u64) -> i64 {
+    let q = wintime / 10;
+    let r = wintime % 10;
+    if r == 0 {
+        // Closest f64 to exactly q (no fractional part); IEEE handles ties.
+        return (q as f64) as i64;
+    }
+    if q % 2 == 0 {
+        q as i64
+    } else {
+        (q + 1) as i64
+    }
+}
+
+/// Format a Windows FILETIME (100-ns ticks since 1601-01-01 UTC) as an
+/// ISO 8601 datetime string with `+00:00` suffix, exactly matching
+/// `regipy.utils.convert_wintime(wintime, as_json=True)`.
+pub fn wintime_to_iso(wintime: u64) -> String {
+    let total_us: i64 = wintime_to_us(wintime);
+    let secs = total_us.div_euclid(1_000_000);
+    let micros = total_us.rem_euclid(1_000_000) as u32;
+
+    // Days from 1601-01-01 to 1970-01-01 = 134774
+    const EPOCH_OFFSET_SECS: i64 = 134774 * 86400;
+    let unix_secs = secs - EPOCH_OFFSET_SECS;
+
+    // Compute civil date from unix_secs (UTC). Algorithm from Howard Hinnant's
+    // "civil_from_days".
+    let days = unix_secs.div_euclid(86400);
+    let secs_of_day = unix_secs.rem_euclid(86400);
+    let h = (secs_of_day / 3600) as u32;
+    let m = ((secs_of_day % 3600) / 60) as u32;
+    let s = (secs_of_day % 60) as u32;
+
+    let z = days + 719468;
+    let era = z.div_euclid(146097);
+    let doe = z.rem_euclid(146097) as u64;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let y = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = (doy - (153 * mp + 2) / 5 + 1) as u32;
+    let mo = (if mp < 10 { mp + 3 } else { mp - 9 }) as u32;
+    let yr = if mo <= 2 { y + 1 } else { y };
+
+    // Match Python's `datetime.isoformat()`: drop the `.000000` suffix
+    // entirely when microseconds are zero.
+    if micros == 0 {
+        format!(
+            "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}+00:00",
+            yr, mo, d, h, m, s
+        )
+    } else {
+        format!(
+            "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:06}+00:00",
+            yr, mo, d, h, m, s, micros
+        )
+    }
+}
+
 fn read_u32(buf: &[u8], offset: usize) -> Result<u32> {
     if offset + 4 > buf.len() {
         return Err(Error::Eof(offset, 4));

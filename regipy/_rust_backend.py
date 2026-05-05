@@ -22,10 +22,7 @@ Compatibility constraints (must not regress):
 """
 from __future__ import annotations
 
-import binascii
 import os
-from dataclasses import asdict
-from typing import Iterator, Optional
 
 try:
     import regipy_rs  # type: ignore
@@ -42,40 +39,6 @@ def is_enabled() -> bool:
     return os.environ.get("REGIPY_BACKEND", "").lower() == "rust"
 
 
-def _coerce_value_for_dataclass(decoded, value_type, as_json: bool, trim_values: bool):
-    """Final touch-up after Rust decode. Most values come through pre-shaped;
-    the only conversion still needed in Python is FILETIME → datetime,
-    because regipy uses pytz for timezone handling.
-    """
-    from regipy.utils import convert_wintime
-
-    if not isinstance(value_type, int) and value_type == "REG_FILETIME" and isinstance(decoded, int):
-        return convert_wintime(decoded, as_json=as_json)
-    return decoded
-
-
-def _build_value_dataclass(value_dict, as_json: bool, trim_values: bool):
-    """Convert a regipy_rs value dict into a regipy.registry.Value instance."""
-    from regipy.registry import Value
-
-    name = value_dict["name"]
-    value_type = value_dict["value_type"]
-    raw = value_dict["value"]
-
-    coerced = _coerce_value_for_dataclass(raw, value_type, as_json=as_json, trim_values=trim_values)
-    return Value(name=name, value=coerced, value_type=value_type, is_corrupted=False)
-
-
-def _iter_values_rust(nk_py_record, as_json: bool = False, max_len: int = 256, trim_values: bool = True):
-    """Replacement for NKRecord.iter_values using Rust under the hood."""
-    rust_nk = nk_py_record._rust_nk  # set by patched __init__
-    if rust_nk is None:
-        # Should not happen if backend is active
-        raise RuntimeError("Rust NK is not bound to this Python NKRecord")
-    for vd in rust_nk.iter_values():
-        yield _build_value_dataclass(vd, as_json=as_json, trim_values=trim_values)
-
-
 def _recurse_subkeys_rust(
     registry_hive,
     nk_record=None,
@@ -84,84 +47,68 @@ def _recurse_subkeys_rust(
     is_init: bool = True,
     fetch_values: bool = True,
 ):
-    """Replacement for RegistryHive.recurse_subkeys using Rust under the hood.
-
-    Yields `regipy.registry.Subkey` instances, identical in shape to the
-    construct-based path. Hot-path optimized: when as_json=True (the common
-    case for tests and dump_hive_to_json), values are kept as dicts in the
-    exact `asdict(Value)` shape and are NOT round-tripped through the Value
-    dataclass.
+    """Wrap regipy_rs.RegistryHive.recurse_subkeys output in regipy's
+    Subkey/Value dataclasses. The Rust side has already produced the exact
+    output shape; this wrapper only does:
+        1. Subkey(**dict) instantiation per row
+        2. Value dataclass wrapping (only when as_json=False)
+        3. convert_wintime for FILETIME values (only when as_json=False,
+           because pytz-aware datetime can't be produced in Rust)
     """
     from regipy.registry import Subkey, Value
     from regipy.utils import convert_wintime
 
     rust_hive: regipy_rs.RegistryHive = registry_hive._rust_hive
-    partial_hive_path = registry_hive.partial_hive_path
+    partial = registry_hive.partial_hive_path
 
     if as_json:
-        for entry in rust_hive.recurse_subkeys(fetch_values=fetch_values):
-            ts = convert_wintime(entry["last_modified"], as_json=True)
-            values_list: list = []
-            if fetch_values and entry["values_count"] > 0:
-                for vd in entry["values"]:
-                    val = vd["value"]
-                    vt = vd["value_type"]
-                    if not isinstance(vt, int) and vt == "REG_FILETIME" and isinstance(val, int):
-                        val = convert_wintime(val, as_json=True)
-                    values_list.append({
-                        "name": vd["name"],
-                        "value": val,
-                        "value_type": vt,
-                        "is_corrupted": False,
-                    })
-            path = entry["path"]
-            yield Subkey(
-                subkey_name=entry["subkey_name"],
-                path=path,
-                timestamp=ts,
-                values=values_list,
-                values_count=entry["values_count"],
-                actual_path=(f"{partial_hive_path}{path}" if partial_hive_path else None),
-            )
+        # Rust emits the exact final shape (ISO timestamps, value dicts).
+        # Just wrap each entry in the Subkey dataclass.
+        for d in rust_hive.recurse_subkeys(fetch_values=fetch_values, as_json=True, partial_hive_path=partial):
+            yield Subkey(**d)
         return
 
-    # Non-as_json branch: yield Value dataclasses
-    for entry in rust_hive.recurse_subkeys(fetch_values=fetch_values):
-        ts = convert_wintime(entry["last_modified"], as_json=False)
-        values_list = []
-        if fetch_values and entry["values_count"] > 0:
-            for vd in entry["values"]:
+    # Non-as_json branch: convert Rust int timestamps to datetime, wrap
+    # value dicts in the Value dataclass.
+    for d in rust_hive.recurse_subkeys(fetch_values=fetch_values, as_json=False, partial_hive_path=partial):
+        d["timestamp"] = convert_wintime(d["timestamp"], as_json=False)
+        if d["values"]:
+            new_values = []
+            for vd in d["values"]:
                 val = vd["value"]
                 vt = vd["value_type"]
-                if not isinstance(vt, int) and vt == "REG_FILETIME" and isinstance(val, int):
+                if vt == "REG_FILETIME" and isinstance(val, int):
                     val = convert_wintime(val, as_json=False)
-                values_list.append(Value(name=vd["name"], value=val, value_type=vt, is_corrupted=False))
-        path = entry["path"]
-        yield Subkey(
-            subkey_name=entry["subkey_name"],
-            path=path,
-            timestamp=ts,
-            values=values_list,
-            values_count=entry["values_count"],
-            actual_path=(f"{partial_hive_path}{path}" if partial_hive_path else None),
-        )
+                new_values.append(Value(
+                    name=vd["name"],
+                    value=val,
+                    value_type=vt,
+                    is_corrupted=vd["is_corrupted"],
+                ))
+            d["values"] = new_values
+        yield Subkey(**d)
 
 
 def _build_nk_at_offset(registry_hive, nk_offset: int):
     """Construct a Python NKRecord at a given file-absolute offset of the
     'nk' signature. Reuses the existing construct-based NKRecord parser so
     `header` retains the same construct Container shape that tests assert on.
+    Attaches `_rust_offset` and `_rust_hive_obj` so subsequent iter_values /
+    iter_subkeys / get_subkey calls on this NK go through Rust too.
     """
     from regipy.registry import Cell, NKRecord
 
     stream = registry_hive._stream
-    # Derive cell size from the 4 bytes preceding the "nk" sig.
     stream.seek(nk_offset - 4)
     raw = stream.read(4)
     cell_size = abs(int.from_bytes(raw, byteorder="little", signed=True))
-    # NKRecord expects cell.offset to be AFTER the 2-byte "nk" sig
     cell = Cell(cell_type="nk", offset=nk_offset + 2, size=cell_size)
-    return NKRecord(cell=cell, stream=stream)
+    nk = NKRecord(cell=cell, stream=stream)
+    # Tag with Rust offset for the patched per-NK methods.
+    nk._rust_offset = nk_offset
+    nk._rust_hive_obj = registry_hive._rust_hive
+    nk._rust_registry_hive = registry_hive
+    return nk
 
 
 def _get_key_rust(registry_hive, key_path: str):
@@ -194,31 +141,42 @@ _ORIGINAL_GET_KEY = None
 _ORIGINAL_RECURSE = None
 _ORIGINAL_ITER_VALUES = None
 _ORIGINAL_INIT = None
+_ORIGINAL_NK_ITER_SUBKEYS = None
+_ORIGINAL_NK_GET_SUBKEY = None
 _PATCHED = False
 
 
 def install():
     """Activate the Rust backend by monkey-patching regipy.registry."""
-    global _ORIGINAL_GET_KEY, _ORIGINAL_RECURSE, _ORIGINAL_ITER_VALUES, _ORIGINAL_INIT, _PATCHED
+    global _ORIGINAL_GET_KEY, _ORIGINAL_RECURSE, _ORIGINAL_ITER_VALUES, _ORIGINAL_INIT
+    global _ORIGINAL_NK_ITER_SUBKEYS, _ORIGINAL_NK_GET_SUBKEY, _PATCHED
     if _PATCHED or not _RUST_AVAILABLE:
         return
 
-    from regipy.registry import NKRecord, RegistryHive
+    from regipy.registry import NKRecord, RegistryHive, Value
+    from regipy.utils import convert_wintime, MAX_LEN
 
     _ORIGINAL_INIT = RegistryHive.__init__
     _ORIGINAL_RECURSE = RegistryHive.recurse_subkeys
     _ORIGINAL_GET_KEY = RegistryHive.get_key
     _ORIGINAL_ITER_VALUES = NKRecord.iter_values
+    _ORIGINAL_NK_ITER_SUBKEYS = NKRecord.iter_subkeys
+    _ORIGINAL_NK_GET_SUBKEY = NKRecord.get_subkey
 
     def patched_init(self, hive_path, hive_type=None, partial_hive_path=None):
-        # Run the original to set up the construct-parsed header + root
         _ORIGINAL_INIT(self, hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path)
-        # Attach the Rust hive
         try:
             self._rust_hive = regipy_rs.RegistryHive(hive_path)
         except Exception:
-            # If Rust can't open it, fall back silently
             self._rust_hive = None
+        # Tag the root NK so plugins iterating from root get Rust speedup.
+        try:
+            if self._rust_hive is not None:
+                self.root._rust_offset = self._rust_hive.root.nk_offset
+                self.root._rust_hive_obj = self._rust_hive
+                self.root._rust_registry_hive = self
+        except Exception:
+            pass
 
     def patched_recurse(
         self,
@@ -229,7 +187,6 @@ def install():
         fetch_values=True,
     ):
         if getattr(self, "_rust_hive", None) is None or nk_record is not None or path_root is not None:
-            # Fall back to original for non-trivial subroots
             yield from _ORIGINAL_RECURSE(
                 self,
                 nk_record=nk_record,
@@ -254,14 +211,84 @@ def install():
         try:
             return _get_key_rust(self, key_path)
         except Exception:
-            # Fallback to Python path on any Rust-side surprise — DFIR-safe.
             return _ORIGINAL_GET_KEY(self, key_path)
+
+    def patched_iter_values(self, as_json=False, max_len=MAX_LEN, trim_values=True):
+        rust_offset = getattr(self, "_rust_offset", None)
+        rust_hive = getattr(self, "_rust_hive_obj", None)
+        if rust_offset is None or rust_hive is None or not trim_values:
+            # Fall back to original when not Rust-tagged or when caller wants
+            # untrimmed bytes (Rust always emits trimmed/hex-shaped form).
+            yield from _ORIGINAL_ITER_VALUES(self, as_json=as_json, max_len=max_len, trim_values=trim_values)
+            return
+        try:
+            value_dicts = rust_hive.iter_values_at(rust_offset, as_json)
+        except Exception:
+            yield from _ORIGINAL_ITER_VALUES(self, as_json=as_json, max_len=max_len, trim_values=trim_values)
+            return
+        for vd in value_dicts:
+            val = vd["value"]
+            vt = vd["value_type"]
+            # Non-as_json FILETIME → datetime via pytz
+            if not as_json and vt == "REG_FILETIME" and isinstance(val, int):
+                val = convert_wintime(val, as_json=False)
+            yield Value(name=vd["name"], value=val, value_type=vt, is_corrupted=vd["is_corrupted"])
+
+    def patched_nk_iter_subkeys(self):
+        rust_offset = getattr(self, "_rust_offset", None)
+        rust_hive = getattr(self, "_rust_hive_obj", None)
+        registry_hive = getattr(self, "_rust_registry_hive", None)
+        if rust_offset is None or rust_hive is None or registry_hive is None:
+            return _ORIGINAL_NK_ITER_SUBKEYS(self)
+        try:
+            pairs = rust_hive.iter_subkeys_at(rust_offset)
+        except Exception:
+            return _ORIGINAL_NK_ITER_SUBKEYS(self)
+        return _yield_subkeys_from_pairs(registry_hive, pairs)
+
+    def patched_nk_get_subkey(self, key_name, raise_on_missing=True):
+        from regipy.exceptions import NoRegistrySubkeysException
+        rust_offset = getattr(self, "_rust_offset", None)
+        rust_hive = getattr(self, "_rust_hive_obj", None)
+        registry_hive = getattr(self, "_rust_registry_hive", None)
+        if rust_offset is None or rust_hive is None or registry_hive is None:
+            return _ORIGINAL_NK_GET_SUBKEY(self, key_name, raise_on_missing=raise_on_missing)
+        if not self.subkey_count and raise_on_missing:
+            raise NoRegistrySubkeysException(f"No subkeys for {self.header.key_name_string}")
+        try:
+            res = rust_hive.get_subkey_at(rust_offset, key_name)
+        except Exception:
+            return _ORIGINAL_NK_GET_SUBKEY(self, key_name, raise_on_missing=raise_on_missing)
+        if res is None:
+            if raise_on_missing:
+                raise NoRegistrySubkeysException(f"No subkey {key_name} for {self.header.key_name_string}")
+            return None
+        _name, off = res
+        return _build_nk_at_offset(registry_hive, off)
 
     RegistryHive.__init__ = patched_init
     RegistryHive.recurse_subkeys = patched_recurse
     RegistryHive.get_key = patched_get_key
+    # Per-NK method patches kept disabled: although they pass byte-exact
+    # parity on the per-key iter_values output (verified by parity_check.py),
+    # routing them through Rust at *import time* causes the existing
+    # `test_system_apply_transaction_logs_2` regdiff test to compute a
+    # different *count* of differences (231 vs 225) on the recovered hive.
+    # The per-key iter_values output is identical between backends, but
+    # `compare_hives`' set-difference loop produces a different number of
+    # entries. Until we pinpoint the cause, only the bulk `recurse_subkeys`
+    # and `get_key` paths are routed through Rust.
+    # NKRecord.iter_values = patched_iter_values
+    # NKRecord.iter_subkeys = patched_nk_iter_subkeys
+    # NKRecord.get_subkey = patched_nk_get_subkey
 
     _PATCHED = True
+
+
+def _yield_subkeys_from_pairs(registry_hive, pairs):
+    """Yield NKRecord instances built at offsets from (name, offset) pairs."""
+    for _name, off in pairs:
+        yield _build_nk_at_offset(registry_hive, off)
 
 
 def maybe_install():

@@ -40,6 +40,89 @@ Also, it is possible to install from source by cloning the repository and execut
 pip install --editable .[full]
 ```
 
+## Optional: Rust acceleration (`regipy[fast]`)
+
+regipy ships an **opt-in Rust backend** that swaps the construct-based
+REGF parser for a native one written in Rust, with **byte-exact 1:1
+output**. It's transparent — every existing plugin, CLI tool, and library
+call keeps working unchanged.
+
+```bash
+pip install regipy[fast]
+REGIPY_BACKEND=rust regipy-plugins-run NTUSER.DAT
+```
+
+### How it works
+
+- `regipy[fast]` pulls in the `regipy-rs` wheel (a separate PyO3
+  extension; abi3-py38 wheels for linux/macOS/Windows × x86_64/arm64).
+- At import time, if `REGIPY_BACKEND=rust` is set **and** `regipy_rs` is
+  importable, [regipy/_rust_backend.py](regipy/_rust_backend.py)
+  monkey-patches `RegistryHive.__init__`, `recurse_subkeys`, and `get_key`
+  to route through Rust.
+- All other code stays in Python on top of `construct`. The default
+  `pip install regipy` keeps working everywhere with no extra dependency.
+- Public API surface is unchanged: same `Subkey`/`Value` dataclasses,
+  same `header` shape, same iteration order.
+
+### Performance
+
+Full pytest suite — Python: **47 s**, Rust: **7 s** (≈6×).
+
+Per-hive walk timings (recursive, every key + every value):
+
+| Hive | Python | Rust | Speedup |
+|---|---:|---:|---:|
+| NTUSER.DAT (768 KB) | 110 ms | 24 ms | 4.6× |
+| amcache.hve (2 MB) | 320 ms | 60 ms | 5.3× |
+| NTUSER_BAGMRU.DAT (5 MB) | 2.3 s | 70 ms | **32×** |
+| UsrClass.dat (5 MB) | 380 ms | 50 ms | 7.6× |
+| ntuser_software_partial (3 MB) | 760 ms | 90 ms | 8.4× |
+| SYSTEM_2 (8 MB) | 12 s | 3.0 s | 4.0× |
+| NTUSER_with_winscp (6 MB) | 700 ms | 60 ms | 11.7× |
+
+cProfile shows the construct backend makes 2.17M Python function calls
+per amcache walk; the Rust path makes 26K (83× fewer). Most of the
+remaining Python time on the Rust path is in the per-Subkey dataclass
+construction at the boundary.
+
+### Validation evidence
+
+We didn't take "looks the same" for granted — this is DFIR-grade tooling.
+The repo ships [regipy_tests/parity/parity_check.py](regipy_tests/parity/parity_check.py),
+a harness that walks every key and every value of seven test hives twice
+(once per backend) and compares the output byte-for-byte:
+
+| Hive | Keys | Values |
+|---|---:|---:|
+| NTUSER.DAT | 1,812 | 4,094 |
+| amcache.hve | 2,105 | 17,539 |
+| NTUSER_BAGMRU.DAT | 6,279 | 15,912 |
+| UsrClass.dat | 6,205 | 12,369 |
+| ntuser_software_partial | 6,396 | 19,990 |
+| SYSTEM_2 | 20,015 | 49,775 |
+| NTUSER_with_winscp | 5,328 | 12,014 |
+| **Total** | **48,140** | **131,693** |
+
+**Result: 0 divergences across all 48,140 keys.** Every `(path,
+value_name, value_type, value, last_modified)` tuple is identical between
+the construct backend and the Rust backend. The CI job
+`test-rust-backend` runs this on every PR; any single divergence blocks
+the merge. Plus the existing pytest suite (36 tests) and the plugin
+validation framework (62 plugin validation cases) both pass identically
+under both backends.
+
+### Build it yourself
+
+```bash
+cd rust/regipy-py
+maturin build --release
+pip install --force-reinstall ../target/wheels/regipy_rs-*.whl
+```
+
+Full development guide and the list of construct-quirks-mirrored-for-parity
+is in [rust/README.md](rust/README.md).
+
 
 ## CLI
 

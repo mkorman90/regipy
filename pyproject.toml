@@ -45,6 +45,12 @@ full = [
     "libfwsi-python>=20240315",
     "libfwps-python>=20240310",
 ]
+fast = [
+    # Optional Rust acceleration: parses REGF in native code via the
+    # regipy-rs PyO3 extension. Activate with `REGIPY_BACKEND=rust`.
+    # The default `regipy` install remains pure Python.
+    "regipy-rs>=0.1,<1.0",
+]
 dev = [
     "pytest>=8.0",
     "pytest-cov",
