@@ -447,33 +447,33 @@ Plugins could be added later as:
 ## Implementation Phases
 
 ### Phase 1: Core Parser (MVP)
-- [ ] `structs.rs` — All binary struct definitions
-- [ ] `cell.rs` — Cell header parsing and iteration
-- [ ] `hive.rs` — RegistryHive, HBin, file loading
-- [ ] `key.rs` — NKRecord, subkey iteration (LF/LH/RI/LI)
-- [ ] `value.rs` — VKRecord, value type parsing
-- [ ] `utils.rs` — Timestamps, checksums, hive type identification
-- [ ] `errors.rs` — Error types
-- [ ] Basic tests with real hive files
+- [x] `structs.rs` — All binary struct definitions
+- [x] `cell.rs` — Cell header parsing and iteration
+- [x] `hive.rs` — RegistryHive, HBin, file loading
+- [x] `key.rs` — NKRecord, subkey iteration (LF/LH/RI/LI)
+- [x] `value.rs` — VKRecord, value type parsing
+- [x] `utils.rs` — Timestamps, checksums, hive type identification
+- [x] `errors.rs` — Error types
+- [x] Basic tests with real hive files
 
 ### Phase 2: Full Navigation
-- [ ] `get_key()` — Path-based key lookup
-- [ ] `recurse_subkeys()` — Recursive traversal
+- [x] `get_key()` — Path-based key lookup
+- [x] `recurse_subkeys()` — Recursive traversal
 - [ ] Control set support
 - [ ] Partial hive path support
 - [ ] Security descriptor parsing
 
 ### Phase 3: Recovery & Diff
-- [ ] `recovery.rs` — HvLE transaction log parsing
-- [ ] `recovery.rs` — DIRT legacy log parsing
-- [ ] `diff.rs` — Hive comparison
-- [ ] Transaction log application
+- [x] `recovery.rs` — HvLE transaction log parsing
+- [x] `recovery.rs` — DIRT legacy log parsing
+- [x] `diff.rs` — Hive comparison
+- [x] Transaction log application
 
 ### Phase 4: Polish
 - [ ] JSON serialization (optional feature)
 - [ ] CLI (optional feature, `clap`)
 - [ ] Documentation and examples
-- [ ] Benchmarking suite
+- [x] Benchmarking suite
 - [ ] PyO3 bindings (optional)
 
 ---

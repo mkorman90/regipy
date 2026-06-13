@@ -33,17 +33,21 @@
 //! ```
 
 pub mod cell;
+pub mod diff;
 pub mod errors;
 pub mod hive;
 pub mod key;
+pub mod recovery;
 pub mod structs;
 pub mod utils;
 pub mod value;
 
 pub use cell::{CellHeader, CellType, NkRecord};
+pub use diff::{compare_hives, HiveDifference, HiveSide};
 pub use errors::{RegistryError, RegistryResult};
 pub use hive::{CellIterator, RegistryHive};
 pub use key::{find_subkey, navigate_path, SubkeyEntry, SubkeyIterator};
+pub use recovery::{DirtyPageReference, TransactionLog, apply_transaction_log, parse_dirt_log};
 pub use structs::*;
 pub use value::{Value, ValueData, ValueList};
 
