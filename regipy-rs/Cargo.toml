@@ -1,0 +1,32 @@
+[package]
+name = "regipy-rs"
+version = "0.1.0"
+edition = "2021"
+description = "Fast, safe Windows registry hive parser"
+license = "MIT"
+authors = ["Martin G. Korman"]
+repository = "https://github.com/mkorman90/regipy"
+readme = "../README.md"
+
+[dependencies]
+bytemuck = { version = "1.14", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+memmap2 = "0.9"
+bitflags = "2.4"
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+sha1 = "0.10"
+
+[dev-dependencies]
+tempfile = "3.8"
+criterion = "0.5"
+sha1 = "0.10"
+
+[features]
+default = ["json"]
+json = ["serde", "serde_json"]
+
+[[bench]]
+name = "benchmark"
+harness = false
