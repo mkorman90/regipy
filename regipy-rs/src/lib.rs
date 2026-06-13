@@ -42,6 +42,9 @@ pub mod structs;
 pub mod utils;
 pub mod value;
 
+#[cfg(feature = "python")]
+pub mod python;
+
 pub use cell::{CellHeader, CellType, NkRecord};
 pub use diff::{compare_hives, HiveDifference, HiveSide};
 pub use errors::{RegistryError, RegistryResult};

@@ -84,7 +84,7 @@ impl RegistryHive {
             });
         }
 
-        let root_nk = NkRecord::from_bytes(&data[root_data_start..])?;
+        let root_nk = NkRecord::from_bytes(&data[root_data_start + 6..])?;
 
         // Identify hive type from file name
         let hive_type = header.file_name().ok().and_then(|name| {

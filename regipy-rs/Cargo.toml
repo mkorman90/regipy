@@ -17,6 +17,7 @@ bitflags = "2.4"
 serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1.0", optional = true }
 sha1 = "0.10"
+pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
 
 [dev-dependencies]
 tempfile = "3.8"
@@ -26,6 +27,11 @@ sha1 = "0.10"
 [features]
 default = ["json"]
 json = ["serde", "serde_json"]
+python = ["pyo3"]
+
+[lib]
+name = "regipy_rs"
+crate-type = ["cdylib", "rlib"]
 
 [[bench]]
 name = "benchmark"
