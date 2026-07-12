@@ -1,0 +1,121 @@
+name: regipy-rs (Rust backend)
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "regipy-rs/**"
+      - "regipy/registry_rs.py"
+      - "regipy_tests/comparison_test.py"
+      - ".github/workflows/regipy-rs.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "regipy-rs/**"
+      - "regipy/registry_rs.py"
+      - "regipy_tests/comparison_test.py"
+      - ".github/workflows/regipy-rs.yml"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    name: Python/Rust parity tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install regipy and build regipy-rs
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[full,dev]"
+          pip install maturin
+          maturin build --release --manifest-path regipy-rs/Cargo.toml
+          pip install regipy-rs/target/wheels/regipy_rs-*.whl
+
+      - name: Run comparison tests (1:1 parity, all hives, all plugins)
+        run: pytest -v regipy_tests/comparison_test.py
+
+      - name: Run full test suite with Rust backend present
+        run: pytest -v regipy_tests/tests.py
+
+  build-wheels:
+    name: Build wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Build abi3 wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --manifest-path regipy-rs/Cargo.toml
+          # manylinux containers for Linux targets
+          manylinux: auto
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v7
+        with:
+          name: regipy-rs-wheels-${{ matrix.os }}
+          path: regipy-rs/target/wheels/*.whl
+
+  build-sdist:
+    name: Build sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --manifest-path regipy-rs/Cargo.toml
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v7
+        with:
+          name: regipy-rs-sdist
+          path: regipy-rs/target/wheels/*.tar.gz
+
+  publish:
+    name: Publish regipy-rs to PyPI
+    # Only on releases whose tag starts with "regipy-rs-" (e.g. regipy-rs-0.1.0a1)
+    if: github.event_name == 'release' && startsWith(github.event.release.tag_name, 'regipy-rs-')
+    needs: [parity, build-wheels, build-sdist]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write  # PyPI trusted publishing
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: regipy-rs-*
+          merge-multiple: true
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist

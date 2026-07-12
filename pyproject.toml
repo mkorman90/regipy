@@ -45,6 +45,9 @@ full = [
     "libfwsi-python>=20240315",
     "libfwps-python>=20240310",
 ]
+rust = [
+    "regipy-rs>=0.1.0a1",
+]
 dev = [
     "pytest>=8.0",
     "pytest-cov",

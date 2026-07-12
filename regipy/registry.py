@@ -462,8 +462,8 @@ class NKRecord:
         # The value inside the vk entry actually contains a pointer to the buffers containing the data
         big_data_block_header = BIG_DATA_BLOCK.parse(value.value)
 
-        # Go to the start of the segment offset list
-        stream.seek(REGF_HEADER_SIZE + big_data_block_header.offset_to_list_of_segments)
+        # Go to the start of the segment offset list (+4 skips the cell size header)
+        stream.seek(REGF_HEADER_SIZE + 4 + big_data_block_header.offset_to_list_of_segments)
         buffer = BytesIO()
 
         # Read them sequentially until we got all the size of the VK
@@ -542,9 +542,9 @@ class NKRecord:
 
                 if data_type in ["REG_SZ", "REG_EXPAND", "REG_EXPAND_SZ"]:
                     if vk.data_size >= 0x80000000:
-                        # data is contained in the data_offset field
-                        value.size -= 0x80000000
-                        actual_value = vk.data_offset
+                        # data is stored inline, in the data_offset field itself
+                        inline_data = Int32ul.build(vk.data_offset)[: vk.data_size - 0x80000000]
+                        actual_value = try_decode_binary(inline_data, as_json=as_json, trim_values=trim_values)
                     elif vk.data_size > 0x3FD8 and value.value[:2] == b"db":
                         data = self._parse_indirect_block(substream, value)
                         actual_value = try_decode_binary(data, as_json=as_json, trim_values=trim_values)
@@ -552,8 +552,9 @@ class NKRecord:
                         actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 elif data_type in ["REG_BINARY", "REG_NONE"]:
                     if vk.data_size >= 0x80000000:
-                        # data is contained in the data_offset field
-                        actual_value = vk.data_offset
+                        # data is stored inline, in the data_offset field itself
+                        inline_data = Int32ul.build(vk.data_offset)[: vk.data_size - 0x80000000]
+                        actual_value = binascii.b2a_hex(inline_data).decode()[:max_len] if trim_values else inline_data
                     elif vk.data_size > 0x3FD8 and value.value[:2] == b"db":
                         try:
                             actual_value = self._parse_indirect_block(substream, value)
@@ -577,7 +578,15 @@ class NKRecord:
                 elif data_type == "REG_QWORD":
                     actual_value = vk.data_offset if vk.data_size >= 0x80000000 else Int64ul.parse(value.value)
                 elif data_type == "REG_MULTI_SZ":
-                    parsed_value = GreedyRange(CString("utf-16-le")).parse(value.value)
+                    if vk.data_size >= 0x80000000:
+                        # data is stored inline, in the data_offset field itself
+                        multi_sz_data = Int32ul.build(vk.data_offset)[: vk.data_size - 0x80000000]
+                    elif vk.data_size > 0x3FD8 and value.value[:2] == b"db":
+                        # value is stored in big-data (db) segments
+                        multi_sz_data = self._parse_indirect_block(substream, value)
+                    else:
+                        multi_sz_data = value.value
+                    parsed_value = GreedyRange(CString("utf-16-le")).parse(multi_sz_data)
                     # Because the ListContainer object returned by Construct cannot be turned into a list,
                     # we do this trick
                     actual_value = [x for x in parsed_value if x]

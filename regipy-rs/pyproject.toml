@@ -1,0 +1,31 @@
+[build-system]
+requires = ["maturin>=1.5,<2"]
+build-backend = "maturin"
+
+[project]
+name = "regipy-rs"
+version = "0.1.0a1"
+description = "Rust-accelerated core parser for regipy (Windows registry hive / REGF format)"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Martin G. Korman", email = "martin@centauri.co.il"}
+]
+keywords = ["registry", "windows registry", "registry parser", "forensics", "dfir", "rust"]
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://github.com/mkorman90/regipy"
+
+[tool.maturin]
+module-name = "regipy_rs"
+features = ["extension-module"]

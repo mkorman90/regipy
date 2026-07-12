@@ -11,7 +11,7 @@ class WinVersionPluginValidationCase(ValidationCase):
             "CurrentVersion": "6.1",
             "CurrentBuild": "7601",
             "InstallDate": "2010-11-10 16:28:55",
-            "RegisteredOrganization": 0,
+            "RegisteredOrganization": "",
             "RegisteredOwner": "Windows User",
             "InstallationType": "Client",
             "EditionID": "Ultimate",

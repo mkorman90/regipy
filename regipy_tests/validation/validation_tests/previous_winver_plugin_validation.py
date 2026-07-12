@@ -20,7 +20,7 @@ class PreviousWinVersionPluginValidationCase(ValidationCase):
             "InstallDate": "2017-07-12 07:18:28",
             "ProductId": "00330-80111-62153-AA362",
             "ProductName": "Windows 10 Pro",
-            "RegisteredOrganization": 0,
+            "RegisteredOrganization": "",
             "RegisteredOwner": "Windows User",
         },
         {
@@ -37,7 +37,7 @@ class PreviousWinVersionPluginValidationCase(ValidationCase):
             "InstallDate": "2019-01-27 10:39:32",
             "ProductId": "00330-80111-62153-AA442",
             "ProductName": "Windows 10 Pro",
-            "RegisteredOrganization": 0,
+            "RegisteredOrganization": "",
             "RegisteredOwner": "Windows User",
         },
     ]
