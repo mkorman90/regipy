@@ -134,6 +134,32 @@ before it was replaced with direct dict construction) and per-key
 `convert_wintime()` (FILETIME conversion now happens in Rust with
 arithmetic verified bit-identical by the fuzz test).
 
+## Reproducing this report
+
+This file is generated end-to-end by `regipy-rs/benchmark.py` — timings,
+parity digests and profiles are all recomputed from the build being measured,
+so the report cannot drift from the code. From a repo checkout:
+
+```bash
+pip install -e ".[dev]"
+pip install maturin
+maturin build --release --manifest-path regipy-rs/Cargo.toml
+pip install regipy-rs/target/wheels/regipy_rs-*.whl --force-reinstall
+python regipy-rs/benchmark.py --runs 3
+```
+
+Notes:
+- Test hives ship with the repo (`regipy_tests/data/*.xz`) and are
+  decompressed to a temp dir automatically.
+- Timings are best-of-N (`--runs`); scenarios slower than 60 s run once,
+  as repeat-run noise is irrelevant at that magnitude. Expect the run to
+  take ~30 minutes — almost all of it is the pure-Python backend (the Rust
+  side contributes seconds in total).
+- Absolute times vary by machine (recorded in the header above); the
+  speedup ratios and the parity digests should not.
+- The digest table must be identical on any machine: it hashes parser
+  *output*, which contains no timing, ordering or environment artifacts.
+
 ## Known divergences (disclaimer)
 
 The Rust backend is output-identical to the Python parser for every key path,

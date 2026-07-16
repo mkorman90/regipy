@@ -52,4 +52,16 @@ maturin build --release
 pip install target/wheels/regipy_rs-*.whl
 ```
 
-See `BENCHMARKS.md` for performance numbers.
+## Benchmarks
+
+`BENCHMARKS.md` contains the full report: per-hive timings, `cProfile`
+breakdowns of both backends, SHA-256 parity digests over the complete
+traversal output, and a disclaimer documenting intentional divergences.
+The entire report is regenerated from source by:
+
+```bash
+python regipy-rs/benchmark.py --runs 3
+```
+
+See the *Reproducing this report* section of `BENCHMARKS.md` for
+prerequisites and caveats.
