@@ -221,9 +221,12 @@ def test_system_apply_transaction_logs(transaction_system, system_tr_log_1, syst
     assert recovered_dirty_pages_count == 315
 
     found_differences = compare_hives(transaction_system, restored_hive_path)
-    assert len(found_differences) == 2511
+    # Was 2511 before inline values (data stored in the VK data_offset field)
+    # were decoded properly: 4 spurious differences came from inline values
+    # being compared as raw data_offset integers or misread data.
+    assert len(found_differences) == 2507
     assert len([x for x in found_differences if x[0] == "new_subkey"]) == 2458
-    assert len([x for x in found_differences if x[0] == "new_value"]) == 53
+    assert len([x for x in found_differences if x[0] == "new_value"]) == 49
 
 
 def test_system_hive_devprop_structure(system_devprop):
@@ -376,3 +379,46 @@ def test_ntuser_filtered_timestamps_no_filter(ntuser_hive):
     for subkey_count, entry in enumerate(get_filtered_subkeys(registry_hive, registry_hive.root, fetch_values=False)):
         assert entry.values == []
     assert subkey_count == 1811
+
+
+def test_inline_reg_sz_value_is_decoded(system_hive):
+    # Values with the inline-data flag (data_size >= 0x80000000) store their
+    # data in the VK data_offset field itself. Regression test: these used to
+    # be returned as the raw data_offset integer instead of a decoded string.
+    registry_hive = RegistryHive(system_hive)
+    subkey = registry_hive.get_key(r"\ControlSet001\Control\Class\{0475BB51-5A02-4EE0-B36C-29040FAD2650}")
+    assert subkey.get_value("NoDisplayClass") == "1"
+    assert subkey.get_value("Class") == "vm3dmp"
+
+
+def test_inline_reg_binary_value_is_decoded(ntuser_hive):
+    # Inline REG_BINARY values used to be returned as the raw data_offset
+    # integer; they are now returned like any other binary value.
+    registry_hive = RegistryHive(ntuser_hive)
+    subkey = registry_hive.get_key(r"\Control Panel\Appearance")
+    assert subkey.get_value("SchemeLangID") == b"\x09\x04"
+    values = {value.name: value for value in subkey.iter_values(as_json=True)}
+    assert values["SchemeLangID"].value == "0904"
+
+
+def test_big_data_reg_multi_sz_is_reassembled(software_hive):
+    # REG_MULTI_SZ values larger than 16344 bytes are stored in big-data (db)
+    # segments. Regression test: these used to be parsed from the raw db
+    # record bytes, producing garbage.
+    registry_hive = RegistryHive(software_hive)
+    subkey = registry_hive.get_key(r"\Microsoft\WBEM\CIMOM")
+    mofs = subkey.get_value("Autorecover MOFs")
+    assert isinstance(mofs, list)
+    assert len(mofs) == 277
+    assert mofs[0] == "%windir%\\system32\\wbem\\cimwin32.mof"
+    assert all(mof.lower().endswith((".mof", ".mfl")) for mof in mofs)
+
+
+def test_big_data_reg_sz_is_reassembled(software_hive):
+    # REG_SZ values stored in big-data (db) segments span multiple 16344-byte
+    # chunks and must be reassembled in order.
+    registry_hive = RegistryHive(software_hive)
+    subkey = registry_hive.get_key(r"\Microsoft\Office\14.0\Registration\{90140000-003D-0000-0000-0000000FF1CE}")
+    values = {v.name: v.value for v in subkey.iter_values(as_json=False, trim_values=False)}
+    big_values = [v for v in values.values() if isinstance(v, str) and len(v) > 0x3FD8 // 2]
+    assert big_values, "expected at least one reassembled big-data string value"

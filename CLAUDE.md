@@ -191,8 +191,37 @@ class MyPluginValidationCase(ValidationCase):
 ```bash
 pip install regipy[full]  # All dependencies including compiled ones
 pip install regipy        # Minimal dependencies
+pip install regipy[rust]  # + Rust-accelerated parser backend (alpha)
 pip install -e .[full]    # Development install
 ```
+
+## Rust Backend (alpha)
+
+The `regipy-rs/` directory contains a Rust (PyO3) port of the core REGF parser,
+published separately to PyPI as `regipy-rs`. It is opt-in and exposes a
+drop-in API:
+
+```python
+from regipy.registry_rs import RegistryHive  # instead of regipy.registry
+```
+
+Key facts:
+
+- `regipy/registry_rs.py` is a thin wrapper returning the same `Value`/`Subkey`
+  dataclasses and raising the same exceptions; all plugins work unchanged with
+  either backend.
+- Output parity is enforced by `regipy_tests/comparison_test.py`, which
+  compares both backends over every test hive: full traversal (every key path,
+  timestamp, value name/type/content), key navigation, security descriptors,
+  and end-to-end plugin output. Any behavioral change to `regipy/registry.py`
+  value decoding must be mirrored in `regipy-rs/src/parser.rs` (and vice versa)
+  or these tests will fail.
+- Timestamps are converted in Python (`convert_wintime`) from raw FILETIME
+  integers returned by Rust, so both backends produce bit-identical datetimes.
+- Build locally with `maturin build --release --manifest-path regipy-rs/Cargo.toml`.
+  Wheels are built in CI by `.github/workflows/regipy-rs.yml` and published on
+  GitHub releases tagged `regipy-rs-*`.
+- Benchmarks: `python regipy-rs/benchmark.py` regenerates `regipy-rs/BENCHMARKS.md`.
 
 ## Testing
 

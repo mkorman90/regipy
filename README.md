@@ -40,6 +40,52 @@ Also, it is possible to install from source by cloning the repository and execut
 pip install --editable .[full]
 ```
 
+### Rust-accelerated backend (alpha)
+
+An optional Rust implementation of the core REGF parser is available as an
+opt-in backend, published separately to PyPI as
+[`regipy-rs`](https://pypi.org/project/regipy-rs/):
+
+```bash
+pip install regipy[rust]
+```
+
+```python
+from regipy.registry_rs import RegistryHive  # instead of regipy.registry
+
+reg = RegistryHive('/tmp/NTUSER.dat')
+# Same API: get_key, iter_values, recurse_subkeys, plugins — everything
+# works unchanged, including all regipy plugins.
+```
+
+It is a drop-in replacement validated 1:1 against the pure-Python parser over
+the entire test-hive corpus — every key path, timestamp, value and plugin
+output, notarized by matching SHA-256 traversal digests (see
+`regipy_tests/comparison_test.py` and the *Forensic parity evidence* section
+of [regipy-rs/BENCHMARKS.md](regipy-rs/BENCHMARKS.md)).
+
+Full traversal with values (`recurse_subkeys`), best of 3 runs:
+
+| Hive | Keys | Python | Rust | Speedup |
+|------|-----:|-------:|-----:|--------:|
+| NTUSER.DAT | 1,812 | 173 ms | 5 ms | **38x** |
+| UsrClass.dat | 6,205 | 948 ms | 17 ms | **55x** |
+| amcache.hve | 2,105 | 837 ms | 12 ms | **67x** |
+| SYSTEM | 30,756 | 23.1 s | 91 ms | **253x** |
+| SYSTEM (Win10 1709) | 43,211 | 118.7 s | 111 ms | **1,068x** |
+| SOFTWARE | 117,488 | 745.6 s | 292 ms | **2,550x** |
+
+`cProfile` shows why: in the Python backend, traversal time is dominated by
+per-record `construct` struct parsing and value decoding; with the Rust
+backend, the parser disappears from the profile entirely and the only
+remaining Python cost is constructing the returned `Subkey` dataclasses.
+The full profiles, per-hive digests and a disclaimer documenting the few
+intentional divergences (exception types on corrupted hives, cycle-guard
+behavior) are in [regipy-rs/BENCHMARKS.md](regipy-rs/BENCHMARKS.md);
+`python regipy-rs/benchmark.py` regenerates the entire report.
+
+The pure-Python parser remains the default and is unaffected when the Rust
+backend is not installed.
 
 ## CLI
 

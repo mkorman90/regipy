@@ -18,7 +18,7 @@ class NetworkDataPluginValidationCase(ValidationCase):
                     "subnet_mask": ["255.255.255.0"],
                     "default_gateway": ["10.3.58.1"],
                     "name_server": "10.3.58.4",
-                    "domain": 0,
+                    "domain": "",
                 },
                 {
                     "interface_name": "{6AAFC9A9-0542-4DB2-8760-CCFFA953737C}",
@@ -29,7 +29,7 @@ class NetworkDataPluginValidationCase(ValidationCase):
                     "subnet_mask": ["255.255.255.0"],
                     "default_gateway": ["192.168.1.1"],
                     "name_server": "192.168.1.112",
-                    "domain": 0,
+                    "domain": "",
                 },
                 {
                     "interface_name": "{e29ac6c2-7037-11de-816d-806e6f6e6963}",
@@ -56,7 +56,7 @@ class NetworkDataPluginValidationCase(ValidationCase):
                     "subnet_mask": ["255.255.255.0"],
                     "default_gateway": ["10.3.58.1"],
                     "name_server": "10.3.58.4",
-                    "domain": 0,
+                    "domain": "",
                 },
                 {
                     "interface_name": "{6AAFC9A9-0542-4DB2-8760-CCFFA953737C}",
@@ -67,7 +67,7 @@ class NetworkDataPluginValidationCase(ValidationCase):
                     "subnet_mask": ["255.255.255.0"],
                     "default_gateway": ["192.168.1.1"],
                     "name_server": "192.168.1.112",
-                    "domain": 0,
+                    "domain": "",
                 },
                 {
                     "interface_name": "{e29ac6c2-7037-11de-816d-806e6f6e6963}",

@@ -61,6 +61,27 @@ dependencies:
 
 ``pip install regipy``
 
+Rust-accelerated backend (alpha)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+An optional Rust implementation of the core parser is available as an opt-in
+backend. It is a drop-in replacement validated 1:1 against the pure-Python
+parser (every key path, timestamp, value and plugin output over the whole test
+corpus, with matching SHA-256 traversal digests) and is dramatically faster on
+value-dense hives — a full traversal of a SOFTWARE hive drops from over 12
+minutes to under a third of a second (~2,500x), and Windows 10 SYSTEM hives
+speed up by ~1,000x:
+
+``pip install regipy[rust]``
+
+.. code:: python
+
+    from regipy.registry_rs import RegistryHive  # instead of regipy.registry
+
+    reg = RegistryHive('/tmp/NTUSER.dat')
+    # Same API: get_key, iter_values, recurse_subkeys, plugins, ...
+
+See ``regipy-rs/README.md`` and ``regipy-rs/BENCHMARKS.md`` for details.
+
 Plugin Validation
 ^^^^^^^^^^^^^^^^^
 Regipy plugins are validated using test cases to ensure they return accurate data.

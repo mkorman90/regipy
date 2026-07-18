@@ -49,7 +49,7 @@ class DomainSidPlugin(Plugin):
         # the Windows machine is not in an AD domain.
         # Otherwise, it contains the domain machine SID data
         # in the standard binary format (REG_BINARY).
-        if isinstance(sid_value, bytes):
+        if isinstance(sid_value, bytes) and sid_value:
             parsed_sid = SID.parse(sid_value)
             domain_sid = convert_sid(parsed_sid, strip_rid=True)
             machine_sid = convert_sid(parsed_sid)

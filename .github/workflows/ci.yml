@@ -122,7 +122,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          # setuptools upgraded explicitly: pip-audit scans the environment,
+          # and the runner's bundled setuptools is periodically flagged
+          # (e.g. PYSEC-2026-3447).
+          python -m pip install --upgrade pip setuptools
           pip install -e ".[full,dev]"
           pip install pip-audit cyclonedx-bom
 

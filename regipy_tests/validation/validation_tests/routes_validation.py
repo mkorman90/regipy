@@ -11,13 +11,13 @@ class RoutesPluginValidationCase(ValidationCase):
             "values": [
                 {
                     "name": "0.0.0.0,0.0.0.0,192.168.1.1,-1",
-                    "value": 0,
+                    "value": "",
                     "value_type": "REG_SZ",
                     "is_corrupted": False,
                 },
                 {
                     "name": "0.0.0.0,0.0.0.0,10.3.58.1,-1",
-                    "value": 0,
+                    "value": "",
                     "value_type": "REG_SZ",
                     "is_corrupted": False,
                 },
@@ -28,13 +28,13 @@ class RoutesPluginValidationCase(ValidationCase):
             "values": [
                 {
                     "name": "0.0.0.0,0.0.0.0,192.168.1.1,-1",
-                    "value": 0,
+                    "value": "",
                     "value_type": "REG_SZ",
                     "is_corrupted": False,
                 },
                 {
                     "name": "0.0.0.0,0.0.0.0,10.3.58.1,-1",
-                    "value": 0,
+                    "value": "",
                     "value_type": "REG_SZ",
                     "is_corrupted": False,
                 },
