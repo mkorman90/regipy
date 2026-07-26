@@ -278,6 +278,15 @@ def test_get_key(software_hive):
     assert registry_hive.root.get_subkey("ODBC").header == registry_hive.get_key("SOFTWARE\\ODBC").header
 
 
+def test_get_key_without_leading_backslash(system_hive):
+    """
+    # Refers to https://github.com/mkorman90/regipy/issues/323
+    """
+    registry_hive = RegistryHive(system_hive)
+    expected = registry_hive.get_key(r"\ControlSet001\Control\ComputerName\ComputerName")
+    assert registry_hive.get_key(r"ControlSet001\Control\ComputerName\ComputerName").header == expected.header
+
+
 def test_get_subkey_errors(software_hive):
     registry_hive = RegistryHive(software_hive)
     # Tests the NoRegistrySubkeysException that suppose to be raised

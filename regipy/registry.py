@@ -271,7 +271,14 @@ class RegistryHive:
 
         # If the path contain slashes, this is a full path. Split it
         if "\\" in key_path:
-            key_path_parts = key_path.split("\\")[1:]
+            key_path_parts = key_path.split("\\")
+            if not key_path_parts[0]:
+                # The path started with a backslash, drop the empty first part
+                key_path_parts = key_path_parts[1:]
+            elif not self.root.get_subkey(key_path_parts[0], raise_on_missing=False):
+                # The first part is not a subkey of the root, so it is the hive
+                # name prefix (for example SOFTWARE\ODBC) and should be dropped
+                key_path_parts = key_path_parts[1:]
         else:
             key_path_parts = [key_path]
 
