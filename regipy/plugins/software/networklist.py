@@ -25,8 +25,8 @@ CATEGORY_TYPES = {0: "Public", 1: "Private", 2: "Domain"}
 NAME_TYPES = {0x06: "Wired", 0x17: "Broadband", 0x47: "Wireless"}
 
 
-def format_mac_address(val) -> Optional[str]:
-    """Format bytes as MAC address (XX:XX:XX:XX:XX:XX)"""
+def format_mac_address(val):
+    """Format bytes as MAC address (XX:XX:XX:XX:XX:XX), otherwise return the value as-is"""
     if isinstance(val, bytes) and len(val) == 6:
         return ":".join(f"{b:02X}" for b in val)
     return val

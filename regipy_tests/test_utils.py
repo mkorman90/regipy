@@ -26,7 +26,7 @@ class TestExtractValues:
     def test_simple_rename(self):
         """Test simple string rename mapping"""
         key = _make_mock_key([("ProfileName", "MyNetwork")])
-        entry = {}
+        entry: dict = {}
 
         extract_values(key, {"ProfileName": "profile_name"}, entry)
 
@@ -40,7 +40,7 @@ class TestExtractValues:
                 ("Description", "Home WiFi"),
             ]
         )
-        entry = {}
+        entry: dict = {}
 
         extract_values(
             key,
@@ -59,7 +59,7 @@ class TestExtractValues:
     def test_callable_converter(self):
         """Test tuple with callable converter"""
         key = _make_mock_key([("Enabled", 1)])
-        entry = {}
+        entry: dict = {}
 
         extract_values(
             key,
@@ -74,7 +74,7 @@ class TestExtractValues:
     def test_callable_converter_false(self):
         """Test callable converter returning False"""
         key = _make_mock_key([("Enabled", 0)])
-        entry = {}
+        entry: dict = {}
 
         extract_values(
             key,
@@ -90,7 +90,7 @@ class TestExtractValues:
         """Test callable that performs lookup"""
         categories = {0: "Public", 1: "Private", 2: "Domain"}
         key = _make_mock_key([("Category", 1)])
-        entry = {}
+        entry: dict = {}
 
         extract_values(
             key,
@@ -106,7 +106,7 @@ class TestExtractValues:
         """Test lookup converter with unknown value"""
         categories = {0: "Public", 1: "Private", 2: "Domain"}
         key = _make_mock_key([("Category", 99)])
-        entry = {}
+        entry: dict = {}
 
         extract_values(
             key,
@@ -126,7 +126,7 @@ class TestExtractValues:
                 ("UnknownField", "SomeValue"),
             ]
         )
-        entry = {}
+        entry: dict = {}
 
         extract_values(key, {"ProfileName": "profile_name"}, entry)
 
@@ -149,7 +149,7 @@ class TestExtractValues:
     def test_empty_value_map(self):
         """Test with empty value_map"""
         key = _make_mock_key([("ProfileName", "MyNetwork")])
-        entry = {}
+        entry: dict = {}
 
         extract_values(key, {}, entry)
 
@@ -158,7 +158,7 @@ class TestExtractValues:
     def test_empty_registry_key(self):
         """Test with registry key that has no values"""
         key = _make_mock_key([])
-        entry = {}
+        entry: dict = {}
 
         extract_values(key, {"ProfileName": "profile_name"}, entry)
 
@@ -173,7 +173,7 @@ class TestExtractValues:
                 ("Category", 2),
             ]
         )
-        entry = {}
+        entry: dict = {}
 
         extract_values(
             key,
@@ -200,7 +200,7 @@ class TestExtractValues:
             return val
 
         key = _make_mock_key([("MacAddress", b"\x00\x1a\x2b\x3c\x4d\x5e")])
-        entry = {}
+        entry: dict = {}
 
         extract_values(
             key,
@@ -215,7 +215,7 @@ class TestExtractValues:
     def test_converter_returns_none(self):
         """Test converter that returns None"""
         key = _make_mock_key([("DateCreated", b"\x00")])
-        entry = {}
+        entry: dict = {}
 
         extract_values(
             key,
@@ -235,7 +235,7 @@ class TestExtractValues:
                 ("DaylightBias", -60),
             ]
         )
-        entry = {}
+        entry: dict = {}
 
         extract_values(
             key,

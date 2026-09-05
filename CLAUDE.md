@@ -186,6 +186,18 @@ class MyPluginValidationCase(ValidationCase):
 - Handle corrupted values gracefully (`is_corrupted` field)
 - Document Windows-specific quirks in comments
 
+### Commits and Pull Requests
+
+- One commit per logical change. Unrelated fixes discovered along the way (e.g.,
+  pre-existing lint/type issues) go in a separate commit stacked on the same branch —
+  never mixed into the bug-fix commit.
+- Never change default behavior. This is a DFIR library: output must be deterministic
+  and reproducible across versions. New behavior (error handling, new output fields,
+  etc.) must be opt-in via an explicit flag/parameter, with the default preserving the
+  original behavior exactly.
+- Push the branch and open a PR with a full test plan: what was tested, how to verify
+  manually, and the test-suite results.
+
 ## Installation Variants
 
 ```bash
