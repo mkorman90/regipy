@@ -224,7 +224,16 @@ def registry_dump(
     help="Include plugins that don't have validation test cases. "
     "These plugins may return incomplete or inaccurate data. Use at your own risk.",
 )
-def run_plugins(hive_path, output_path, plugins, hive_type, partial_hive_path, verbose, include_unvalidated):
+@click.option(
+    "--continue-on-error",
+    is_flag=True,
+    default=False,
+    help="Continue running the remaining plugins when a plugin fails, "
+    "recording the failure in the result as {\"error\": \"<message>\"} instead of aborting.",
+)
+def run_plugins(
+    hive_path, output_path, plugins, hive_type, partial_hive_path, verbose, include_unvalidated, continue_on_error
+):
     _setup_logging(verbose=verbose)
     registry_hive = RegistryHive(hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path)
     click.secho(f"Loaded {len(PLUGINS)} plugins", fg="white")
@@ -256,6 +265,7 @@ def run_plugins(hive_path, output_path, plugins, hive_type, partial_hive_path, v
         as_json=True,
         plugins=plugins,
         include_unvalidated=include_unvalidated,
+        continue_on_error=continue_on_error,
     )
 
     # If output path was set, dump results to disk

@@ -1,8 +1,13 @@
 """Unit tests for regipy.plugins.utils module"""
 
+import logging
 from unittest.mock import MagicMock
 
-from regipy.plugins.utils import extract_values
+import pytest
+
+from regipy.exceptions import RegistryKeyNotFoundException
+from regipy.plugins import utils as plugins_utils
+from regipy.plugins.utils import extract_values, run_relevant_plugins
 
 
 def _make_mock_value(name, value):
@@ -250,3 +255,85 @@ class TestExtractValues:
             "bias_minutes": -300,
             "daylight_bias_minutes": -60,
         }
+
+
+class TestRunRelevantPlugins:
+    """Tests for run_relevant_plugins error handling (issue #338)"""
+
+    def _make_plugin_class(self, name, entries=None, run_side_effect=None):
+        """Helper to create a mock plugin class with a controlled run() behavior"""
+        plugin_cls = MagicMock()
+        instance = MagicMock()
+        instance.NAME = name
+        instance.entries = entries or []
+        if run_side_effect is not None:
+            instance.run.side_effect = run_side_effect
+        plugin_cls.return_value = instance
+        return plugin_cls
+
+    def _patch_plugins(self, monkeypatch, plugin_classes):
+        monkeypatch.setattr(plugins_utils, "PLUGINS", set(plugin_classes))
+        monkeypatch.setattr(plugins_utils, "is_plugin_validated", lambda name: True)
+
+    def test_default_behavior_propagates_plugin_errors(self, monkeypatch):
+        """Without continue_on_error, a plugin exception aborts the run (original behavior)"""
+        bad = self._make_plugin_class("bad", run_side_effect=ValueError("boom"))
+
+        self._patch_plugins(monkeypatch, [bad])
+
+        with pytest.raises(ValueError, match="boom"):
+            run_relevant_plugins(MagicMock())
+
+    def test_default_behavior_skips_missing_dependencies(self, monkeypatch):
+        """Without continue_on_error, missing dependencies are logged and skipped (original behavior)"""
+        bad = self._make_plugin_class(
+            "bad", run_side_effect=ModuleNotFoundError("No module named 'pandas'", name="pandas")
+        )
+        good = self._make_plugin_class("good", entries=[{"a": 1}])
+
+        self._patch_plugins(monkeypatch, [bad, good])
+
+        results = run_relevant_plugins(MagicMock())
+
+        assert "bad" not in results
+        assert results["good"] == [{"a": 1}]
+
+    def test_continue_on_error_records_failure_and_continues(self, monkeypatch):
+        """With continue_on_error, a failing plugin is recorded and the rest still run"""
+        good = self._make_plugin_class("good", entries=[{"a": 1}])
+        bad = self._make_plugin_class(
+            "bad", run_side_effect=RegistryKeyNotFoundException("key missing")
+        )
+        other = self._make_plugin_class("other", entries=[{"b": 2}])
+
+        self._patch_plugins(monkeypatch, [good, bad, other])
+
+        results = run_relevant_plugins(MagicMock(), continue_on_error=True)
+
+        assert results["good"] == [{"a": 1}]
+        assert results["bad"] == {"error": "key missing"}
+        assert results["other"] == [{"b": 2}]
+
+    def test_continue_on_error_records_missing_dependencies(self, monkeypatch):
+        """With continue_on_error, missing dependencies are recorded, not just logged"""
+        bad = self._make_plugin_class(
+            "bad", run_side_effect=ModuleNotFoundError("No module named 'pandas'", name="pandas")
+        )
+
+        self._patch_plugins(monkeypatch, [bad])
+
+        results = run_relevant_plugins(MagicMock(), continue_on_error=True)
+
+        assert results["bad"] == {"error": "No module named 'pandas'"}
+
+    def test_continue_on_error_failure_is_logged(self, monkeypatch, caplog):
+        """With continue_on_error, a plugin failure is logged with the plugin name and error"""
+        bad = self._make_plugin_class("bad", run_side_effect=ValueError("boom"))
+
+        self._patch_plugins(monkeypatch, [bad])
+
+        with caplog.at_level(logging.ERROR):
+            results = run_relevant_plugins(MagicMock(), continue_on_error=True)
+
+        assert results["bad"] == {"error": "boom"}
+        assert any("bad" in record.message and "boom" in record.message for record in caplog.records)
