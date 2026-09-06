@@ -286,9 +286,7 @@ class TestRunRelevantPlugins:
 
     def test_default_behavior_skips_missing_dependencies(self, monkeypatch):
         """Without continue_on_error, missing dependencies are logged and skipped (original behavior)"""
-        bad = self._make_plugin_class(
-            "bad", run_side_effect=ModuleNotFoundError("No module named 'pandas'", name="pandas")
-        )
+        bad = self._make_plugin_class("bad", run_side_effect=ModuleNotFoundError("No module named 'pandas'", name="pandas"))
         good = self._make_plugin_class("good", entries=[{"a": 1}])
 
         self._patch_plugins(monkeypatch, [bad, good])
@@ -301,9 +299,7 @@ class TestRunRelevantPlugins:
     def test_continue_on_error_records_failure_and_continues(self, monkeypatch):
         """With continue_on_error, a failing plugin is recorded and the rest still run"""
         good = self._make_plugin_class("good", entries=[{"a": 1}])
-        bad = self._make_plugin_class(
-            "bad", run_side_effect=RegistryKeyNotFoundException("key missing")
-        )
+        bad = self._make_plugin_class("bad", run_side_effect=RegistryKeyNotFoundException("key missing"))
         other = self._make_plugin_class("other", entries=[{"b": 2}])
 
         self._patch_plugins(monkeypatch, [good, bad, other])
@@ -316,9 +312,7 @@ class TestRunRelevantPlugins:
 
     def test_continue_on_error_records_missing_dependencies(self, monkeypatch):
         """With continue_on_error, missing dependencies are recorded, not just logged"""
-        bad = self._make_plugin_class(
-            "bad", run_side_effect=ModuleNotFoundError("No module named 'pandas'", name="pandas")
-        )
+        bad = self._make_plugin_class("bad", run_side_effect=ModuleNotFoundError("No module named 'pandas'", name="pandas"))
 
         self._patch_plugins(monkeypatch, [bad])
 

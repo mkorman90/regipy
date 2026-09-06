@@ -229,11 +229,9 @@ def registry_dump(
     is_flag=True,
     default=False,
     help="Continue running the remaining plugins when a plugin fails, "
-    "recording the failure in the result as {\"error\": \"<message>\"} instead of aborting.",
+    'recording the failure in the result as {"error": "<message>"} instead of aborting.',
 )
-def run_plugins(
-    hive_path, output_path, plugins, hive_type, partial_hive_path, verbose, include_unvalidated, continue_on_error
-):
+def run_plugins(hive_path, output_path, plugins, hive_type, partial_hive_path, verbose, include_unvalidated, continue_on_error):
     _setup_logging(verbose=verbose)
     registry_hive = RegistryHive(hive_path, hive_type=hive_type, partial_hive_path=partial_hive_path)
     click.secho(f"Loaded {len(PLUGINS)} plugins", fg="white")

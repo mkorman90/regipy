@@ -52,10 +52,10 @@ The main entry point. Handles hive parsing, key navigation, and value retrieval.
 ```python
 from regipy.registry import RegistryHive
 
-reg = RegistryHive('/path/to/NTUSER.DAT')
+reg = RegistryHive("/path/to/NTUSER.DAT")
 
 # Navigate to a key
-key = reg.get_key(r'Software\Microsoft\Windows\CurrentVersion\Run')
+key = reg.get_key(r"Software\Microsoft\Windows\CurrentVersion\Run")
 
 # Get values
 values = key.get_values(as_json=True)
@@ -69,7 +69,7 @@ for entry in reg.recurse_subkeys(as_json=True):
     print(entry)
 
 # Control sets (SYSTEM hive)
-for path in reg.get_control_sets(r'Control\ComputerName\ComputerName'):
+for path in reg.get_control_sets(r"Control\ComputerName\ComputerName"):
     # Yields: ControlSet001\Control\..., ControlSet002\Control\..., etc.
     pass
 ```
@@ -77,6 +77,7 @@ for path in reg.get_control_sets(r'Control\ComputerName\ComputerName'):
 ### Plugin System
 
 Plugins inherit from `Plugin` base class and define:
+
 - `NAME`: Snake_case identifier
 - `DESCRIPTION`: Human-readable description  
 - `COMPATIBLE_HIVE`: Hive type constant from `hive_types.py`
@@ -86,14 +87,15 @@ Plugins inherit from `Plugin` base class and define:
 from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
 
+
 class MyPlugin(Plugin):
-    NAME = 'my_plugin'
-    DESCRIPTION = 'Extract something useful'
+    NAME = "my_plugin"
+    DESCRIPTION = "Extract something useful"
     COMPATIBLE_HIVE = NTUSER_HIVE_TYPE
-    
+
     def run(self):
         try:
-            key = self.registry_hive.get_key(r'Software\MyKey')
+            key = self.registry_hive.get_key(r"Software\MyKey")
             for value in key.get_values(as_json=self.as_json):
                 self.entries.append(value)
         except RegistryKeyNotFoundException:
@@ -117,9 +119,9 @@ timestamp = convert_wintime(key.header.last_modified, as_json=True)
 from regipy.recovery import apply_transaction_logs
 
 apply_transaction_logs(
-    hive_path='/path/to/NTUSER.DAT',
-    transaction_log_path='/path/to/NTUSER.DAT.LOG1',
-    restored_hive_path='/path/to/recovered.DAT'
+    hive_path="/path/to/NTUSER.DAT",
+    transaction_log_path="/path/to/NTUSER.DAT.LOG1",
+    restored_hive_path="/path/to/recovered.DAT",
 )
 ```
 
@@ -128,7 +130,7 @@ apply_transaction_logs(
 Defined in `hive_types.py`:
 
 | Constant | Typical Files |
-|----------|---------------|
+| ---------- | --------------- |
 | `NTUSER_HIVE_TYPE` | NTUSER.DAT |
 | `SYSTEM_HIVE_TYPE` | SYSTEM |
 | `SOFTWARE_HIVE_TYPE` | SOFTWARE |
@@ -246,27 +248,32 @@ Test hives are stored as `.xz` compressed files in `regipy_tests/data/`.
 ## Common Forensic Artifacts by Hive
 
 **NTUSER.DAT**: User activity
+
 - Run/RunOnce keys (persistence)
 - TypedURLs (browser history)
 - UserAssist (program execution)
 - RecentDocs, MRU lists
 
 **SYSTEM**: System configuration
+
 - ComputerName
 - Shimcache/AppCompatCache (execution history)
 - BAM/DAM (background activity)
 - Services, network interfaces
 
 **SOFTWARE**: Installed software
+
 - Uninstall keys
 - ProfileList (user profiles)
 - Installed programs
 
 **Amcache.hve**: Application compatibility
+
 - File execution with SHA1 hashes
 - Driver information
 
 **UsrClass.dat**: Shell data
+
 - Shellbags (folder access history)
 
 ## MCP Server Integration
@@ -276,6 +283,7 @@ regipy includes an MCP (Model Context Protocol) server that enables natural lang
 ### What it Does
 
 The MCP server bridges Claude and regipy's plugin ecosystem, allowing investigators to:
+
 - Ask forensic questions in plain English instead of remembering CLI syntax
 - Auto-detect hive types from a directory of collected registry files
 - Leverage all 75+ plugins without knowing which plugin extracts which artifact
@@ -284,6 +292,7 @@ The MCP server bridges Claude and regipy's plugin ecosystem, allowing investigat
 ### Example Workflow
 
 Instead of:
+
 ```bash
 regipy-plugins-run SYSTEM -o system_output.json
 regipy-plugins-run NTUSER.DAT -o ntuser_output.json
@@ -305,6 +314,7 @@ Claude will automatically run both `software_persistence` and `ntuser_persistenc
 ### Design Philosophy
 
 The MCP server exposes plugin metadata (names, descriptions, compatible hives) to Claude, letting it reason about which plugins to run based on the investigator's natural language questions. This means:
+
 - New plugins automatically become available to Claude without prompt updates
 - Claude can chain multiple plugins when a question spans artifacts
 - Investigators can follow their instincts with follow-up questions
@@ -327,7 +337,7 @@ For more details, see the blog post: [Regipy MCP: Natural Language Registry Fore
 ### Registry File Locations
 
 | Hive | File Path |
-|------|-----------|
+| ------ | ----------- |
 | SYSTEM | `%SystemRoot%\System32\config\SYSTEM` |
 | SOFTWARE | `%SystemRoot%\System32\config\SOFTWARE` |
 | SAM | `%SystemRoot%\System32\config\SAM` |
