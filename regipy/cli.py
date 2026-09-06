@@ -4,6 +4,7 @@ import logging
 import os
 import time
 from dataclasses import asdict
+from typing import Optional
 
 import click
 from tabulate import tabulate
@@ -128,50 +129,56 @@ def registry_dump(
         click.secho("You must provide an output path if choosing timeline output!", fg="red")
         return
 
+    subkey_count = 0
     if output_path:
-        with open(output_path, "w") as output_file:
-            if timeline:
-                csvwriter = csv.DictWriter(
-                    output_file,
-                    delimiter=",",
-                    quotechar='"',
-                    quoting=csv.QUOTE_MINIMAL,
-                    fieldnames=["timestamp", "subkey_name", "values_count", "values"],
-                )
-                csvwriter.writeheader()
-
-            for subkey_count, entry in enumerate(
-                get_filtered_subkeys(
-                    registry_hive,
-                    name_key_entry,
-                    fetch_values=not do_not_fetch_values,
-                    start_date=start_date,
-                    end_date=end_date,
-                )
-            ):
+        try:
+            with open(output_path, "w") as output_file:
+                csvwriter: Optional[csv.DictWriter] = None
                 if timeline:
-                    csvwriter.writerow(
-                        {
-                            "subkey_name": entry.path,
-                            "timestamp": entry.timestamp,
-                            "values_count": entry.values_count,
-                            "values": entry.values,
-                        }
+                    csvwriter = csv.DictWriter(
+                        output_file,
+                        delimiter=",",
+                        quotechar='"',
+                        quoting=csv.QUOTE_MINIMAL,
+                        fieldnames=["timestamp", "subkey_name", "values_count", "values"],
                     )
-                else:
-                    output_file.write(
-                        json.dumps(
-                            asdict(
-                                entry,
-                            ),
-                            separators=(
-                                ",",
-                                ":",
-                            ),
-                            default=_normalize_subkey_fields,
+                    csvwriter.writeheader()
+
+                for subkey_count, entry in enumerate(
+                    get_filtered_subkeys(
+                        registry_hive,
+                        name_key_entry,
+                        fetch_values=not do_not_fetch_values,
+                        start_date=start_date,
+                        end_date=end_date,
+                    )
+                ):
+                    if timeline and csvwriter:
+                        csvwriter.writerow(
+                            {
+                                "subkey_name": entry.path,
+                                "timestamp": entry.timestamp,
+                                "values_count": entry.values_count,
+                                "values": entry.values,
+                            }
                         )
-                    )
-                    output_file.write("\n")
+                    else:
+                        output_file.write(
+                            json.dumps(
+                                asdict(
+                                    entry,
+                                ),
+                                separators=(
+                                    ",",
+                                    ":",
+                                ),
+                                default=_normalize_subkey_fields,
+                            )
+                        )
+                        output_file.write("\n")
+        except OSError as e:
+            logger.error(f"Failed to write output file {output_path}: {e}")
+            return
     else:
         for subkey_count, entry in enumerate(
             registry_hive.recurse_subkeys(name_key_entry, as_json=True, fetch_values=not do_not_fetch_values)
@@ -268,8 +275,12 @@ def run_plugins(hive_path, output_path, plugins, hive_type, partial_hive_path, v
 
     # If output path was set, dump results to disk
     if output_path:
-        with open(output_path, "w") as f:
-            f.write(json.dumps(plugin_results, indent=4))
+        try:
+            with open(output_path, "w") as f:
+                f.write(json.dumps(plugin_results, indent=4))
+        except OSError as e:
+            logger.error(f"Failed to write output file {output_path}: {e}")
+            return
     else:
         print(json.dumps(plugin_results, indent=4))
     click.secho(
@@ -314,11 +325,15 @@ def reg_diff(first_hive_path, second_hive_path, output_path, verbose):
     click.secho(f"Comparing {os.path.basename(first_hive_path)} vs {os.path.basename(second_hive_path)}")
 
     if output_path:
-        with open(output_path, "w") as csvfile:
-            csvwriter = csv.writer(csvfile, delimiter="|", quoting=csv.QUOTE_MINIMAL)
-            csvwriter.writerow(REGDIFF_HEADERS)
-            for difference in found_differences:
-                csvwriter.writerow(difference)
+        try:
+            with open(output_path, "w") as csvfile:
+                csvwriter = csv.writer(csvfile, delimiter="|", quoting=csv.QUOTE_MINIMAL)
+                csvwriter.writerow(REGDIFF_HEADERS)
+                for difference in found_differences:
+                    csvwriter.writerow(difference)
+        except OSError as e:
+            logger.error(f"Failed to write output file {output_path}: {e}")
+            return
     else:
         click.secho(tabulate(found_differences, headers=REGDIFF_HEADERS, tablefmt="fancy_grid"))
     click.secho(f"Detected {len(found_differences)} differences", fg="green")
