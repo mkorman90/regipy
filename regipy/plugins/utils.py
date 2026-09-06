@@ -133,10 +133,11 @@ def run_relevant_plugins(
                 if continue_on_error:
                     plugin_results[plugin.NAME] = {"error": str(e)}
             except Exception as e:
+                # Always log the failure for visibility, regardless of continue_on_error setting
+                logger.exception(f"Plugin {plugin.NAME} failed: {e}")
                 if not continue_on_error:
                     raise
                 # A single failing plugin must not abort the whole run -
-                # log it, record the failure and continue to the next plugin.
-                logger.exception(f"Plugin {plugin.NAME} failed: {e}")
+                # record the failure and continue to the next plugin.
                 plugin_results[plugin.NAME] = {"error": str(e)}
     return plugin_results
