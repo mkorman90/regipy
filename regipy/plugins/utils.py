@@ -90,6 +90,7 @@ def run_relevant_plugins(
     as_json=False,
     plugins=None,
     include_unvalidated=False,
+    continue_on_error=False,
 ):
     """
     Execute the relevant plugins on the hive
@@ -100,6 +101,11 @@ def run_relevant_plugins(
     :param include_unvalidated: Whether to include plugins that don't have validation test cases.
                                 If False (default), only validated plugins will be executed.
                                 Unvalidated plugins may return incomplete or inaccurate data.
+    :param continue_on_error: Whether to continue running the remaining plugins when a plugin
+                              fails. If True, a failing plugin is recorded in the result as
+                              {"error": "<message>"} and the run continues. If False (default),
+                              the original behavior applies: ModuleNotFoundError is logged and
+                              the plugin is skipped, and any other exception propagates.
     :return: The result, as dict
     """
     plugin_results = {}
@@ -122,6 +128,16 @@ def run_relevant_plugins(
             try:
                 plugin.run()
                 plugin_results[plugin.NAME] = plugin.entries
-            except ModuleNotFoundError:
+            except ModuleNotFoundError as e:
                 logger.error(f"Plugin {plugin.NAME} has missing dependencies")
+                if continue_on_error:
+                    plugin_results[plugin.NAME] = {"error": str(e)}
+            except Exception as e:
+                # Always log the failure for visibility, regardless of continue_on_error setting
+                logger.exception(f"Plugin {plugin.NAME} failed: {e}")
+                if not continue_on_error:
+                    raise
+                # A single failing plugin must not abort the whole run -
+                # record the failure and continue to the next plugin.
+                plugin_results[plugin.NAME] = {"error": str(e)}
     return plugin_results
