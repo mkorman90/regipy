@@ -28,7 +28,7 @@ class WinSCPSavedSessionsPlugin(Plugin):
                 if winscp_saved_session.values_count
                 else {}
             )
-            self.entries.append(
+            self.entries.append(  # type: ignore[union-attr]
                 {
                     "timestamp": convert_wintime(winscp_saved_session.header.last_modified, as_json=self.as_json),
                     "hive_name": "HKEY_CURRENT_USER",

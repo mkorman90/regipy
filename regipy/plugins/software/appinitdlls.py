@@ -3,6 +3,7 @@ AppInit_DLLs plugin - Parses persistence via AppInit_DLLs
 """
 
 import logging
+from typing import Any
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
@@ -48,7 +49,7 @@ class AppInitDLLsPlugin(Plugin):
             logger.debug(f"Could not find AppInit_DLLs at: {path}")
             return
 
-        entry = {
+        entry: dict[str, Any] = {
             "key_path": path,
             "architecture": architecture,
             "last_write": convert_wintime(windows_key.header.last_modified, as_json=self.as_json),
@@ -70,4 +71,4 @@ class AppInitDLLsPlugin(Plugin):
 
         # Only add entry if AppInit_DLLs has content or loading is enabled
         if entry["appinit_dlls"] or entry["load_appinit_dlls"]:
-            self.entries.append(entry)
+            self.entries.append(entry)  # type: ignore[union-attr]

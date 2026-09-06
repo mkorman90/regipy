@@ -68,7 +68,7 @@ class ExecutionPolicyPlugin(Plugin):
             entry,
         )
 
-        self.entries.append(entry)
+        self.entries.append(entry)  # type: ignore[union-attr]
 
     def _parse_powershell_group_policy(self):
         """Parse PowerShell Group Policy settings"""
@@ -94,7 +94,7 @@ class ExecutionPolicyPlugin(Plugin):
         )
 
         if "execution_policy" in entry or "scripts_enabled" in entry:
-            self.entries.append(entry)
+            self.entries.append(entry)  # type: ignore[union-attr]
 
     def _parse_wsh_settings(self):
         """Parse Windows Script Host settings"""
@@ -124,4 +124,4 @@ class ExecutionPolicyPlugin(Plugin):
         )
 
         if len(entry) > 3:
-            self.entries.append(entry)
+            self.entries.append(entry)  # type: ignore[union-attr]

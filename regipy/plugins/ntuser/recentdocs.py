@@ -3,7 +3,7 @@ RecentDocs plugin - Parses recently opened documents from the registry
 """
 
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import NTUSER_HIVE_TYPE
@@ -68,7 +68,7 @@ class RecentDocsPlugin(Plugin):
 
     def _process_recent_docs_key(self, key, key_path: str, extension: str = None):
         """Process a RecentDocs key and extract document entries"""
-        entry = {
+        entry: dict[str, Any] = {
             "key_path": key_path,
             "last_write": convert_wintime(key.header.last_modified, as_json=self.as_json),
             "extension": extension,
@@ -100,4 +100,4 @@ class RecentDocsPlugin(Plugin):
                     entry["documents"].append({"index": index, "name": mru_values[index]})
 
         if entry["documents"]:
-            self.entries.append(entry)
+            self.entries.append(entry)  # type: ignore[union-attr]

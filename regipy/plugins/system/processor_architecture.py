@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
@@ -24,8 +25,8 @@ class ProcessorArchitecturePlugin(Plugin):
     def can_run(self):
         return self.registry_hive.hive_type == SYSTEM_HIVE_TYPE
 
-    def run(self):
-        self.entries = {}
+    def run(self) -> None:
+        self.entries: dict[str, Any] = {}  # type: ignore[override]
         processor_subkeys = self.registry_hive.get_control_sets(PROCESSOR_PATH)
         for processor_subkey in processor_subkeys:
             try:

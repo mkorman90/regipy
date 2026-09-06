@@ -1,5 +1,6 @@
 import logging
 from dataclasses import asdict
+from typing import Any
 
 from regipy.hive_types import SYSTEM_HIVE_TYPE
 from regipy.plugins.plugin import Plugin
@@ -14,8 +15,8 @@ class TimezoneDataPlugin(Plugin):
     DESCRIPTION = "Get timezone data"
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
-    def run(self):
-        self.entries = {}
+    def run(self) -> None:
+        self.entries: dict[str, Any] = {}  # type: ignore[override]
         tzdata_subkeys = self.registry_hive.get_control_sets(TZ_DATA_PATH)
         for tzdata_subkey in tzdata_subkeys:
             tzdata = self.registry_hive.get_key(tzdata_subkey)

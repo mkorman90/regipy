@@ -84,7 +84,7 @@ class WindowsDefenderPlugin(Plugin):
         except RegistryKeyNotFoundException:
             pass
 
-        self.entries.append(entry)
+        self.entries.append(entry)  # type: ignore[union-attr]
 
     def _parse_defender_policy(self):
         """Parse Defender Group Policy settings"""
@@ -124,7 +124,7 @@ class WindowsDefenderPlugin(Plugin):
             pass
 
         if len(entry) > 3:  # More than just type, key_path, last_write
-            self.entries.append(entry)
+            self.entries.append(entry)  # type: ignore[union-attr]
 
     def _parse_exclusions(self):
         """Parse Defender exclusions"""
@@ -155,4 +155,4 @@ class WindowsDefenderPlugin(Plugin):
                     "last_write": convert_wintime(exclusions_key.header.last_modified, as_json=self.as_json),
                     "exclusions": exclusions,
                 }
-                self.entries.append(entry)
+                self.entries.append(entry)  # type: ignore[union-attr]

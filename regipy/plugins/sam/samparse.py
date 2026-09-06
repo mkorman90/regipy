@@ -6,7 +6,7 @@ import contextlib
 import logging
 import struct
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SAM_HIVE_TYPE
@@ -139,9 +139,9 @@ class SAMParsePlugin(Plugin):
 
             self.entries.append(entry)
 
-    def _get_rid_to_name_mapping(self) -> dict:
+    def _get_rid_to_name_mapping(self) -> dict[str, Any]:
         """Build mapping of RID to username from Names subkey"""
-        mapping = {}
+        mapping: dict[str, Any] = {}
         try:
             names_key = self.registry_hive.get_key(SAM_NAMES_PATH)
         except RegistryKeyNotFoundException:

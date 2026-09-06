@@ -20,7 +20,7 @@ class NetworkDrivesPlugin(Plugin):
             network_drives = self.registry_hive.get_key(NETWORK_DRIVES)
             for mapped_drive in network_drives.iter_subkeys():
                 timestamp = convert_wintime(mapped_drive.header.last_modified, as_json=self.as_json)
-                self.entries.append(
+                self.entries.append(  # type: ignore[union-attr]
                     {
                         "last_write": timestamp,
                         "drive_letter": mapped_drive.name,

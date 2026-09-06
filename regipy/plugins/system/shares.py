@@ -3,6 +3,7 @@ Shares plugin - Parses network share configuration
 """
 
 import logging
+from typing import Any
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
@@ -48,7 +49,7 @@ class SharesPlugin(Plugin):
             share_name = value.name
             share_data = value.value
 
-            entry = {
+            entry: dict[str, Any] = {
                 "key_path": key_path,
                 "share_name": share_name,
                 "last_write": convert_wintime(shares_key.header.last_modified, as_json=self.as_json),
@@ -68,13 +69,13 @@ class SharesPlugin(Plugin):
                         elif key_lower == "permissions":
                             entry["permissions"] = val
                         elif key_lower == "maxuses":
-                            entry["max_uses"] = int(val) if val.isdigit() else val
+                            entry["max_uses"] = int(val) if val.isdigit() else val  # type: ignore[unreachable]
                         elif key_lower == "type":
-                            entry["type"] = self._get_share_type(int(val) if val.isdigit() else 0)
+                            entry["type"] = self._get_share_type(int(val) if val.isdigit() else 0)  # type: ignore[unreachable]
                         elif key_lower == "cscflags":
                             entry["csc_flags"] = val
 
-            self.entries.append(entry)
+            self.entries.append(entry)  # type: ignore[union-attr]
 
     @staticmethod
     def _get_share_type(type_value: int) -> str:

@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime
+from typing import Any
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
@@ -20,8 +22,8 @@ class DiagSRPlugin(Plugin):
     def can_run(self):
         return self.registry_hive.hive_type == SYSTEM_HIVE_TYPE
 
-    def run(self):
-        self.entries = {}
+    def run(self) -> None:
+        self.entries: dict[str, Any] = {}  # type: ignore[override]
         diagsr_subkeys = self.registry_hive.get_control_sets(DIAGSR_PATH)
         for diagsr_subkey in diagsr_subkeys:
             try:
@@ -29,6 +31,7 @@ class DiagSRPlugin(Plugin):
             except RegistryKeyNotFoundException as ex:
                 logger.error(f"Could not find {self.NAME} subkey at {diagsr_subkey}: {ex}")
                 continue
-            self.entries[diagsr_subkey] = {"last_write": convert_wintime(diagsr.header.last_modified).isoformat()}
+            ts: datetime = convert_wintime(diagsr.header.last_modified)  # type: ignore[assignment]
+            self.entries[diagsr_subkey] = {"last_write": ts.isoformat()}
             for val in diagsr.iter_values():
                 self.entries[diagsr_subkey][val.name] = convert_filetime2(val.value[16:32])

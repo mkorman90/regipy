@@ -25,7 +25,7 @@ class NtuserClassesInstallerPlugin(Plugin):
             identifier = entry.name
             timestamp = convert_wintime(entry.header.last_modified, as_json=self.as_json)
             product_name = entry.get_value("ProductName")
-            self.entries.append(
+            self.entries.append(  # type: ignore[union-attr]
                 {
                     "identifier": identifier,
                     "timestamp": timestamp,

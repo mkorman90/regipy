@@ -26,7 +26,7 @@ class TSClientPlugin(Plugin):
             return
 
         for server in tsclient_subkey.iter_subkeys():
-            self.entries.append(
+            self.entries.append(  # type: ignore[union-attr]
                 {
                     "server": server.name,
                     "last_connection": convert_wintime(server.header.last_modified, as_json=self.as_json),

@@ -3,7 +3,7 @@ import datetime as dt
 import logging
 from dataclasses import asdict, dataclass, field
 from io import BytesIO
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from construct import (
     Bytes,
@@ -100,12 +100,22 @@ class Value:
 class Subkey:
     subkey_name: str
     path: str
-    timestamp: dt.datetime
+    timestamp: dt.datetime | str
     values_count: int
-    values: list[Value] = field(default_factory=list)
-
+    values: list[Value] | list[dict[str, Any]] = field(default_factory=list)
     # This field will be used if a partial hive was given, if not it would be None.
     actual_path: Optional[str] = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dict with JSON-serializable values."""
+        return {
+            "subkey_name": self.subkey_name,
+            "path": self.path,
+            "timestamp": self.timestamp.isoformat() if isinstance(self.timestamp, dt.datetime) else self.timestamp,
+            "values_count": self.values_count,
+            "values": [asdict(v) if isinstance(v, Value) else v for v in self.values],
+            "actual_path": self.actual_path,
+        }
 
 
 class RIRecord:
@@ -210,14 +220,18 @@ class RegistryHive:
                             values = [asdict(x) for x in subkey.iter_values(as_json=as_json)]
                         else:
                             values = list(subkey.iter_values(as_json=as_json))
-                    except RegistryParsingException:
-                        logger.exception(f"Failed to parse hive value at path: {trim_registry_data_for_error_msg(path_root)}")
+                    except RegistryParsingException as ex:
+                        logger.exception(f"Failed to parse hive value at path: {trim_registry_data_for_error_msg(path_root or '')}: {ex}")
 
-                ts = convert_wintime(subkey.header.last_modified)
+                ts = convert_wintime(subkey.header.last_modified, as_json=False)
+                assert isinstance(ts, dt.datetime), "convert_wintime with as_json=False should return datetime"
+                # When as_json=True, convert timestamp to ISO format string
+                if as_json:
+                    ts = ts.isoformat()
                 yield Subkey(
                     subkey_name=subkey.name,
                     path=subkey_path,
-                    timestamp=ts.isoformat() if as_json else ts,
+                    timestamp=ts,
                     values=values,
                     values_count=subkey.values_count,
                     actual_path=(f"{self.partial_hive_path}{subkey_path}" if self.partial_hive_path else None),
@@ -236,12 +250,16 @@ class RegistryHive:
                     logger.exception(f"Failed to parse hive value at path: {trim_registry_data_for_error_msg(path_root)}: {ex}")
                     values = []
 
-            ts = convert_wintime(nk_record.header.last_modified)
+            ts = convert_wintime(nk_record.header.last_modified, as_json=False)
+            assert isinstance(ts, dt.datetime), "convert_wintime with as_json=False should return datetime"
+            # When as_json=True, convert timestamp to ISO format string
+            if as_json:
+                ts = ts.isoformat()
             subkey_path = path_root or "\\"
             yield Subkey(
                 subkey_name=nk_record.name,
                 path=subkey_path,
-                timestamp=ts.isoformat() if as_json else ts,
+                timestamp=ts,
                 values=values,
                 values_count=len(values),
                 actual_path=(f"{self.partial_hive_path}\\{subkey_path}" if self.partial_hive_path else None),

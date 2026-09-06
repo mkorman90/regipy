@@ -97,7 +97,7 @@ class PuTTYPlugin(Plugin):
                 elif name == "WinTitle" and val:
                     entry["window_title"] = val
 
-            self.entries.append(entry)
+            self.entries.append(entry)  # type: ignore[union-attr]
 
     def _parse_ssh_host_keys(self):
         """Parse SSH host keys - evidence of connections made"""
@@ -132,7 +132,7 @@ class PuTTYPlugin(Plugin):
             entry["hosts"].append(host_entry)
 
         if entry["hosts"]:
-            self.entries.append(entry)
+            self.entries.append(entry)  # type: ignore[union-attr]
 
     def _parse_jumplist(self):
         """Parse PuTTY jump list entries"""
@@ -156,7 +156,7 @@ class PuTTYPlugin(Plugin):
                 entry["recent_sessions"] = sessions
 
         if entry["recent_sessions"]:
-            self.entries.append(entry)
+            self.entries.append(entry)  # type: ignore[union-attr]
 
     @staticmethod
     def _get_protocol_name(protocol_id):
