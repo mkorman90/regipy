@@ -1,6 +1,11 @@
-# CLAUDE.md - regipy
+# AGENTS.md - regipy
 
 > OS-independent Python library for parsing offline Windows registry hives
+>
+> This file is the canonical agent-instructions file for the repo (supersedes
+> CLAUDE.md). It documents how to build, test, type-check, and — critically — how
+> the CI pipeline works and the non-obvious gotchas that will bite you if you
+> touch the workflow or add code that must run on the full Python 3.9–3.13 matrix.
 
 ## Project Overview
 
@@ -244,6 +249,105 @@ pytest regipy_tests/
 ```
 
 Test hives are stored as `.xz` compressed files in `regipy_tests/data/`.
+
+The Rust parity suite (`regipy_tests/comparison_test.py`) is run separately and
+takes ~30–40 min; it is not part of the default `pytest regipy_tests/` invocation
+on the local machine (it requires `regipy-rs` built via `maturin develop -r`).
+
+## CI (GitHub Actions) — how it works and the gotchas
+
+The pipeline lives in `.github/workflows/ci.yml` (plus `regipy-rs.yml` for the
+Rust backend). It is **uv-based**. Every job follows the same shape:
+
+```yaml
+- name: Set up uv
+  uses: astral-sh/setup-uv@v6
+  with:
+    python-version: "3.11"        # or ${{ matrix.python-version }}
+- name: Create virtual environment
+  run: uv venv
+- name: Install dependencies
+  run: uv pip install -e ".[full,dev]"
+- name: Run <tool>
+  run: |
+    . .venv/bin/activate
+    <tool> ...
+```
+
+### Gotchas (each of these has broken CI before — do not regress them)
+
+1. **`uv venv` is mandatory before `uv pip install`.** `uv pip install` refuses
+   to run without an existing virtual environment ("No virtual environment
+   found for Python X.Y; run `uv venv` …"). `astral-sh/setup-uv` installs uv and
+   the interpreter but does **not** create a venv. Every job that installs
+   packages needs an explicit `uv venv` step first.
+
+2. **Do NOT use `uv run <tool>` to invoke the test/lint/type tools.** `uv run`
+   treats the repo as a *uv project* and re-syncs a **separate** environment,
+   installing only the project's declared dependencies — it drops the
+   `.[full,dev]` extras (so `pytest`, `mypy`, `ruff`, `pip-audit` are missing)
+   and does not make `regipy_tests` importable. The fix is to activate the venv
+   you already populated: `. .venv/bin/activate && <tool>` (or a multi-line
+   `run: |` block that sources `. .venv/bin/activate` on its own line, which
+   also keeps lines under the 80-char ruff limit).
+
+3. **`plugin_validation.py` needs `PYTHONPATH=.`.** `regipy_tests` is a test
+   directory, not an installed package, so `python regipy_tests/validation/
+   plugin_validation.py` fails with `ModuleNotFoundError: No module named
+   'regipy_tests'` unless the repo root is on the path. Run it as
+   `PYTHONPATH=. python regipy_tests/validation/plugin_validation.py`.
+
+4. **Python 3.9 is in the test matrix — no PEP 604 unions in
+   runtime-evaluated annotations.** The matrix runs 3.9, 3.10, 3.11, 3.12, 3.13.
+   `X | Y` union syntax (PEP 604) is only valid at runtime on 3.10+. In a
+   `@dataclass`, field annotations are evaluated when the class body executes,
+   so `timestamp: dt.datetime | str` raises
+   `TypeError: unsupported operand type(s) for |: 'type' and 'type'` on 3.9
+   at import time. Use `typing.Union[X, Y]` (or `Optional[X]`) in any
+   annotation that is evaluated at runtime — i.e. in files that do **not** have
+   `from __future__ import annotations`. (mypy is configured with
+   `python_version = "3.9"`, but mypy does not always flag every runtime-evaluated
+   PEP 604 union, so don't rely on it as the only guard.)
+
+### Jobs
+
+- **lint** — `ruff check .` + `ruff format --check .` (3.11).
+- **test** — matrix 3.9–3.13: `pytest` over `tests.py`, `cli_tests.py`,
+  `test_packaging.py`, then plugin validation.
+- **validation-docs** — regenerates `regipy_tests/validation/plugin_validation.md`
+  and uploads it as an artifact.
+- **type-check** — `mypy regipy/ --ignore-missing-imports` (3.11).
+- **security** — `pip-audit --skip-editable` + CycloneDX SBOM generation/upload.
+- **regipy-rs.yml** — builds the Rust wheels and runs the Python/Rust parity
+  tests (`comparison_test.py`) + the full suite with the Rust backend present.
+
+### Monitoring a PR's CI
+
+```bash
+gh pr checks <PR>                          # one-line status per check
+gh run view <run-id> --log-failed          # just the failing steps' logs
+gh run view --job <job-id>                # step-by-step status of one job
+```
+
+When a job fails, `--log-failed` is the fastest way to the root cause. Watch
+for the two signature failures above: `No virtual environment found` (missing
+`uv venv`) and `command not found` / `ModuleNotFoundError` (used `uv run` or
+forgot `PYTHONPATH=.`).
+
+### Local verification that mirrors CI
+
+```bash
+uv venv
+uv pip install -e ".[full,dev]"
+. .venv/bin/activate
+ruff check . && ruff format --check .
+pytest regipy_tests/ -v
+PYTHONPATH=. python regipy_tests/validation/plugin_validation.py
+mypy regipy/ --ignore-missing-imports
+# Rust parity (requires maturin + regipy-rs built):
+maturin develop -r --manifest-path regipy-rs/Cargo.toml
+pytest regipy_tests/comparison_test.py -v
+```
 
 ## Common Forensic Artifacts by Hive
 
