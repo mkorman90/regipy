@@ -2,9 +2,10 @@ import json
 import os
 import sys
 from collections import defaultdict
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import asdict
 from pathlib import Path
+from typing import Optional
 
 from tabulate import tabulate
 
@@ -45,12 +46,15 @@ class PluginValidationCaseFailureException(Exception):
 @contextmanager
 def load_hive(hive_file_name):
     temp_path = extract_lzma(os.path.join(test_data_dir, hive_file_name))
-    yield RegistryHive(temp_path)
-    os.remove(temp_path)
+    try:
+        yield RegistryHive(temp_path)
+    finally:
+        with suppress(OSError):
+            os.remove(temp_path)
 
 
 def validate_case(plugin_validation_case: type[ValidationCase], registry_hive: RegistryHive):
-    plugin_validation_case_instance: ValidationCase | None = None
+    plugin_validation_case_instance: Optional[ValidationCase] = None
     try:
         plugin_validation_case_instance = plugin_validation_case(registry_hive)
         return plugin_validation_case_instance.validate()

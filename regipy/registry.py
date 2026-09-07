@@ -100,9 +100,9 @@ class Value:
 class Subkey:
     subkey_name: str
     path: str
-    timestamp: dt.datetime | str
+    timestamp: Union[dt.datetime, str]
     values_count: int
-    values: list[Value] | list[dict[str, Any]] = field(default_factory=list)
+    values: Union[list[Value], list[dict[str, Any]]] = field(default_factory=list)
     # This field will be used if a partial hive was given, if not it would be None.
     actual_path: Optional[str] = None
 
