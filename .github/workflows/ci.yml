@@ -108,7 +108,7 @@ jobs:
 
       - name: Run mypy
         run: mypy regipy/ --ignore-missing-imports
-        continue-on-error: true  # incremental typing
+        continue-on-error: true # incremental typing
 
   security:
     runs-on: ubuntu-latest
