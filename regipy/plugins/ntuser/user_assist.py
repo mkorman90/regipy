@@ -1,5 +1,6 @@
 import codecs
 import logging
+from typing import Any
 
 from construct import Bytes, Const, ConstError, Int32ul, Int64ul, Struct
 
@@ -43,19 +44,19 @@ GUID_TO_PATH_MAPPINGS = {
 
 WHITELISTED_NAMES = ["UEME_CTLSESSION"]
 
-WIN_XP_USER_ASSIST = Struct(
-    "session_id" / Int32ul,
-    "run_counter" / Int32ul,
-    "last_execution_timestamp" / Int64ul,
+WIN_XP_USER_ASSIST: Any = Struct(
+    "session_id" / Int32ul,  # type: ignore[operator]
+    "run_counter" / Int32ul,  # type: ignore[operator]
+    "last_execution_timestamp" / Int64ul,  # type: ignore[operator]
 )
 
-WIN7_USER_ASSIST = Struct(
-    "session_id" / Int32ul,
-    "run_counter" / Int32ul,
-    "focus_count" / Int32ul,
-    "total_focus_time_ms" / Int32ul,
+WIN7_USER_ASSIST: Any = Struct(
+    "session_id" / Int32ul,  # type: ignore[operator]
+    "run_counter" / Int32ul,  # type: ignore[operator]
+    "focus_count" / Int32ul,  # type: ignore[operator]
+    "total_focus_time_ms" / Int32ul,  # type: ignore[operator]
     "unknown" * Bytes(44),
-    "last_execution_timestamp" / Int64ul,
+    "last_execution_timestamp" / Int64ul,  # type: ignore[operator]
     "Const" * Const(b"\x00\x00\x00\x00"),
 )
 
@@ -70,8 +71,7 @@ class UserAssistPlugin(Plugin):
             try:
                 subkey = self.registry_hive.get_key(rf"{USER_ASSIST_KEY_PATH}\{guid}")
                 count_subkey = subkey.get_subkey("Count")
-
-                if not count_subkey.values_count:
+                if count_subkey is None or not count_subkey.values_count:
                     logger.debug(f"Skipping {guid}")
                     continue
 
@@ -125,6 +125,7 @@ class UserAssistPlugin(Plugin):
                         }
 
                     if entry:
+                        assert isinstance(self.entries, list)
                         self.entries.append(entry)
             except RegistryKeyNotFoundException:
                 continue

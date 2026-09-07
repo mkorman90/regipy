@@ -52,4 +52,5 @@ class SysinternalsPlugin(Plugin):
                 if value.name == "EulaAccepted":
                     entry["eula_accepted"] = value.value == 1
 
+            assert isinstance(self.entries, list)
             self.entries.append(entry)

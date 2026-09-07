@@ -66,7 +66,7 @@ class RecentDocsPlugin(Plugin):
             subkey_path = f"{RECENT_DOCS_PATH}\\{subkey.name}"
             self._process_recent_docs_key(subkey, subkey_path, extension=subkey.name)
 
-    def _process_recent_docs_key(self, key, key_path: str, extension: str = None):
+    def _process_recent_docs_key(self, key, key_path: str, extension: Optional[str] = None):
         """Process a RecentDocs key and extract document entries"""
         entry: dict[str, Any] = {
             "key_path": key_path,

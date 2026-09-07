@@ -72,6 +72,7 @@ class AppCompatFlagsPlugin(Plugin):
             entry["applications"].append(app_entry)
 
         if entry["applications"]:
+            assert isinstance(self.entries, list)
             self.entries.append(entry)
 
     def _parse_custom(self):
@@ -105,4 +106,5 @@ class AppCompatFlagsPlugin(Plugin):
                 )
 
             if entry["shims"]:
+                assert isinstance(self.entries, list)
                 self.entries.append(entry)

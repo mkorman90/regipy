@@ -91,7 +91,7 @@ class LIRecord:
 @dataclass
 class Value:
     name: str
-    value: Union[str, int, bytes]
+    value: Union[str, int, bytes, dt.datetime]
     value_type: str
     is_corrupted: bool = False
 
@@ -221,7 +221,9 @@ class RegistryHive:
                         else:
                             values = list(subkey.iter_values(as_json=as_json))
                     except RegistryParsingException as ex:
-                        logger.exception(f"Failed to parse hive value at path: {trim_registry_data_for_error_msg(path_root or '')}: {ex}")
+                        logger.exception(
+                            f"Failed to parse hive value at path: {trim_registry_data_for_error_msg(path_root or '')}: {ex}"
+                        )
 
                 ts = convert_wintime(subkey.header.last_modified, as_json=False)
                 assert isinstance(ts, dt.datetime), "convert_wintime with as_json=False should return datetime"

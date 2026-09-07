@@ -23,6 +23,7 @@ class WinRARPlugin(Plugin):
 
             timestamp = convert_wintime(open_subkey.header.last_modified, as_json=self.as_json)
             for value in open_subkey.iter_values(as_json=self.as_json):
+                assert isinstance(self.entries, list)
                 self.entries.append(
                     {
                         "last_write": timestamp,
@@ -40,6 +41,7 @@ class WinRARPlugin(Plugin):
 
             timestamp = convert_wintime(create_subkey.header.last_modified, as_json=self.as_json)
             for value in create_subkey.iter_values(as_json=self.as_json):
+                assert isinstance(self.entries, list)
                 self.entries.append(
                     {
                         "last_write": timestamp,
@@ -57,6 +59,7 @@ class WinRARPlugin(Plugin):
 
             timestamp = convert_wintime(extract_subkey.header.last_modified, as_json=self.as_json)
             for value in extract_subkey.iter_values(as_json=self.as_json):
+                assert isinstance(self.entries, list)
                 self.entries.append(
                     {
                         "last_write": timestamp,

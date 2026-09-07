@@ -62,6 +62,8 @@ class BootEntryListPlugin(Plugin):
 
         for obj_key in objects_key.iter_subkeys():
             desc_key = obj_key.get_subkey("Description")
+            if desc_key is None:
+                continue
             # Object type defines the boot entry features
             desc_type = desc_key.get_value("Type")
 

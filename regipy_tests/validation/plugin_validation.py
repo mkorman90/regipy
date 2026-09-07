@@ -49,11 +49,13 @@ def load_hive(hive_file_name):
     os.remove(temp_path)
 
 
-def validate_case(plugin_validation_case: ValidationCase, registry_hive: RegistryHive):
+def validate_case(plugin_validation_case: type[ValidationCase], registry_hive: RegistryHive):
+    plugin_validation_case_instance: ValidationCase | None = None
     try:
         plugin_validation_case_instance = plugin_validation_case(registry_hive)
         return plugin_validation_case_instance.validate()
     except AssertionError as ex:
+        assert plugin_validation_case_instance is not None
         msg = f"Validation for {plugin_validation_case_instance.__class__.__name__} failed: {ex}"
         if ENFORCE_VALIDATION:
             if SHOULD_DEBUG:
@@ -76,8 +78,10 @@ def run_validations_for_hive_file(hive_file_name, validation_cases) -> list[Vali
 
 def main():
     # Map all existing validation cases
-    validation_cases_map: dict[str, ValidationCase] = {v.plugin.NAME: v for v in VALIDATION_CASES}
-    plugins_without_validation: set = {p.NAME for p in PLUGINS}.difference(set(validation_cases_map.keys()))
+    validation_cases_map: dict[str, type[ValidationCase]] = {v.plugin.NAME: v for v in VALIDATION_CASES}
+    plugins_without_validation: set[str] = {p.NAME for p in PLUGINS if p.NAME is not None}.difference(
+        set(validation_cases_map.keys())
+    )
 
     print(f"[*] Loaded {len(validation_cases_map)} validation cases")
 
@@ -85,16 +89,16 @@ def main():
         plugin_name = sys.argv[1]
         if plugin_name in validation_cases_map:
             print(f"Running validation for plugin {plugin_name}")
-            validation_case: ValidationCase = validation_cases_map[plugin_name]
-            with load_hive(validation_case.test_hive_file_name) as registry_hive:
-                validate_case(validation_case, registry_hive)
+            validation_case_cls = validation_cases_map[plugin_name]
+            with load_hive(validation_case_cls.test_hive_file_name) as registry_hive:
+                validate_case(validation_case_cls, registry_hive)
                 return
         print(f"No ValidationCase for {plugin_name}")
         return
 
     # Map all plugins according to registry hive test file, for performance.
     # Also, warn about plugins without validation, this will be enforced in the future.
-    registry_hive_map = defaultdict(list)
+    registry_hive_map: dict[str, list[type[ValidationCase]]] = defaultdict(list)
     for plugin in PLUGINS:
         plugin_name = plugin.NAME
         if plugin_name in validation_cases_map:
@@ -103,7 +107,8 @@ def main():
 
             # Get hive filename from file, in the future group plugin validation by hive file
             hive_file_name = plugin_validation_case.test_hive_file_name
-            registry_hive_map[hive_file_name].append(plugin_validation_case)
+            if hive_file_name is not None:
+                registry_hive_map[hive_file_name].append(plugin_validation_case)
         else:
             print(f"[!] {plugin_name} has NO validation case!")
 
@@ -116,7 +121,9 @@ def main():
         validation_results.extend(run_validations_for_hive_file(registry_hive_file_name, validation_cases))
 
     print()
-    validation_results_dict = sorted([asdict(v) for v in validation_results], key=lambda x: x["plugin_name"])
+    validation_results_dict: list[dict[str, object]] = sorted(
+        [asdict(v) for v in validation_results], key=lambda x: x["plugin_name"]
+    )
     print(f"\n[!] {len(validation_results_dict)}/{len(PLUGINS)} plugins have a validation case:")
     md_table_for_validation_results = tabulate(validation_results_dict, headers="keys", tablefmt="github")
     print(md_table_for_validation_results)
@@ -124,28 +131,26 @@ def main():
     if plugins_without_validation:
         print(f"\n[!] {len(plugins_without_validation)}/{len(PLUGINS)} plugins have no validation case!")
     # Create empty validation results for plugins without validation
+    plugins_without_validation_results: list[dict[str, object]] = [
+        asdict(
+            ValidationResult(
+                plugin_name=p.NAME or "",
+                plugin_description=p.DESCRIPTION,
+                plugin_class_name=p.__name__,
+                test_case_name=None,
+                success=False,
+            )
+        )
+        for p in PLUGINS
+        if p.NAME in plugins_without_validation
+    ]
     md_table_for_plugins_without_validation_results = tabulate(
-        sorted(
-            [
-                asdict(
-                    ValidationResult(
-                        plugin_name=p.NAME,
-                        plugin_description=p.DESCRIPTION,
-                        plugin_class_name=p.__name__,
-                        test_case_name=None,
-                        success=False,
-                    )
-                )
-                for p in PLUGINS
-                if p.NAME in plugins_without_validation
-            ],
-            key=lambda x: x["plugin_name"],
-        ),
+        sorted(plugins_without_validation_results, key=lambda x: str(x["plugin_name"])),
         headers="keys",
         tablefmt="github",
     )
-    print(md_table_for_plugins_without_validation_results)
 
+    print(md_table_for_plugins_without_validation_results)
     if GENERATE_MISSING_VALIDATION_TEST_TEMPLATES:
         for p in PLUGINS:
             if p.NAME in plugins_without_validation:
@@ -166,8 +171,11 @@ class {p.__name__}ValidationCase(ValidationCase):
                 )
                 if not os.path.exists(missing_test_target_path):
                     print(f"Creating template for {plugin_name} target path: {missing_test_target_path}")
-                    with open(missing_test_target_path, "w+") as f:
-                        f.write(validation_template)
+                    try:
+                        with open(missing_test_target_path, "w+") as f:
+                            f.write(validation_template)
+                    except OSError as e:
+                        print(f"Failed to write template: {e}")
 
     # If we are enforcing validation, raise on plugins without validation
     if not ENFORCE_VALIDATION and plugins_without_validation:
@@ -193,14 +201,20 @@ class {p.__name__}ValidationCase(ValidationCase):
 
     # Write the content to a Markdown file
     print(f" ** Updated the validation results in {validation_results_output_file} **")
-    with open(validation_results_output_file, "w") as f:
-        f.write(markdown_content)
+    try:
+        with open(validation_results_output_file, "w") as f:
+            f.write(markdown_content)
+    except OSError as e:
+        print(f"Failed to write validation results: {e}")
 
     # Generate validated_plugins.json for the package
     validated_plugin_names = sorted(validation_cases_map.keys())
     print(f" ** Updated validated plugins JSON in {validated_plugins_json_file} **")
-    with open(validated_plugins_json_file, "w") as f:
-        json.dump(validated_plugin_names, f, indent=4)
+    try:
+        with open(validated_plugins_json_file, "w") as f:
+            json.dump(validated_plugin_names, f, indent=4)
+    except OSError as e:
+        print(f"Failed to write validated plugins JSON: {e}")
 
 
 if __name__ == "__main__":

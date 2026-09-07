@@ -137,6 +137,7 @@ class SAMParsePlugin(Plugin):
             if v_value:
                 self._parse_v_value(v_value, entry)
 
+            assert isinstance(self.entries, list)
             self.entries.append(entry)
 
     def _get_rid_to_name_mapping(self) -> dict[str, Any]:

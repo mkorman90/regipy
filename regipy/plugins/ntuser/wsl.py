@@ -94,4 +94,4 @@ class WSLPlugin(Plugin):
             for distrib in wsl_key.iter_subkeys():
                 self.get_wsl_info(distrib, self.entries[WSL_PATH]["distributions"])
         except Exception as e:
-            logger.error(f"Error iterating over subkeys in {distrib.path}: {e}")
+            logger.error(f"Error iterating over subkeys in {WSL_PATH}: {e}")

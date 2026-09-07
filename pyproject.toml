@@ -124,23 +124,7 @@ warn_redundant_casts = false
 disallow_untyped_defs = false
 check_untyped_defs = false
 ignore_missing_imports = true
-no_implicit_optional = false
-strict_optional = false
-disallow_any_generics = false
-warn_unreachable = false
-warn_no_return = false
-disallow_subclassing_any = false
-disallow_incomplete_defs = false
-disallow_untyped_calls = false
-disallow_untyped_decorators = false
-disallow_any_unimported = false
-disallow_any_expr = false
-disallow_any_decorators = false
-warn_return_value = false
-warn_enum_return_value = false
-warn_unused_ignore = false
-warn_untyped_calls = false
-warn_untyped_decorators = false
+mypy_path = "stubs"
 
 [tool.pytest.ini_options]
 testpaths = ["regipy_tests"]
