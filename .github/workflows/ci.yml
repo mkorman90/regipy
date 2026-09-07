@@ -17,6 +17,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Create virtual environment
+        run: uv venv
+
       - name: Install ruff
         run: uv pip install ruff
 
@@ -41,11 +44,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Create virtual environment
+        run: uv venv
+
       - name: Cache uv dependencies
         uses: actions/cache@v6
         with:
           path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('uv.lock') }} # noqa: E501
+          key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-uv-${{ matrix.python-version }}-
             ${{ runner.os }}-uv-
@@ -75,6 +81,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Create virtual environment
+        run: uv venv
+
       - name: Install dependencies
         run: uv pip install -e ".[full,dev]"
 
@@ -97,6 +106,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Create virtual environment
+        run: uv venv
+
       - name: Install dependencies
         run: uv pip install -e ".[full,dev]"
 
@@ -112,6 +124,9 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.11"
+
+      - name: Create virtual environment
+        run: uv venv
 
       - name: Install dependencies
         run: |

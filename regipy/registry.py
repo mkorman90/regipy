@@ -123,7 +123,7 @@ class RIRecord:
     header = None
 
     def __init__(self, stream):
-        self.header = INDEX_ROOT.parse_stream(stream)
+        self.header = INDEX_ROOT.parse_stream(stream)  # type: ignore[union-attr]
 
 
 class RegistryHive:
@@ -147,7 +147,7 @@ class RegistryHive:
             self._stream = BytesIO(f.read())
 
         with boomerang_stream(self._stream) as s:
-            self.header = REGF_HEADER.parse_stream(s)
+            self.header = REGF_HEADER.parse_stream(s)  # type: ignore[union-attr]
 
             # Get the first cell in root HBin, which is the root NKRecord:
             root_hbin = self.get_hbin_at_offset()
@@ -337,14 +337,14 @@ class HBin:
         """
         :param stream: a stream at the start of the hbin block
         """
-        self.header = HBIN_HEADER.parse_stream(stream)
+        self.header = HBIN_HEADER.parse_stream(stream)  # type: ignore[union-attr]
         self.hbin_data_offset = stream.tell()
 
     def iter_cells(self, stream):
         stream.seek(self.hbin_data_offset)
         offset = stream.tell()
         while offset < self.hbin_data_offset + self.header.size - HBIN_HEADER.sizeof():
-            hbin_cell_size = Int32sl.parse_stream(stream)
+            hbin_cell_size = Int32sl.parse_stream(stream)  # type: ignore[union-attr]
 
             # If the cell size is positive, it means it is unallocated. We are not interested in those on a regular run
             if hbin_cell_size >= 0:
@@ -352,7 +352,7 @@ class HBin:
 
             bytes_to_read = (hbin_cell_size * -1) - 4
 
-            cell_type = Bytes(2).parse_stream(stream)
+            cell_type = Bytes(2).parse_stream(stream)  # type: ignore[union-attr]
 
             # Yield the cell
             yield Cell(cell_type=cell_type.decode(), offset=stream.tell(), size=bytes_to_read)
@@ -368,7 +368,7 @@ class NKRecord:
 
     def __init__(self, cell, stream):
         stream.seek(cell.offset)
-        self.header = CM_KEY_NODE.parse_stream(stream)
+        self.header = CM_KEY_NODE.parse_stream(stream)  # type: ignore[union-attr]
         self._stream = stream
 
         # Sometimes the key names are ASCII and sometimes UTF-16 little endian
@@ -409,7 +409,7 @@ class NKRecord:
 
         # Read the signature
         try:
-            signature = Bytes(2).parse_stream(self._stream)
+            signature = Bytes(2).parse_stream(self._stream)  # type: ignore[union-attr]
         except StreamError as ex:
             raise RegistryParsingException(f"Bad subkey at offset {target_offset}: {ex}")
 
@@ -441,9 +441,9 @@ class NKRecord:
             signature = stream.read(2)
 
         if signature in [HASH_LEAF_SIGNATURE, FAST_LEAF_SIGNATURE]:
-            subkeys = LF_LH_SK_ELEMENT.parse_stream(stream)
+            subkeys = LF_LH_SK_ELEMENT.parse_stream(stream)  # type: ignore[union-attr]
         elif signature == LEAF_INDEX_SIGNATURE:
-            subkeys = INDEX_LEAF.parse_stream(stream)
+            subkeys = INDEX_LEAF.parse_stream(stream)  # type: ignore[union-attr]
         else:
             raise RegistryParsingException(f"Expected a known signature, got: {signature} at offset {stream.tell()}")
 
@@ -451,7 +451,7 @@ class NKRecord:
             stream.seek(REGF_HEADER_SIZE + subkey.key_node_offset)
 
             # This cell should always be allocated, therefor we expect a negative size
-            cell_size = Int32sl.parse_stream(stream) * -1
+            cell_size = Int32sl.parse_stream(stream) * -1  # type: ignore[union-attr]
 
             # We read to this offset and skip 2 bytes, because that is the cell size we just read
             nk_cell = Cell(cell_type="nk", offset=stream.tell() + 2, size=cell_size)
@@ -480,7 +480,7 @@ class NKRecord:
     def _parse_indirect_block(stream, value):
         # This is an indirect datablock (Bigger than 16344, therefor we handle it differently)
         # The value inside the vk entry actually contains a pointer to the buffers containing the data
-        big_data_block_header = BIG_DATA_BLOCK.parse(value.value)
+        big_data_block_header = BIG_DATA_BLOCK.parse(value.value)  # type: ignore[union-attr]
 
         # Go to the start of the segment offset list (+4 skips the cell size header)
         stream.seek(REGF_HEADER_SIZE + 4 + big_data_block_header.offset_to_list_of_segments)
@@ -489,7 +489,7 @@ class NKRecord:
         # Read them sequentially until we got all the size of the VK
         value_size = value.size
         while value_size > 0:
-            data_segment_offset = Int32ul.parse_stream(stream)
+            data_segment_offset = Int32ul.parse_stream(stream)  # type: ignore[union-attr]
             with boomerang_stream(stream) as tmpstream:
                 tmpstream.seek(REGF_HEADER_SIZE + 4 + data_segment_offset)
                 tmpbuffer = tmpstream.read(min(0x3FD8, value_size))
@@ -516,7 +516,7 @@ class NKRecord:
         for _ in range(self.values_count):
             is_corrupted = False
             try:
-                vk_offset = Int32ul.parse_stream(self._stream)
+                vk_offset = Int32ul.parse_stream(self._stream)  # type: ignore[union-attr]
             except StreamError:
                 logger.info(f"Skipping bad registry VK at {self._stream.tell()}")
                 raise RegistryParsingException(f"Bad registry VK at {self._stream.tell()}")
@@ -525,7 +525,7 @@ class NKRecord:
                 actual_vk_offset = REGF_HEADER_SIZE + 4 + vk_offset
                 substream.seek(actual_vk_offset)
                 try:
-                    vk = VALUE_KEY.parse_stream(substream)
+                    vk = VALUE_KEY.parse_stream(substream)  # type: ignore[union-attr]
                 except (ConstError, StreamError):
                     logger.error(f"Could not parse VK at {substream.tell()}, registry hive is probably corrupted.")
                     return
@@ -549,7 +549,7 @@ class NKRecord:
                 # We currently do not support these, We are going to make the best effort to dump as string.
                 # This int casting will always work because the data_type is construct's EnumIntegerString
                 if int(vk.data_type) > 0xFFFF0000:
-                    data_type = VALUE_TYPE_ENUM.parse(Int32ul.build(int(vk.data_type) & 0xFFFF))
+                    data_type = VALUE_TYPE_ENUM.parse(Int32ul.build(int(vk.data_type) & 0xFFFF))  # type: ignore[union-attr]
                     logger.info(f"Value at {hex(actual_vk_offset)} contains DEVPROP structure of type {data_type}")
 
                 # Skip this unknown data type, research pending :)
@@ -594,19 +594,19 @@ class NKRecord:
                     actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 elif data_type == "REG_DWORD":
                     # If the data size is bigger than 0x80000000, data is actually stored in the VK data offset.
-                    actual_value = vk.data_offset if vk.data_size >= 0x80000000 else Int32ul.parse(value.value)
+                    actual_value = vk.data_offset if vk.data_size >= 0x80000000 else Int32ul.parse(value.value)  # type: ignore[union-attr]
                 elif data_type == "REG_QWORD":
-                    actual_value = vk.data_offset if vk.data_size >= 0x80000000 else Int64ul.parse(value.value)
+                    actual_value = vk.data_offset if vk.data_size >= 0x80000000 else Int64ul.parse(value.value)  # type: ignore[union-attr]
                 elif data_type == "REG_MULTI_SZ":
                     if vk.data_size >= 0x80000000:
                         # data is stored inline, in the data_offset field itself
-                        multi_sz_data = Int32ul.build(vk.data_offset)[: vk.data_size - 0x80000000]
+                        multi_sz_data = Int32ul.build(vk.data_offset)[: vk.data_size - 0x80000000]  # type: ignore[union-attr]
                     elif vk.data_size > 0x3FD8 and value.value[:2] == b"db":
                         # value is stored in big-data (db) segments
                         multi_sz_data = self._parse_indirect_block(substream, value)
                     else:
                         multi_sz_data = value.value
-                    parsed_value = GreedyRange(CString("utf-16-le")).parse(multi_sz_data)
+                    parsed_value = GreedyRange(CString("utf-16-le")).parse(multi_sz_data)  # type: ignore[union-attr]
                     # Because the ListContainer object returned by Construct cannot be turned into a list,
                     # we do this trick
                     actual_value = [x for x in parsed_value if x]
@@ -618,7 +618,7 @@ class NKRecord:
                 ]:
                     actual_value = binascii.b2a_hex(value.value).decode()[:max_len] if trim_values else value.value
                 elif data_type == "REG_FILETIME":
-                    actual_value = convert_wintime(Int64ul.parse(value.value), as_json=as_json)
+                    actual_value = convert_wintime(Int64ul.parse(value.value), as_json=as_json)  # type: ignore[union-attr]
                 else:
                     actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
                 yield Value(
@@ -659,14 +659,14 @@ class NKRecord:
     def get_security_key_info(self):
         self._stream.seek(REGF_HEADER_SIZE + self.header.security_key_offset)
         # TODO: If parsing fails, parse with SECURITY_KEY_v1_2
-        security_key = SECURITY_KEY_v1_1.parse_stream(self._stream)
-        security_descriptor = SECURITY_DESCRIPTOR.parse(security_key.security_descriptor)
+        security_key = SECURITY_KEY_v1_1.parse_stream(self._stream)  # type: ignore[union-attr]
+        security_descriptor = SECURITY_DESCRIPTOR.parse(security_key.security_descriptor)  # type: ignore[union-attr]
 
         with boomerang_stream(self._stream) as s:
             security_base_offset = REGF_HEADER_SIZE + self.header.security_key_offset + 24
 
             s.seek(security_base_offset + security_descriptor.owner)
-            owner_sid = convert_sid(SID.parse_stream(s))
+            owner_sid = convert_sid(SID.parse_stream(s))  # type: ignore[union-attr]
 
             s.seek(security_base_offset + security_descriptor.group)
             group_sid = convert_sid(SID.parse_stream(s))

@@ -5,8 +5,8 @@ from typing import Any
 
 class ParsingError(Exception):
     """Raised when hive parsing fails."""
-    ...
 
+    ...
 
 class NKRecord:
     """Wrapper for a registry key (NK record)."""
@@ -24,7 +24,6 @@ class NKRecord:
     def iter_values(self) -> Iterator[tuple[str, int, Any, bool, bool]]: ...
     def header_dict(self) -> dict[str, Any]: ...
 
-
 class RegistryHive:
     """Rust-backed registry hive parser."""
 
@@ -39,11 +38,9 @@ class RegistryHive:
     def header_dict(self) -> dict[str, Any]: ...
     def wintime_to_iso(self, filetime: int) -> str: ...
 
-
 class KeyIter:
     """Iterator over subkeys."""
     def __iter__(self) -> Iterator[NKRecord]: ...
-
 
 class WalkIter:
     """Iterator over all keys in the hive."""
