@@ -24,10 +24,10 @@ jobs:
         run: uv pip install ruff
 
       - name: Run ruff linter
-        run: ruff check .
+        run: uv run ruff check .
 
       - name: Run ruff formatter check
-        run: ruff format --check .
+        run: uv run ruff format --check .
 
   test:
     runs-on: ubuntu-latest
@@ -60,16 +60,16 @@ jobs:
         run: uv pip install -e ".[full,dev]"
 
       - name: Run tests with pytest
-        run: pytest -v regipy_tests/tests.py
+        run: uv run pytest -v regipy_tests/tests.py
 
       - name: Run CLI tests
-        run: pytest -v regipy_tests/cli_tests.py
+        run: uv run pytest -v regipy_tests/cli_tests.py
 
       - name: Run packaging tests
-        run: pytest -v regipy_tests/test_packaging.py
+        run: uv run pytest -v regipy_tests/test_packaging.py
 
       - name: Run plugin validation
-        run: PYTHONPATH=. python regipy_tests/validation/plugin_validation.py
+        run: uv run python regipy_tests/validation/plugin_validation.py
 
   validation-docs:
     runs-on: ubuntu-latest
@@ -88,7 +88,7 @@ jobs:
         run: uv pip install -e ".[full,dev]"
 
       - name: Generate plugin validation documentation
-        run: PYTHONPATH=. python regipy_tests/validation/plugin_validation.py
+        run: uv run python regipy_tests/validation/plugin_validation.py
 
       - name: Upload validation documentation
         uses: actions/upload-artifact@v7
@@ -113,7 +113,7 @@ jobs:
         run: uv pip install -e ".[full,dev]"
 
       - name: Run mypy
-        run: mypy regipy/ --ignore-missing-imports
+        run: uv run mypy regipy/ --ignore-missing-imports
 
   security:
     runs-on: ubuntu-latest
@@ -137,12 +137,12 @@ jobs:
           uv pip install pip-audit cyclonedx-bom
 
       - name: Run pip-audit (vulnerability scan)
-        run: pip-audit --skip-editable
+        run: uv run pip-audit --skip-editable
 
       - name: Generate SBOM (CycloneDX)
         run: |
-          cyclonedx-py environment -o sbom.json --of JSON
-          cyclonedx-py environment -o sbom.xml --of XML
+          uv run cyclonedx-py environment -o sbom.json --of JSON
+          uv run cyclonedx-py environment -o sbom.xml --of XML
 
       - name: Upload SBOM
         uses: actions/upload-artifact@v7
