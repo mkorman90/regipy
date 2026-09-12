@@ -19,3 +19,8 @@ extension-module = ["pyo3/extension-module"]
 opt-level = 3
 lto = true
 codegen-units = 1
+
+[lints.clippy]
+# pyo3 0.22's #[pymethods]/#[pyfunction] macros generate a redundant PyErr
+# conversion that newer clippy flags; fixed upstream in pyo3 0.23.
+useless_conversion = "allow"
