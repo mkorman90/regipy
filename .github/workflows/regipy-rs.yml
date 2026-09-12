@@ -23,8 +23,29 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    name: Rust lint (fmt, clippy, unit tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Check formatting
+        run: cargo fmt --check --manifest-path regipy-rs/Cargo.toml
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy --all-targets --manifest-path regipy-rs/Cargo.toml -- -D warnings
+
+      - name: Unit tests
+        run: cargo test --manifest-path regipy-rs/Cargo.toml
+
   parity:
     name: Python/Rust parity tests
+    needs: [lint]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
