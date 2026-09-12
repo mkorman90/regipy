@@ -13,7 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - By default a failing plugin still aborts the run (original behavior preserved)
   - Set to `True` to log the failure, record it in the results, and continue with the remaining plugins
   - Plugin failures are always logged, regardless of the flag
-- **uv-managed packaging** - `uv.lock` committed and CI migrated to `uv` for reproducible, faster installs
 
 ### Changed
 
