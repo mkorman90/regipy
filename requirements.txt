@@ -1,6 +1,6 @@
 construct==2.10.70
 attrs>=26.1.0
-click==8.4.2
+click==8.5.0
 inflection==0.5.1
 pytz
 tabulate==0.10.0
