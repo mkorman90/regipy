@@ -18,6 +18,8 @@ use std::borrow::Cow;
 use std::fmt;
 use std::sync::Arc;
 
+use memmap2::Mmap;
+
 pub const REGF_HEADER_SIZE: usize = 4096;
 pub const HBIN_HEADER_SIZE: usize = 32;
 /// Values larger than this are stored in "big data" (db) segments.
@@ -372,7 +374,24 @@ pub struct NkRecord {
     pub key_name_size: u16,
     pub class_name_size: u16,
     pub key_name_raw: Vec<u8>,
-    pub name: String,
+}
+
+impl NkRecord {
+    /// Key name, borrowing the raw bytes when they are plain ASCII
+    /// (zero-alloc for the common case) and decoding otherwise.
+    /// Produces byte-identical output to the old eager decode.
+    pub fn name_cow(&self) -> Cow<'_, str> {
+        if self.flags & KEY_COMP_NAME != 0 {
+            if self.key_name_raw.iter().all(|&b| b < 0x80) {
+                // Safety: every byte was just checked to be < 0x80.
+                Cow::Borrowed(unsafe { std::str::from_utf8_unchecked(&self.key_name_raw) })
+            } else {
+                Cow::Owned(decode_ascii_replace(&self.key_name_raw))
+            }
+        } else {
+            Cow::Owned(decode_utf16le_replace(&self.key_name_raw))
+        }
+    }
 }
 
 pub fn parse_nk(data: &[u8], off: usize) -> Result<NkRecord> {
@@ -380,11 +399,6 @@ pub fn parse_nk(data: &[u8], off: usize) -> Result<NkRecord> {
     let flags = u16_at(data, off, "NK flags")?;
     let key_name_size = u16_at(data, off + 70, "NK name size")?;
     let key_name_raw = slice_at(data, off + 74, key_name_size as usize, "NK name")?.to_vec();
-    let name = if flags & KEY_COMP_NAME != 0 {
-        decode_ascii_replace(&key_name_raw)
-    } else {
-        decode_utf16le_replace(&key_name_raw)
-    };
     let mut access_bits = [0u8; 4];
     access_bits.copy_from_slice(&data[off + 10..off + 14]);
     Ok(NkRecord {
@@ -408,25 +422,28 @@ pub fn parse_nk(data: &[u8], off: usize) -> Result<NkRecord> {
         key_name_size,
         class_name_size: u16_at(data, off + 72, "NK class name size")?,
         key_name_raw,
-        name,
     })
 }
 
 // ─── Hive ────────────────────────────────────────────────────────────────────
 
 pub struct Hive {
-    pub data: Vec<u8>,
+    pub data: Mmap,
     pub header: RegfHeader,
     pub root: NkRecord,
 }
 
 impl Hive {
     pub fn from_file(path: &str) -> Result<Arc<Hive>> {
-        let data = std::fs::read(path)?;
-        Self::from_bytes(data)
-    }
-
-    pub fn from_bytes(data: Vec<u8>) -> Result<Arc<Hive>> {
+        let file = std::fs::File::open(path)?;
+        if file.metadata()?.len() == 0 {
+            // An empty file fails the REGF signature check; report the same
+            // out-of-bounds read the old Vec-based loader produced.
+            return Err(oob(0, "REGF signature"));
+        }
+        // Safety: the mapping is read-only and never written through here;
+        // the File handle is held for the mapping's lifetime.
+        let data = unsafe { Mmap::map(&file)? };
         let header = parse_regf_header(&data)?;
         // The Python parser takes the first allocated cell of the first hbin
         // as the root NK record (not header.root_key_offset).
@@ -459,89 +476,209 @@ impl Hive {
 
 // ─── Subkey lists ────────────────────────────────────────────────────────────
 
-/// Result of enumerating a subkey list: the successfully parsed prefix and,
-/// if enumeration failed midway, the error. This mirrors Python generator
-/// semantics where earlier elements are yielded before the exception raises.
-pub struct SubkeyList {
-    pub subkeys: Vec<NkRecord>,
-    pub error: Option<ParseError>,
+/// One level of a (possibly nested, via `ri`) subkey list.
+enum SubkeyFrame {
+    /// A leaf list (`lf`/`lh`/`li`): subkey offsets parsed one at a time.
+    Leaf {
+        pos: usize,
+        stride: usize,
+        count: usize,
+        idx: usize,
+    },
+    /// An `ri` index: child lists opened one at a time, so a corrupt child
+    /// errors only after the previous children's subkeys were yielded
+    /// (Python generator semantics).
+    Ri {
+        payload: usize,
+        count: usize,
+        idx: usize,
+    },
 }
 
-fn parse_leaf_elements(
-    data: &[u8],
-    pos: usize,
-    stride: usize,
-    out: &mut Vec<NkRecord>,
-) -> Result<()> {
-    let count = u16_at(data, pos, "subkey list count")? as usize;
-    for i in 0..count {
-        let elem_off = pos + 2 + stride * i;
-        let key_node_offset = u32_at(data, elem_off, "subkey element")? as usize;
-        // Skip the 4-byte cell size and the 2-byte "nk" signature.
-        let nk_off = REGF_HEADER_SIZE + key_node_offset + 4 + 2;
-        out.push(parse_nk(data, nk_off)?);
-    }
-    Ok(())
-}
-
-/// Enumerate the subkeys of `nk`, in on-disk list order (Python: NKRecord.iter_subkeys).
-pub fn list_subkeys(hive: &Hive, nk: &NkRecord) -> SubkeyList {
-    let mut out = Vec::new();
-    let error = list_subkeys_inner(&hive.data, nk, &mut out).err();
-    SubkeyList {
-        subkeys: out,
-        error,
-    }
-}
-
-fn list_subkeys_inner(data: &[u8], nk: &NkRecord, out: &mut Vec<NkRecord>) -> Result<()> {
-    if nk.subkey_count == 0 {
-        return Ok(());
-    }
-    // subkey_count comes from disk and may be corrupt — cap the pre-allocation.
-    out.reserve((nk.subkey_count as usize).min(4096));
-    let payload = REGF_HEADER_SIZE + 4 + nk.subkeys_list_offset as usize;
-    let sig = slice_at(data, payload, 2, "subkey list signature")
-        .map_err(|_| ParseError::Parsing(format!("Bad subkey at offset {payload}")))?;
-    match sig {
-        b"lf" | b"lh" => parse_leaf_elements(data, payload + 2, 8, out),
-        b"li" => parse_leaf_elements(data, payload + 2, 4, out),
+/// Open the list frame at `payload` for a known 2-byte signature.
+/// Returns `Ok(None)` for unknown signatures (Python silently yields nothing).
+fn frame_from_sig(data: &[u8], payload: usize, sig: &[u8]) -> Result<Option<SubkeyFrame>> {
+    let frame = match sig {
+        b"lf" | b"lh" => {
+            let count = u16_at(data, payload + 2, "subkey list count")? as usize;
+            SubkeyFrame::Leaf {
+                pos: payload + 2,
+                stride: 8,
+                count,
+                idx: 0,
+            }
+        }
+        b"li" => {
+            let count = u16_at(data, payload + 2, "subkey list count")? as usize;
+            SubkeyFrame::Leaf {
+                pos: payload + 2,
+                stride: 4,
+                count,
+                idx: 0,
+            }
+        }
         b"ri" => {
             let count = u16_at(data, payload + 2, "ri count")? as usize;
-            for i in 0..count {
-                let elem = u32_at(data, payload + 4 + 4 * i, "ri element")? as usize;
-                let child = REGF_HEADER_SIZE + 4 + elem;
-                let child_sig = slice_at(data, child, 2, "subkey list signature")?;
-                match child_sig {
-                    b"lf" | b"lh" => parse_leaf_elements(data, child + 2, 8, out)?,
-                    b"li" => parse_leaf_elements(data, child + 2, 4, out)?,
-                    other => {
-                        return Err(ParseError::Parsing(format!(
-                            "Expected a known signature, got: {other:?} at offset {child}"
-                        )))
+            SubkeyFrame::Ri {
+                payload,
+                count,
+                idx: 0,
+            }
+        }
+        _ => return Ok(None),
+    };
+    Ok(Some(frame))
+}
+
+/// Lazy subkey iterator (Python: NKRecord.iter_subkeys).
+///
+/// Parses one subkey per `next()` instead of materializing the whole list.
+/// Error semantics mirror the Python generator: successfully parsed subkeys
+/// are yielded first, then the first error (if any) is returned.
+pub struct SubkeyIter {
+    hive: Arc<Hive>,
+    stack: Vec<SubkeyFrame>,
+    pending: Option<ParseError>,
+    done: bool,
+}
+
+impl SubkeyIter {
+    pub fn new(hive: Arc<Hive>, nk: &NkRecord) -> Self {
+        let mut it = SubkeyIter {
+            hive,
+            stack: Vec::new(),
+            pending: None,
+            done: false,
+        };
+        if nk.subkey_count == 0 {
+            it.done = true;
+            return it;
+        }
+        let data: &[u8] = &it.hive.data;
+        let payload = REGF_HEADER_SIZE + 4 + nk.subkeys_list_offset as usize;
+        match slice_at(data, payload, 2, "subkey list signature") {
+            Err(_) => {
+                it.pending = Some(ParseError::Parsing(format!(
+                    "Bad subkey at offset {payload}"
+                )));
+            }
+            Ok(sig) => match frame_from_sig(data, payload, sig) {
+                Ok(Some(frame)) => it.stack.push(frame),
+                Ok(None) => it.done = true, // unknown signature: silently empty
+                Err(e) => it.pending = Some(e),
+            },
+        }
+        it
+    }
+}
+
+impl Iterator for SubkeyIter {
+    type Item = Result<NkRecord>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(e) = self.pending.take() {
+            self.done = true;
+            return Some(Err(e));
+        }
+        if self.done {
+            return None;
+        }
+        // Clone the Arc so `data` doesn't borrow `self` while we mutate it.
+        let hive = self.hive.clone();
+        let data: &[u8] = &hive.data;
+        loop {
+            let frame = self.stack.pop()?;
+            match frame {
+                SubkeyFrame::Leaf {
+                    pos,
+                    stride,
+                    count,
+                    idx,
+                } => {
+                    if idx >= count {
+                        continue; // list exhausted, resume parent frame
+                    }
+                    self.stack.push(SubkeyFrame::Leaf {
+                        pos,
+                        stride,
+                        count,
+                        idx: idx + 1,
+                    });
+                    let elem_off = pos + 2 + stride * idx;
+                    let key_node_offset = match u32_at(data, elem_off, "subkey element") {
+                        Ok(v) => v as usize,
+                        Err(e) => {
+                            self.done = true;
+                            return Some(Err(e));
+                        }
+                    };
+                    // Skip the 4-byte cell size and the 2-byte "nk" signature.
+                    let nk_off = REGF_HEADER_SIZE + key_node_offset + 4 + 2;
+                    match parse_nk(data, nk_off) {
+                        Ok(rec) => return Some(Ok(rec)),
+                        Err(e) => {
+                            self.done = true;
+                            return Some(Err(e));
+                        }
+                    }
+                }
+                SubkeyFrame::Ri {
+                    payload,
+                    count,
+                    idx,
+                } => {
+                    if idx >= count {
+                        continue;
+                    }
+                    self.stack.push(SubkeyFrame::Ri {
+                        payload,
+                        count,
+                        idx: idx + 1,
+                    });
+                    let child = match u32_at(data, payload + 4 + 4 * idx, "ri element") {
+                        Ok(v) => REGF_HEADER_SIZE + 4 + v as usize,
+                        Err(e) => {
+                            self.done = true;
+                            return Some(Err(e));
+                        }
+                    };
+                    let child_sig = match slice_at(data, child, 2, "subkey list signature") {
+                        Ok(s) => s,
+                        Err(e) => {
+                            self.done = true;
+                            return Some(Err(e));
+                        }
+                    };
+                    match frame_from_sig(data, child, child_sig) {
+                        Ok(Some(f)) => self.stack.push(f),
+                        Ok(None) => {
+                            self.done = true;
+                            return Some(Err(ParseError::Parsing(format!(
+                                "Expected a known signature, got: {child_sig:?} at offset {child}"
+                            ))));
+                        }
+                        Err(e) => {
+                            self.done = true;
+                            return Some(Err(e));
+                        }
                     }
                 }
             }
-            Ok(())
         }
-        // Python silently yields nothing for unknown list signatures.
-        _ => Ok(()),
     }
 }
 
 /// Case-insensitive subkey lookup (Python: NKRecord.get_subkey).
-pub fn find_subkey(hive: &Hive, nk: &NkRecord, name: &str) -> Result<Option<NkRecord>> {
+/// Short-circuits on the first match instead of parsing every sibling.
+pub fn find_subkey(hive: Arc<Hive>, nk: &NkRecord, name: &str) -> Result<Option<NkRecord>> {
     let target = name.to_uppercase();
-    let list = list_subkeys(hive, nk);
-    for sk in list.subkeys {
-        if sk.name.to_uppercase() == target {
+    for res in SubkeyIter::new(hive, nk) {
+        let sk = res?;
+        if sk.name_cow().to_uppercase() == target {
             return Ok(Some(sk));
         }
     }
-    match list.error {
-        Some(e) => Err(e),
-        None => Ok(None),
-    }
+    Ok(None)
 }
 
 // ─── VK records and value decoding ───────────────────────────────────────────
@@ -642,10 +779,86 @@ pub struct ParsedValue {
 }
 
 /// Result of enumerating a key's values: parsed prefix + optional fatal error
-/// (same generator semantics as SubkeyList).
-pub struct ValueList {
-    pub values: Vec<ParsedValue>,
-    pub error: Option<ParseError>,
+/// Lazy value iterator (Python: NKRecord.iter_values).
+///
+/// Decodes one value per `next()`. A corrupt VK record ends iteration
+/// silently (like Python); any other failure is returned after the values
+/// parsed so far.
+pub struct ValueIter {
+    hive: Arc<Hive>,
+    list_payload: usize,
+    count: usize,
+    idx: usize,
+    as_json: bool,
+    trim_values: bool,
+    max_len: usize,
+    done: bool,
+}
+
+impl ValueIter {
+    pub fn new(
+        hive: Arc<Hive>,
+        nk: &NkRecord,
+        as_json: bool,
+        trim_values: bool,
+        max_len: usize,
+    ) -> Self {
+        ValueIter {
+            hive,
+            list_payload: REGF_HEADER_SIZE + 4 + nk.values_list_offset as usize,
+            count: nk.values_count as usize,
+            idx: 0,
+            as_json,
+            trim_values,
+            max_len,
+            done: nk.values_count == 0,
+        }
+    }
+}
+
+impl Iterator for ValueIter {
+    type Item = Result<ParsedValue>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.done {
+            return None;
+        }
+        // Clone the Arc so `data` doesn't borrow `self` while we mutate it.
+        let hive = self.hive.clone();
+        let data: &[u8] = &hive.data;
+        while self.idx < self.count {
+            let pos = self.list_payload + 4 * self.idx;
+            self.idx += 1;
+            let vk_off = match u32_at(data, pos, "VK offset") {
+                Ok(v) => v,
+                Err(_) => {
+                    // Python: RegistryParsingException("Bad registry VK at ...")
+                    self.done = true;
+                    return Some(Err(ParseError::Parsing(format!(
+                        "Bad registry VK at {pos}"
+                    ))));
+                }
+            };
+            let vk_payload = REGF_HEADER_SIZE + 4 + vk_off as usize;
+            let vk = match parse_vk(data, vk_payload) {
+                Ok(v) => v,
+                // Python: a corrupt VK record ends value iteration silently.
+                Err(_) => {
+                    self.done = true;
+                    return None;
+                }
+            };
+            match decode_value(data, &vk, self.as_json, self.trim_values, self.max_len) {
+                Ok(Some(v)) => return Some(Ok(v)),
+                Ok(None) => continue, // skipped type (e.g. 0x200000)
+                Err(e) => {
+                    self.done = true;
+                    return Some(Err(e));
+                }
+            }
+        }
+        None
+    }
 }
 
 /// Python: `stream.read(data_size)` at the data cell payload — clamped at EOF,
@@ -908,67 +1121,6 @@ fn decode_value(
         data: vdata,
         is_corrupted: false,
     }))
-}
-
-/// Enumerate the values of `nk` (Python: NKRecord.iter_values).
-pub fn list_values(
-    hive: &Hive,
-    nk: &NkRecord,
-    as_json: bool,
-    trim_values: bool,
-    max_len: usize,
-) -> ValueList {
-    let data = &hive.data;
-    let mut out = Vec::new();
-    if nk.values_count == 0 {
-        return ValueList {
-            values: out,
-            error: None,
-        };
-    }
-    // values_count comes from disk and may be corrupt — cap the pre-allocation.
-    out.reserve((nk.values_count as usize).min(4096));
-    let list_payload = REGF_HEADER_SIZE + 4 + nk.values_list_offset as usize;
-    for i in 0..nk.values_count as usize {
-        let vk_off = match u32_at(data, list_payload + 4 * i, "VK offset") {
-            Ok(v) => v,
-            Err(_) => {
-                // Python: RegistryParsingException("Bad registry VK at ...")
-                return ValueList {
-                    values: out,
-                    error: Some(ParseError::Parsing(format!(
-                        "Bad registry VK at {}",
-                        list_payload + 4 * i
-                    ))),
-                };
-            }
-        };
-        let vk_payload = REGF_HEADER_SIZE + 4 + vk_off as usize;
-        let vk = match parse_vk(data, vk_payload) {
-            Ok(v) => v,
-            // Python: a corrupt VK record ends value iteration silently.
-            Err(_) => {
-                return ValueList {
-                    values: out,
-                    error: None,
-                }
-            }
-        };
-        match decode_value(data, &vk, as_json, trim_values, max_len) {
-            Ok(Some(v)) => out.push(v),
-            Ok(None) => continue,
-            Err(e) => {
-                return ValueList {
-                    values: out,
-                    error: Some(e),
-                }
-            }
-        }
-    }
-    ValueList {
-        values: out,
-        error: None,
-    }
 }
 
 // ─── Class name ──────────────────────────────────────────────────────────────

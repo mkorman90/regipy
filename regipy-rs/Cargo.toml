@@ -11,6 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 pyo3 = { version = "0.22", features = ["abi3-py39"] }
+memmap2 = "0.9"
 
 [features]
 extension-module = ["pyo3/extension-module"]
