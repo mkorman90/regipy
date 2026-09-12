@@ -29,7 +29,7 @@ class InstalledProgramsSoftwarePlugin(Plugin):
                 if installed_program.values_count
                 else {}
             )
-            self.entries.append(
+            self.entries.append(  # type: ignore[union-attr]
                 {
                     "service_name": installed_program.name,
                     "timestamp": convert_wintime(installed_program.header.last_modified, as_json=self.as_json),

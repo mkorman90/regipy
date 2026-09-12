@@ -1,19 +1,19 @@
 import logging
-from typing import Any
+from typing import Any, Optional, Union
 
 from regipy.registry import RegistryHive
 
-PLUGINS = set()
+PLUGINS: set[type] = set()
 
 logger = logging.getLogger(__name__)
 
 
 class Plugin:
-    NAME: str = None
-    DESCRIPTION: str = None
-    COMPATIBLE_HIVE: str = None
+    NAME: Optional[str] = None
+    DESCRIPTION: Optional[str] = None
+    COMPATIBLE_HIVE: Optional[str] = None
 
-    def __init_subclass__(cls):
+    def __init_subclass__(cls) -> None:
         PLUGINS.add(cls)
 
     def __init__(self, registry_hive: RegistryHive, as_json=False, trim_values=False):
@@ -24,11 +24,12 @@ class Plugin:
         self.partial_hive_path = registry_hive.partial_hive_path
 
         # This variable should always hold the final result - in order to use it in anomaly detection and timeline gen.
-        self.entries: list[dict[str, Any]] = []
+        # Can be either a list of dicts (most plugins) or a dict (some plugins that organize by key path)
+        self.entries: Union[list[dict[str, Any]], dict[str, Any]] = []
 
     def can_run(self):
         """
-        Wether the plugin can run or not, according to specific checks
+        Whether the plugin can run or not, according to specific checks
         :return:
         """
         return self.registry_hive.hive_type == self.COMPATIBLE_HIVE

@@ -3,6 +3,7 @@ App Paths plugin - Parses application paths registry entries
 """
 
 import logging
+from typing import Any
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
@@ -55,7 +56,7 @@ class AppPathsPlugin(Plugin):
             app_name = subkey.name
             subkey_path = f"{path}\\{app_name}"
 
-            entry = {
+            entry: dict[str, Any] = {
                 "key_path": subkey_path,
                 "application": app_name,
                 "architecture": architecture,
@@ -77,4 +78,4 @@ class AppPathsPlugin(Plugin):
                 elif name == "dontusedestoolbar":
                     entry["dont_use_des_toolbar"] = val
 
-            self.entries.append(entry)
+            self.entries.append(entry)  # type: ignore[union-attr]

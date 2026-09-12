@@ -3,7 +3,7 @@ ComDlg32 plugin - Parses Open/Save dialog history (OpenSavePidlMRU, OpenSaveMRU)
 """
 
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import NTUSER_HIVE_TYPE
@@ -127,7 +127,7 @@ class ComDlg32Plugin(Plugin):
                         entry["items"].append({"index": index, "path": mru_values[index]})
 
             if entry["items"]:
-                self.entries.append(entry)
+                self.entries.append(entry)  # type: ignore[union-attr]
 
     def _parse_last_visited_mru(self, path: str):
         """Parse LastVisitedPidlMRU entries"""
@@ -137,7 +137,7 @@ class ComDlg32Plugin(Plugin):
             logger.debug(f"Could not find LastVisitedPidlMRU at: {path}")
             return
 
-        entry = {
+        entry: dict[str, Any] = {
             "key_path": path,
             "mru_type": "LastVisitedPidlMRU",
             "last_write": convert_wintime(key.header.last_modified, as_json=self.as_json),
@@ -164,4 +164,4 @@ class ComDlg32Plugin(Plugin):
                     entry["items"].append({"index": index, "path": mru_values[index]})
 
         if entry["items"]:
-            self.entries.append(entry)
+            self.entries.append(entry)  # type: ignore[union-attr]

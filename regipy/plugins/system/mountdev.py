@@ -4,6 +4,7 @@ MountedDevices plugin - Parses mounted device information
 
 import logging
 import re
+from typing import Any
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
@@ -15,9 +16,9 @@ logger = logging.getLogger(__name__)
 MOUNTED_DEVICES_PATH = r"\MountedDevices"
 
 
-def parse_device_data(data: bytes) -> dict:
+def parse_device_data(data: bytes) -> dict[str, Any]:
     """Parse the binary device data to extract device information"""
-    result = {}
+    result: dict[str, Any] = {}
 
     if not data:
         return result
@@ -108,7 +109,7 @@ class MountedDevicesPlugin(Plugin):
             logger.debug(f"Could not find MountedDevices at: {MOUNTED_DEVICES_PATH}: {ex}")
             return
 
-        base_entry = {
+        base_entry: dict[str, Any] = {
             "key_path": MOUNTED_DEVICES_PATH,
             "last_write": convert_wintime(mounted_key.header.last_modified, as_json=self.as_json),
         }
@@ -117,7 +118,7 @@ class MountedDevicesPlugin(Plugin):
             name = value.name
             data = value.value
 
-            entry = base_entry.copy()
+            entry: dict[str, Any] = base_entry.copy()
             entry["value_name"] = name
 
             # Determine mount point type
@@ -138,4 +139,4 @@ class MountedDevicesPlugin(Plugin):
                 entry.update(device_info)
                 entry["data_size"] = len(data)
 
-            self.entries.append(entry)
+            self.entries.append(entry)  # type: ignore[union-attr]

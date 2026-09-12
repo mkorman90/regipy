@@ -36,14 +36,14 @@ def _get_element_by_type(obj_key: NKRecord, datatype: int) -> Union[str, bytes, 
 
     # The BCD object attributes are stored as "elements" instead of normal values
     elements_key = obj_key.get_subkey("Elements", raise_on_missing=False)
-    if elements_key.subkey_count == 0:
+    if elements_key is None or elements_key.subkey_count == 0:  # type: ignore[union-attr]
         return None
 
-    elem_key = elements_key.get_subkey(f"{datatype:08X}", raise_on_missing=False)
+    elem_key = elements_key.get_subkey(f"{datatype:08X}", raise_on_missing=False)  # type: ignore[union-attr]
     if elem_key is None:
         return None
 
-    return elem_key.get_value("Element")
+    return elem_key.get_value("Element")  # type: ignore[union-attr]
 
 
 class BootEntryListPlugin(Plugin):
@@ -62,6 +62,8 @@ class BootEntryListPlugin(Plugin):
 
         for obj_key in objects_key.iter_subkeys():
             desc_key = obj_key.get_subkey("Description")
+            if desc_key is None:
+                continue
             # Object type defines the boot entry features
             desc_type = desc_key.get_value("Type")
 
@@ -84,7 +86,7 @@ class BootEntryListPlugin(Plugin):
 
             entry_type = f"0x{desc_type:08X}" if self.as_json else desc_type
 
-            self.entries.append(
+            self.entries.append(  # type: ignore[union-attr]
                 {
                     "guid": obj_key.name,
                     "type": entry_type,

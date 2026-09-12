@@ -3,6 +3,7 @@ Pending File Rename plugin - Parses pending file rename operations
 """
 
 import logging
+from typing import Any
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
@@ -55,11 +56,11 @@ class PendingFileRenamePlugin(Plugin):
                     entry["operations"].extend(operations)
 
             if entry["operations"]:
-                self.entries.append(entry)
+                self.entries.append(entry)  # type: ignore[union-attr]
 
     def _parse_operations(self, data, value_name: str) -> list:
         """Parse pending file rename operations"""
-        operations = []
+        operations: list[dict[str, Any]] = []
 
         if not data:
             return operations

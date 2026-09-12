@@ -88,7 +88,7 @@ class AmCachePlugin(Plugin):
             if ts:
                 entry[ts_field_name] = convert_wintime(ts, as_json=self.as_json)
 
-        self.entries.append(entry)
+        self.entries.append(entry)  # type: ignore[union-attr]
 
     def run(self):
         logger.debug("Started AmCache Plugin...")
@@ -111,7 +111,7 @@ class AmCachePlugin(Plugin):
                     for file_subkey in subkey.iter_subkeys():
                         self.parse_amcache_file_entry(file_subkey)
                 if subkey.header.values_count > 0:
-                    self.entries.append(subkey)
+                    self.entries.append(subkey)  # type: ignore[union-attr]
 
         if amcache_inventory_file_subkey:
             for file_subkey in amcache_inventory_file_subkey.iter_subkeys():

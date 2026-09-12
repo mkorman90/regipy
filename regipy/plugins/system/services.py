@@ -1,5 +1,6 @@
 import logging
 from dataclasses import asdict
+from typing import Any
 
 from regipy.exceptions import (
     RegistryKeyNotFoundException,
@@ -19,8 +20,8 @@ class ServicesPlugin(Plugin):
     DESCRIPTION = "Enumerate the services in the SYSTEM hive"
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
-    def run(self):
-        self.entries = {}
+    def run(self) -> None:
+        self.entries: dict[str, Any] = {}  # type: ignore[override]
         logger.debug("Started Services enumeration Plugin...")
         for control_set_services_path in self.registry_hive.get_control_sets(SERVICES_PATH):
             try:

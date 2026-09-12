@@ -45,7 +45,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}
           restore-keys: |
             ${{ runner.os }}-pip-${{ matrix.python-version }}-
             ${{ runner.os }}-pip-
@@ -108,7 +108,7 @@ jobs:
 
       - name: Run mypy
         run: mypy regipy/ --ignore-missing-imports
-        continue-on-error: true  # Allow failures while adding type hints incrementally
+        continue-on-error: true # incremental typing
 
   security:
     runs-on: ubuntu-latest

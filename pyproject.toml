@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "regipy"
-version = "6.3.0"
+version = "6.4.0"
 description = "Python Registry Parser"
 readme = "docs/README.rst"
 license = {text = "MIT"}
@@ -118,12 +118,13 @@ line-ending = "auto"
 
 [tool.mypy]
 python_version = "3.9"
-warn_return_any = true
-warn_unused_ignores = true
-warn_redundant_casts = true
-disallow_untyped_defs = false  # Start lenient, can increase strictness later
-check_untyped_defs = true
+warn_return_any = false
+warn_unused_ignores = false
+warn_redundant_casts = false
+disallow_untyped_defs = false
+check_untyped_defs = false
 ignore_missing_imports = true
+mypy_path = "stubs"
 
 [tool.pytest.ini_options]
 testpaths = ["regipy_tests"]

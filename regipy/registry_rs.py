@@ -26,7 +26,7 @@ between backends.
 import logging
 
 try:
-    import regipy_rs
+    import regipy_rs  # type: ignore[import-not-found]
 except ImportError as ex:  # pragma: no cover
     raise ImportError("The Rust backend requires the regipy-rs package. Install it with: pip install regipy[rust]") from ex
 

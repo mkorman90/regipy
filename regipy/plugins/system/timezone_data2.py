@@ -1,5 +1,7 @@
 import logging
 import struct
+from datetime import datetime
+from typing import Any
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
@@ -16,8 +18,8 @@ class TimezoneDataPlugin2(Plugin):
     DESCRIPTION = "Get timezone data"
     COMPATIBLE_HIVE = SYSTEM_HIVE_TYPE
 
-    def run(self):
-        self.entries = {}
+    def run(self) -> None:
+        self.entries: dict[str, Any] = {}  # type: ignore[override]
         tzdata_subkeys = self.registry_hive.get_control_sets(TZ_DATA_PATH)
         for tzdata_subkey in tzdata_subkeys:
             try:
@@ -26,7 +28,8 @@ class TimezoneDataPlugin2(Plugin):
                 logger.error(f"Could not find {self.NAME} subkey at {tzdata_subkey}: {ex}")
                 continue
             self.entries[tzdata_subkey] = list(tzdata.iter_values(as_json=self.as_json))
-            self.entries[tzdata_subkey] = {"last_write": convert_wintime(tzdata.header.last_modified).isoformat()}
+            ts: datetime = convert_wintime(tzdata.header.last_modified, as_json=False)  # type: ignore[assignment]
+            self.entries[tzdata_subkey] = {"last_write": ts.isoformat()}
             for val in tzdata.iter_values():
                 if val.name in ("ActiveTimeBias", "Bias", "DaylightBias"):
                     self.entries[tzdata_subkey][val.name] = struct.unpack(">l", struct.pack(">L", val.value & 0xFFFFFFFF))[0]

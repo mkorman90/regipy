@@ -1,10 +1,10 @@
 from dataclasses import dataclass
-from typing import Callable, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 from regipy.plugins.plugin import Plugin
 from regipy.registry import RegistryHive
 
-VALIDATION_CASES = set()
+VALIDATION_CASES: set[type] = set()
 
 
 @dataclass
@@ -17,27 +17,30 @@ class ValidationResult:
 
 
 class ValidationCase:
-    input_hive: RegistryHive = None
-    plugin: Plugin = None
+    input_hive: Optional[RegistryHive] = None
+    plugin: Optional[type[Plugin]] = None
 
-    plugin_instance: type[Plugin] = None
+    plugin_instance: Optional[Plugin] = None
 
     # Will hold the output of the plugin execution
-    plugin_output: Union[list, dict] = None
+    plugin_output: Optional[Union[list[Any], dict[Any, Any]]] = None
 
     # These entries will be tested for presence in the plugin output
-    expected_entries: list[dict] = []
+    expected_entries: list[dict[str, Any]] = []
 
     # The result here will be matched to the
-    exact_expected_result: Optional[Union[dict, list]] = None
+    exact_expected_result: Optional[Union[dict[str, Any], list[Any]]] = None
 
     # Optionally Implement a custom test for your plugin, which will be called during the validation step
     # This test can replace the validation of entries, but not the count.
     # The test must return True, or raise an AssertionError
-    custom_test: Optional[Callable] = None
+    custom_test: Optional[Callable[[], Any]] = None
 
     # Expected entries count
-    expected_entries_count: int = None
+    expected_entries_count: Optional[int] = None
+
+    # The test hive file to use for validation (e.g. "SYSTEM_WIN_10.xz")
+    test_hive_file_name: Optional[str] = None
 
     def __init_subclass__(cls):
         VALIDATION_CASES.add(cls)
@@ -46,6 +49,8 @@ class ValidationCase:
         self.input_hive = input_hive
 
     def validate(self):
+        assert self.plugin is not None, "plugin must be set"
+        assert self.input_hive is not None, "input_hive must be set"
         print(f"\tStarting validation for {self.plugin.NAME} ({self.__class__.__name__})")
         self.plugin_instance = self.plugin(self.input_hive, as_json=True)
         self.plugin_instance.run()
@@ -77,7 +82,7 @@ class ValidationCase:
 
         print(f"\tValidation passed for {self.plugin.NAME}")
         return ValidationResult(
-            plugin_name=self.plugin.NAME,
+            plugin_name=self.plugin.NAME or "",
             plugin_description=self.plugin.DESCRIPTION,
             plugin_class_name=self.plugin.__name__,
             test_case_name=self.__class__.__name__,
@@ -85,6 +90,9 @@ class ValidationCase:
         )
 
     def debug(self):
-        import ipdb
+        try:
+            import ipdb  # type: ignore[import-not-found]
+        except ImportError:
+            import pdb as ipdb  # type: ignore[no-redef]
 
         ipdb.set_trace()

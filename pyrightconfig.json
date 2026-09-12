@@ -1,0 +1,6 @@
+{
+  "extraPaths": ["stubs"],
+  "include": ["regipy", "regipy_tests", "regipy_mcp_server"],
+  "useLibraryCodeForTypes": false,
+  "typeshedPath": null
+}

@@ -32,7 +32,7 @@ class ShellBagNtuserPlugin(Plugin):
     @staticmethod
     def _get_shell_item_type(shell_item):
         try:
-            import pyfwsi
+            import pyfwsi  # type: ignore[import-not-found]
         except ModuleNotFoundError as ex:
             logger.exception(
                 "Plugin `shellbag_plugin` has missing modules, install regipy using"
@@ -131,8 +131,8 @@ class ShellBagNtuserPlugin(Plugin):
         """
 
         try:
-            import pyfwsi
-            import pyfwps
+            import pyfwsi  # type: ignore[import-not-found]
+            import pyfwps  # type: ignore[import-not-found]
         except ModuleNotFoundError as ex:
             logger.exception(
                 f"Plugin `shellbag_plugin` has missing modules, install regipy using"
@@ -247,7 +247,7 @@ class ShellBagNtuserPlugin(Plugin):
 
     def iter_sk(self, key, reg_path, codepage=DEFAULT_CODEPAGE, base_path="", path=""):
         try:
-            import pyfwsi
+            import pyfwsi  # type: ignore[import-not-found]
         except ModuleNotFoundError as ex:
             logger.exception(
                 f"Plugin `shellbag_plugin` has missing modules, install regipy using"
@@ -314,6 +314,7 @@ class ShellBagNtuserPlugin(Plugin):
 
                     value_name = v.name
                     mru_order_location = mru_order.split("-").index(value_name)
+                    assert isinstance(self.entries, list)
                     self.entries.append(
                         self._create_entry(
                             value=value,
@@ -346,6 +347,7 @@ class ShellBagNtuserPlugin(Plugin):
         for subkey in key.iter_subkeys():
             if subkey.name not in processed_values:
                 childless_last_write = convert_wintime(subkey.header.last_modified, as_json=True)
+                assert isinstance(self.entries, list)
                 self.entries.append(
                     self._create_entry(
                         value=None,

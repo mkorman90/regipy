@@ -1,6 +1,11 @@
-# CLAUDE.md - regipy
+# AGENTS.md - regipy
 
 > OS-independent Python library for parsing offline Windows registry hives
+>
+> This file is the canonical agent-instructions file for the repo (supersedes
+> CLAUDE.md). It documents how to build, test, type-check, and — critically — how
+> the CI pipeline works and the non-obvious gotchas that will bite you if you
+> touch the workflow or add code that must run on the full Python 3.9–3.13 matrix.
 
 ## Project Overview
 
@@ -237,6 +242,30 @@ Key facts:
   GitHub releases tagged `regipy-rs-*`.
 - Benchmarks: `python regipy-rs/benchmark.py` regenerates `regipy-rs/BENCHMARKS.md`.
 
+### Releasing regipy-rs
+
+`regipy` and `regipy-rs` are **versioned and released independently** — a
+`regipy` release (e.g. 6.4.0) does not imply a `regipy-rs` release (its own
+alpha series, e.g. 0.1.0, in `regipy-rs/Cargo.toml`). A Rust release is only
+needed when the Rust surface actually changed: anything under `regipy-rs/src/`,
+`regipy-rs/Cargo.toml`, or runtime behavior in the `regipy/registry_rs.py`
+wrapper. Non-behavioral changes (`.pyi` stubs, type-ignore comments, docs) do
+not require one.
+
+Process (all automation lives in `.github/workflows/regipy-rs.yml`):
+
+1. **Bump the version** in `regipy-rs/Cargo.toml` (e.g. `0.1.0` → `0.1.1`,
+   or `0.2.0a1` for a pre-release).
+2. **Push a tag** named `regipy-rs-<version>` (e.g. `regipy-rs-0.1.1`).
+3. **Create a GitHub release** for that tag.
+
+The workflow's `publish` job fires only when the event is `release: published`
+**and** the tag starts with `regipy-rs-`. It needs the `parity`, `build-wheels`
+and `build-sdist` jobs to pass first, then publishes to PyPI via **trusted
+publishing** (`id-token: write`, `environment: pypi`) — no API token required.
+On PRs and non-`regipy-rs-` tags the publish job shows as *skipping*, which is
+expected, not a failure.
+
 ## Testing
 
 ```bash
@@ -244,6 +273,101 @@ pytest regipy_tests/
 ```
 
 Test hives are stored as `.xz` compressed files in `regipy_tests/data/`.
+
+The Rust parity suite (`regipy_tests/comparison_test.py`) is run separately and
+takes ~30–40 min; it is not part of the default `pytest regipy_tests/` invocation
+on the local machine (it requires `regipy-rs` built via `maturin develop -r`).
+
+## CI (GitHub Actions) — how it works and the gotchas
+
+The pipeline lives in `.github/workflows/ci.yml` (plus `regipy-rs.yml` for the
+Rust backend). It uses **`actions/setup-python` + `pip`** (not uv). Every job
+follows the same shape:
+
+```yaml
+- name: Set up Python
+  uses: actions/setup-python@v6
+  with:
+    python-version: "3.11"        # or ${{ matrix.python-version }}
+- name: Install dependencies
+  run: |
+    python -m pip install --upgrade pip
+    pip install -e ".[full,dev]"
+- name: Run <tool>
+  run: <tool> ...
+```
+
+> **Why pip and not uv:** an earlier revision migrated this workflow to
+> `astral-sh/setup-uv` + `uv`. That was not required and introduced avoidable
+> breakage — `uv pip install` needs a prior `uv venv`, and `uv run <tool>`
+> re-syncs a *separate* environment that drops the `.[full,dev]` extras and
+> doesn't expose `regipy_tests`. The `setup-python` + `pip` form below is the
+> simpler, known-good baseline; prefer it unless there's a specific reason to
+> move to uv.
+
+### Gotchas (each of these has broken CI before — do not regress them)
+
+1. **`plugin_validation.py` needs `PYTHONPATH=.`.** `regipy_tests` is a test
+   directory, not an installed package, so `python regipy_tests/validation/
+   plugin_validation.py` fails with `ModuleNotFoundError: No module named
+   'regipy_tests'` unless the repo root is on the path. Run it as
+   `PYTHONPATH=. python regipy_tests/validation/plugin_validation.py`.
+
+2. **Python 3.9 is in the test matrix — no PEP 604 unions in
+   runtime-evaluated annotations.** The matrix runs 3.9, 3.10, 3.11, 3.12, 3.13.
+   `X | Y` union syntax (PEP 604) is only valid at runtime on 3.10+. In a
+   `@dataclass`, field annotations are evaluated when the class body executes,
+   so `timestamp: dt.datetime | str` raises
+   `TypeError: unsupported operand type(s) for |: 'type' and 'type'` on 3.9
+   at import time. Use `typing.Union[X, Y]` (or `Optional[X]`) in any
+   annotation that is evaluated at runtime — i.e. in files that do **not** have
+   `from __future__ import annotations`. (mypy is configured with
+   `python_version = "3.9"`, but mypy does not always flag every runtime-evaluated
+   PEP 604 union, so don't rely on it as the only guard.)
+
+### Jobs
+
+- **lint** — `ruff check .` + `ruff format --check .` (3.11). Note ruff only
+  lints Python files; the `ci.yml` line lengths are not checked by ruff
+  (project `line-length` is 128 and `E501` is ignored).
+- **test** — matrix 3.9–3.13: `pytest` over `tests.py`, `cli_tests.py`,
+  `test_packaging.py`, then plugin validation.
+- **validation-docs** — regenerates `regipy_tests/validation/plugin_validation.md`
+  and uploads it as an artifact.
+- **type-check** — `mypy regipy/ --ignore-missing-imports` (3.11). Currently
+  runs with `continue-on-error: true`; drop that flag once typing is stable.
+- **security** — `pip-audit --skip-editable` + CycloneDX SBOM generation/upload.
+- **regipy-rs.yml** — builds the Rust wheels and runs the Python/Rust parity
+  tests (`comparison_test.py`) + the full suite with the Rust backend present.
+
+### Monitoring a PR's CI
+
+```bash
+gh pr checks <PR>                          # one-line status per check
+gh run view <run-id> --log-failed          # just the failing steps' logs
+gh run view --job <job-id>                # step-by-step status of one job
+```
+
+When a job fails, `--log-failed` is the fastest way to the root cause. The
+`test` matrix is the usual place to look; a `ModuleNotFoundError: No module
+named 'regipy_tests'` means a step dropped `PYTHONPATH=.`, and a
+`TypeError ... for |` at import means a PEP 604 union slipped into a
+runtime-evaluated annotation on the 3.9 leg.
+
+### Local verification that mirrors CI
+
+```bash
+python -m venv .venv && . .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -e ".[full,dev]"
+ruff check . && ruff format --check .
+pytest regipy_tests/ -v
+PYTHONPATH=. python regipy_tests/validation/plugin_validation.py
+mypy regipy/ --ignore-missing-imports
+# Rust parity (requires maturin + regipy-rs built):
+maturin develop -r --manifest-path regipy-rs/Cargo.toml
+pytest regipy_tests/comparison_test.py -v
+```
 
 ## Common Forensic Artifacts by Hive
 

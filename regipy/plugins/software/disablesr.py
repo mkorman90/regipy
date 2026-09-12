@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
@@ -29,7 +30,8 @@ class DisableSRPlugin(Plugin):
             logger.error(f"Could not find {self.NAME} subkey at {SYS_RESTORE_PATH}: {ex}")
             return None
 
-        self.entries = {SYS_RESTORE_PATH: {"last_write": convert_wintime(key.header.last_modified).isoformat()}}
+        ts = convert_wintime(key.header.last_modified, as_json=False)  # type: ignore[union-attr]
+        self.entries: dict[str, Any] = {SYS_RESTORE_PATH: {"last_write": ts.isoformat()}}  # type: ignore[override]
 
         for val in key.iter_values():
             if val.name in value_list:

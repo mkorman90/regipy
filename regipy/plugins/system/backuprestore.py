@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime
+from typing import Any
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
@@ -23,8 +25,8 @@ class BackupRestorePlugin(Plugin):
     def can_run(self):
         return self.registry_hive.hive_type == SYSTEM_HIVE_TYPE
 
-    def run(self):
-        self.entries = {}
+    def run(self) -> None:
+        self.entries: dict[str, Any] = {}  # type: ignore[override]
         for br_path in BACKUPRESTORE_PATH:
             br_subkeys = self.registry_hive.get_control_sets(br_path)
             for br_subkey in br_subkeys:
@@ -33,6 +35,7 @@ class BackupRestorePlugin(Plugin):
                 except RegistryKeyNotFoundException as ex:
                     logger.error(f"Could not find {self.NAME} subkey at {br_subkey}: {ex}")
                     continue
-                self.entries[br_subkey] = {"last_write": convert_wintime(backuprestore.header.last_modified).isoformat()}
+                ts: datetime = convert_wintime(backuprestore.header.last_modified)  # type: ignore[assignment]
+                self.entries[br_subkey] = {"last_write": ts.isoformat()}
                 for val in backuprestore.iter_values():
                     self.entries[br_subkey][val.name] = val.value

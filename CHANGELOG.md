@@ -5,7 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [6.1.0] - 2025-12-27
+## [6.4.0] - 2026-07-25
+
+### Added
+
+- **`continue_on_error` flag** for `run_relevant_plugins()` and the `--continue-on-error` CLI option for `regipy-plugins-run` (fixes #338)
+  - By default a failing plugin still aborts the run (original behavior preserved)
+  - Set to `True` to log the failure, record it in the results, and continue with the remaining plugins
+  - Plugin failures are always logged, regardless of the flag
+
+### Changed
+
+- **Type checking is now clean** - fixed all pre-existing mypy errors (the `type-check` CI job no longer needs `continue-on-error`)
+- Added a `[tool.pyright]` configuration so the codebase is also clean under pyright strict; construct's incomplete type stubs are handled explicitly
+- Corrected stale changelog version labels (the plugin/validation entry previously filed under 6.1.0 actually shipped in 6.2.0)
+
+## [6.3.0] - 2026-07-18
+
+### Added
+
+- **Rust-accelerated core parser backend** (`regipy-rs`, alpha) - opt-in via `pip install regipy[rust]`, importable as `from regipy.registry_rs import RegistryHive`. Output parity with the Python backend is enforced by `regipy_tests/comparison_test.py`
+- Benchmark tooling and `regipy-rs/BENCHMARKS.md`
+
+### Changed
+
+- Dependency and CI action bumps (click, libfwps-python, actions/*)
+
+## [6.2.1] - 2026-01-22
+
+### Added
+
+- **MCP (Model Context Protocol) server** (`regipy_mcp_server/`) for natural-language registry forensics via Claude Desktop and other MCP-compatible clients
+
+### Fixed
+
+- Shellbags plugin: handle childless shellbag entries gracefully
+- Various plugin bug fixes
+
+## [6.2.0] - 2025-12-29
 
 ### Added
 
@@ -34,7 +71,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated README with comprehensive plugin list organized by hive type
 - Updated plugin validation documentation
 
-## [6.0.0] - 2025-12-25
+## [6.1.0] - 2025-12-27
+
+### Fixed
+
+- Fixed missing `regipy.plugins.system.external` package in distribution
+- Added tests to CI for better coverage
+- Lint fixes
+
+## [6.0.1] - 2025-12-26
 
 ### Breaking Changes
 

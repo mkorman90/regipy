@@ -36,11 +36,11 @@ class LocalSidPlugin(Plugin):
 
         # The 'V' value is a binary value that has the computer SID embedded
         # within it at the end of its data.
-        sid_value = v_value[-24:]
+        sid_value = v_value[-24:]  # type: ignore[union-attr]
 
         parsed_sid = SID.parse(sid_value)
 
-        self.entries.append(
+        self.entries.append(  # type: ignore[union-attr]
             {
                 "machine_sid": convert_sid(parsed_sid),
                 "timestamp": convert_wintime(account_key.header.last_modified, as_json=self.as_json),

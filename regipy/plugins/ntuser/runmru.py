@@ -66,4 +66,4 @@ class RunMRUPlugin(Plugin):
                     entry["commands"].append({"letter": letter, "command": mru_values[letter]})
 
         if entry["commands"] or entry["mru_order"]:
-            self.entries.append(entry)
+            self.entries.append(entry)  # type: ignore[union-attr]

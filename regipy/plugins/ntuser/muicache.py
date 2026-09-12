@@ -3,6 +3,7 @@ MUICache plugin - Parses MUI Cache entries (application display names)
 """
 
 import logging
+from typing import Any
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import NTUSER_HIVE_TYPE
@@ -45,7 +46,7 @@ class MUICachePlugin(Plugin):
             logger.debug(f"Could not find MUICache at: {path}")
             return False
 
-        entry = {
+        entry: dict[str, Any] = {
             "key_path": path,
             "last_write": convert_wintime(muicache_key.header.last_modified, as_json=self.as_json),
             "applications": [],
@@ -70,7 +71,7 @@ class MUICachePlugin(Plugin):
             entry["applications"].append(app_entry)
 
         if entry["applications"]:
-            self.entries.append(entry)
+            self.entries.append(entry)  # type: ignore[union-attr]
             return True
 
         return False

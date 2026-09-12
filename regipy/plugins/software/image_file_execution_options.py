@@ -19,6 +19,7 @@ class ImageFileExecutionOptions(Plugin):
         if image_file_execution_options.subkey_count:
             for subkey in image_file_execution_options.iter_subkeys():
                 values = {x.name: x.value for x in subkey.iter_values(as_json=self.as_json)} if subkey.values_count else {}
+                assert isinstance(self.entries, list)
                 self.entries.append(
                     {
                         "name": subkey.name,

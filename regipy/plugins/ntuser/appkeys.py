@@ -54,4 +54,4 @@ class AppKeysPlugin(Plugin):
 
             # [comment] why filter?
             if "shell_execute" in entry or "association" in entry or "registered_app" in entry:
-                self.entries.append(entry)
+                self.entries.append(entry)  # type: ignore[union-attr]

@@ -29,15 +29,19 @@ class WordWheelQueryPlugin(Plugin):
         mru_list_order = subkey.get_value("MRUListEx")
 
         # If this is the value, the list is empty
-        if mru_list_order == 0xFFFFFFFF:
+        if mru_list_order == 0xFFFFFFFF or mru_list_order is None:
             return None
 
-        for i, entry_name in enumerate(GreedyRange(Int32ul).parse(mru_list_order)):
+        parsed_entries = GreedyRange(Int32ul).parse(mru_list_order)
+        if parsed_entries is None:
+            return None
+        for i, entry_name in enumerate(parsed_entries):
             entry_value = subkey.get_value(str(entry_name))
 
             if not entry_value:
                 continue
 
+            assert isinstance(self.entries, list)
             self.entries.append(
                 {
                     "last_write": timestamp,

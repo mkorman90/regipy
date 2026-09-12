@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SOFTWARE_HIVE_TYPE
@@ -47,7 +48,8 @@ class WinVersionPlugin(Plugin):
             logger.error(f"Could not find {self.NAME} subkey at {WIN_VER_PATH}: {ex}")
             return None
 
-        self.entries = {WIN_VER_PATH: {"last_write": convert_wintime(key.header.last_modified).isoformat()}}
+        ts: datetime = convert_wintime(key.header.last_modified, as_json=False)  # type: ignore[assignment]
+        self.entries: dict[str, Any] = {WIN_VER_PATH: {"last_write": ts.isoformat()}}  # type: ignore[override]
 
         for val in key.iter_values():
             if val.name in os_list:

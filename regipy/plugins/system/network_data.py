@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 from regipy.exceptions import RegistryKeyNotFoundException
 from regipy.hive_types import SYSTEM_HIVE_TYPE
@@ -92,8 +93,8 @@ class NetworkDataPlugin(Plugin):
 
         return interfaces
 
-    def run(self):
-        self.entries = {}
+    def run(self) -> None:
+        self.entries: dict[str, Any] = {}  # type: ignore[override]
 
         for control_set_interfaces_path in self.registry_hive.get_control_sets(INTERFACES_PATH):
             try:
@@ -106,7 +107,7 @@ class NetworkDataPlugin(Plugin):
                 self.entries[control_set_interfaces_path] = {
                     "timestamp": convert_wintime(subkey.header.last_modified, as_json=self.as_json)
                 }
-                interfaces = []
+                interfaces: list[dict[str, Any]] = []
                 interfaces = self.get_network_info(subkey, interfaces)
                 self.entries[control_set_interfaces_path]["interfaces"] = interfaces
             except Exception as ex:

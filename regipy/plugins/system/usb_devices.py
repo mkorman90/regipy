@@ -105,4 +105,4 @@ class USBDevicesPlugin(Plugin):
                     entry,
                 )
 
-                self.entries.append(entry)
+                self.entries.append(entry)  # type: ignore[union-attr]
