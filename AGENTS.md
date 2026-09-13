@@ -246,7 +246,7 @@ Key facts:
 
 `regipy` and `regipy-rs` are **versioned and released independently** — a
 `regipy` release (e.g. 6.4.0) does not imply a `regipy-rs` release (its own
-alpha series, e.g. 0.1.0, in `regipy-rs/Cargo.toml`). A Rust release is only
+alpha series, e.g. 0.1.0a1, in `regipy-rs/pyproject.toml`). A Rust release is only
 needed when the Rust surface actually changed: anything under `regipy-rs/src/`,
 `regipy-rs/Cargo.toml`, or runtime behavior in the `regipy/registry_rs.py`
 wrapper. Non-behavioral changes (`.pyi` stubs, type-ignore comments, docs) do
@@ -254,9 +254,14 @@ not require one.
 
 Process (all automation lives in `.github/workflows/regipy-rs.yml`):
 
-1. **Bump the version** in `regipy-rs/Cargo.toml` (e.g. `0.1.0` → `0.1.1`,
-   or `0.2.0a1` for a pre-release).
-2. **Push a tag** named `regipy-rs-<version>` (e.g. `regipy-rs-0.1.1`).
+1. **Bump the version** in `regipy-rs/pyproject.toml` (the maturin/PEP 440
+   version, e.g. `0.1.0a1` → `0.1.0a2`). This is the version maturin stamps
+   on the wheel and the one the release tag must match. Leave
+   `regipy-rs/Cargo.toml` alone: it carries the plain Rust crate version
+   (`0.1.0`), and Rust semver rejects PEP 440 pre-releases (`0.1.0a2` is
+   invalid; Rust would need `0.1.0-a2`), so the two files intentionally
+   differ.
+2. **Push a tag** named `regipy-rs-<version>` (e.g. `regipy-rs-0.1.0a2`).
 3. **Create a GitHub release** for that tag.
 
 The workflow's `publish` job fires only when the event is `release: published`
