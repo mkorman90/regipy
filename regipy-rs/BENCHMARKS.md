@@ -4,6 +4,52 @@ Pure-Python parser (`regipy.registry`) vs Rust backend (`regipy.registry_rs`),
 best of 3 runs per scenario. Both backends produce identical output
 (enforced by `regipy_tests/comparison_test.py`).
 
+## 2026-09-13 — quality pass (lazy iterators, mmap, zero-alloc names)
+
+Three-way comparison: pure Python vs the Rust backend before the quality
+pass (`origin/master`, `1293544`) vs after (this branch). Methodology:
+release builds, fresh process per cell, median of 7 runs for the Rust
+backends and 3 runs for Python (SOFTWARE `traversal+values` was 1 run —
+~16 minutes), peak RSS measured per cell via `getrusage(RUSAGE_CHILDREN)`.
+Machine: Linux x86_64 / Python 3.12. Raw results:
+`~/workspace/bench/{base,new,python}.json`.
+
+Takeaway: this was a memory/latency pass, not a throughput pass. Full
+traversal is ~1.1x faster with ~20% less peak RSS on the big hives; hive
+load is 6–180x faster (mmap + lazy parse — `load+root` is now a flat
+~0.1 ms regardless of hive size); targeted `get_key` lookups are ~3.8x
+faster (short-circuiting iterator). Against pure Python, full traversal
+with values stays 79–1,975x faster.
+
+| Hive | Scenario | Python | Rust (old) | Rust (new) | new vs old | new vs Python |
+|------|----------|-------:|-----------:|-----------:|-----------:|--------------:|
+| NTUSER.DAT (0.8 MB) | full traversal + values (as_json) | 681.3 ms | 9.8 ms | 8.6 ms | 1.13x | 78.9x |
+| | full traversal, no values | 66.2 ms | 5.5 ms | 5.0 ms | 1.11x | 13.4x |
+| | hive load + root | 1.3 ms | 0.7 ms | 0.1 ms | 5.7x | 11.4x |
+| | find_subkey('AppEvents') | 1.3 ms | 0.7 ms | 0.2 ms | 3.8x | 7.3x |
+| SYSTEM (11.2 MB) | full traversal + values (as_json) | 60,511 ms | 155.0 ms | 139.5 ms | 1.11x | 433.8x |
+| | full traversal, no values | 678.3 ms | 87.8 ms | 78.3 ms | 1.12x | 8.7x |
+| | hive load + root | 8.2 ms | 7.7 ms | 0.1 ms | 68.1x | 72.4x |
+| SOFTWARE (36.0 MB) | full traversal + values (as_json) | 962,343 ms | 544.3 ms | 487.3 ms | 1.12x | 1,975.0x |
+| | full traversal, no values | 2,565.8 ms | 339.2 ms | 309.4 ms | 1.10x | 8.3x |
+| | hive load + root | 24.7 ms | 24.2 ms | 0.1 ms | 182.4x | 186.2x |
+| UsrClass.dat (2.8 MB) | full traversal + values (as_json) | 2,572.1 ms | 33.7 ms | 29.9 ms | 1.13x | 86.0x |
+| | full traversal, no values | 147.1 ms | 18.9 ms | 17.6 ms | 1.07x | 8.3x |
+| | hive load + root | 2.7 ms | 2.0 ms | 0.1 ms | 17.7x | 23.2x |
+| amcache.hve (0.9 MB) | full traversal + values (as_json) | 1,815.5 ms | 21.7 ms | 18.4 ms | 1.18x | 98.6x |
+| | full traversal, no values | 40.7 ms | 6.8 ms | 6.0 ms | 1.14x | 6.8x |
+| | hive load + root | 2.4 ms | 1.4 ms | 0.1 ms | 12.9x | 21.9x |
+| SYSTEM_WIN_10_1709 (13.3 MB) | full traversal + values (as_json) | 188,043 ms | 224.4 ms | 202.8 ms | 1.11x | 927.2x |
+| | full traversal, no values | 918.0 ms | 121.1 ms | 111.8 ms | 1.08x | 8.2x |
+| | hive load + root | 10.9 ms | 10.0 ms | 0.1 ms | 90.7x | 98.8x |
+
+Peak RSS, `traversal+values` scenario (Python / Rust old / Rust new):
+NTUSER.DAT 24.7 / 22.7 / 22.6 MB; SYSTEM 66.9 / 34.5 / 33.5 MB;
+SOFTWARE 161.5 / 68.5 / 56.5 MB; UsrClass.dat 33.1 / 25.2 / 25.0 MB;
+amcache.hve 29.8 / 24.3 / 23.9 MB; SYSTEM_WIN_10_1709 169.8 / 38.9 / 37.2 MB.
+
+## 2026-07-11 — original backend comparison (historical)
+
 - Date: 2026-07-11
 - Machine: Linux-6.19.14-108.fc42.x86_64-x86_64-with-glibc2.41 / Python 3.11.9
 - Timing includes hive loading, traversal and value decoding, and for the
