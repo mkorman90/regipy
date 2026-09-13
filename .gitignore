@@ -110,4 +110,7 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+# uv (local only; CI uses setup-python + pip)
+uv.lock
+
 .DS_Store
