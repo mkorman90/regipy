@@ -18,6 +18,8 @@ use std::borrow::Cow;
 use std::fmt;
 use std::sync::Arc;
 
+use memmap2::Mmap;
+
 pub const REGF_HEADER_SIZE: usize = 4096;
 pub const HBIN_HEADER_SIZE: usize = 32;
 /// Values larger than this are stored in "big data" (db) segments.
@@ -52,7 +54,9 @@ impl From<std::io::Error> for ParseError {
 pub type Result<T> = std::result::Result<T, ParseError>;
 
 fn oob(offset: usize, what: &str) -> ParseError {
-    ParseError::Parsing(format!("Read out of bounds at offset {offset} while reading {what}"))
+    ParseError::Parsing(format!(
+        "Read out of bounds at offset {offset} while reading {what}"
+    ))
 }
 
 // ─── Raw readers ─────────────────────────────────────────────────────────────
@@ -75,7 +79,12 @@ fn u16_at(data: &[u8], off: usize, what: &str) -> Result<u16> {
 #[inline]
 fn u32_at(data: &[u8], off: usize, what: &str) -> Result<u32> {
     need(data, off, 4, what)?;
-    Ok(u32::from_le_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]]))
+    Ok(u32::from_le_bytes([
+        data[off],
+        data[off + 1],
+        data[off + 2],
+        data[off + 3],
+    ]))
 }
 
 #[inline]
@@ -96,17 +105,24 @@ fn slice_at<'a>(data: &'a [u8], off: usize, len: usize, what: &str) -> Result<&'
 
 /// bytes.decode("ascii", errors="replace")
 pub fn decode_ascii_replace(data: &[u8]) -> String {
-    data.iter().map(|&b| if b < 0x80 { b as char } else { '\u{FFFD}' }).collect()
+    data.iter()
+        .map(|&b| if b < 0x80 { b as char } else { '\u{FFFD}' })
+        .collect()
 }
 
 #[inline]
 fn utf16le_units(data: &[u8]) -> impl Iterator<Item = u16> + '_ {
-    data.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]]))
+    data.as_chunks::<2>()
+        .0
+        .iter()
+        .map(|c| u16::from_le_bytes(*c))
 }
 
 /// bytes.decode("utf-16-le", errors="replace")
 pub fn decode_utf16le_replace(data: &[u8]) -> String {
-    let mut s: String = char::decode_utf16(utf16le_units(data)).map(|r| r.unwrap_or('\u{FFFD}')).collect();
+    let mut s: String = char::decode_utf16(utf16le_units(data))
+        .map(|r| r.unwrap_or('\u{FFFD}'))
+        .collect();
     if !data.len().is_multiple_of(2) {
         // Python replaces the trailing lone byte with a single U+FFFD
         s.push('\u{FFFD}');
@@ -122,7 +138,9 @@ fn decode_utf16le_strict(data: &[u8]) -> Option<String> {
     if !data.len().is_multiple_of(2) {
         return None;
     }
-    char::decode_utf16(utf16le_units(data)).collect::<std::result::Result<String, _>>().ok()
+    char::decode_utf16(utf16le_units(data))
+        .collect::<std::result::Result<String, _>>()
+        .ok()
 }
 
 /// Python str[:max_len] (by code points).
@@ -208,8 +226,15 @@ fn max_filetime_micros() -> i64 {
     (days_from_civil(9999, 12, 31) - filetime_epoch_days()) * MICROS_PER_DAY + (MICROS_PER_DAY - 1)
 }
 
-const FILETIME_EPOCH: CivilDateTime =
-    CivilDateTime { year: 1601, month: 1, day: 1, hour: 0, minute: 0, second: 0, microsecond: 0 };
+const FILETIME_EPOCH: CivilDateTime = CivilDateTime {
+    year: 1601,
+    month: 1,
+    day: 1,
+    hour: 0,
+    minute: 0,
+    second: 0,
+    microsecond: 0,
+};
 
 /// Correctly-rounded x/10 as f64, matching Python's int/int true division.
 /// (`x as f64 / 10.0` would round twice: once at the u64→f64 conversion and
@@ -217,7 +242,7 @@ const FILETIME_EPOCH: CivilDateTime =
 fn u64_div10_f64(x: u64) -> f64 {
     let n = (x as u128) << 63;
     let mut q = n / 10;
-    if n % 10 != 0 {
+    if !n.is_multiple_of(10) {
         // Sticky bit: the quotient's LSB sits far below the f64 rounding
         // point except in exact-tie cases, where a non-zero remainder must
         // break the tie upward.
@@ -295,7 +320,9 @@ fn parse_regf_header(data: &[u8]) -> Result<RegfHeader> {
     }
     let file_name_raw = slice_at(data, 48, 64, "REGF file name")?;
     // PaddedString(64, "utf-16-le"): decode then strip trailing NULs.
-    let file_name = decode_utf16le_replace(file_name_raw).trim_end_matches('\0').to_string();
+    let file_name = decode_utf16le_replace(file_name_raw)
+        .trim_end_matches('\0')
+        .to_string();
     Ok(RegfHeader {
         primary_sequence_num: u32_at(data, 4, "REGF header")?,
         secondary_sequence_num: u32_at(data, 8, "REGF header")?,
@@ -347,7 +374,24 @@ pub struct NkRecord {
     pub key_name_size: u16,
     pub class_name_size: u16,
     pub key_name_raw: Vec<u8>,
-    pub name: String,
+}
+
+impl NkRecord {
+    /// Key name, borrowing the raw bytes when they are plain ASCII
+    /// (zero-alloc for the common case) and decoding otherwise.
+    /// Produces byte-identical output to the old eager decode.
+    pub fn name_cow(&self) -> Cow<'_, str> {
+        if self.flags & KEY_COMP_NAME != 0 {
+            if self.key_name_raw.iter().all(|&b| b < 0x80) {
+                // Safety: every byte was just checked to be < 0x80.
+                Cow::Borrowed(unsafe { std::str::from_utf8_unchecked(&self.key_name_raw) })
+            } else {
+                Cow::Owned(decode_ascii_replace(&self.key_name_raw))
+            }
+        } else {
+            Cow::Owned(decode_utf16le_replace(&self.key_name_raw))
+        }
+    }
 }
 
 pub fn parse_nk(data: &[u8], off: usize) -> Result<NkRecord> {
@@ -355,11 +399,6 @@ pub fn parse_nk(data: &[u8], off: usize) -> Result<NkRecord> {
     let flags = u16_at(data, off, "NK flags")?;
     let key_name_size = u16_at(data, off + 70, "NK name size")?;
     let key_name_raw = slice_at(data, off + 74, key_name_size as usize, "NK name")?.to_vec();
-    let name = if flags & KEY_COMP_NAME != 0 {
-        decode_ascii_replace(&key_name_raw)
-    } else {
-        decode_utf16le_replace(&key_name_raw)
-    };
     let mut access_bits = [0u8; 4];
     access_bits.copy_from_slice(&data[off + 10..off + 14]);
     Ok(NkRecord {
@@ -383,25 +422,28 @@ pub fn parse_nk(data: &[u8], off: usize) -> Result<NkRecord> {
         key_name_size,
         class_name_size: u16_at(data, off + 72, "NK class name size")?,
         key_name_raw,
-        name,
     })
 }
 
 // ─── Hive ────────────────────────────────────────────────────────────────────
 
 pub struct Hive {
-    pub data: Vec<u8>,
+    pub data: Mmap,
     pub header: RegfHeader,
     pub root: NkRecord,
 }
 
 impl Hive {
     pub fn from_file(path: &str) -> Result<Arc<Hive>> {
-        let data = std::fs::read(path)?;
-        Self::from_bytes(data)
-    }
-
-    pub fn from_bytes(data: Vec<u8>) -> Result<Arc<Hive>> {
+        let file = std::fs::File::open(path)?;
+        if file.metadata()?.len() == 0 {
+            // An empty file fails the REGF signature check; report the same
+            // out-of-bounds read the old Vec-based loader produced.
+            return Err(oob(0, "REGF signature"));
+        }
+        // Safety: the mapping is read-only and never written through here;
+        // the File handle is held for the mapping's lifetime.
+        let data = unsafe { Mmap::map(&file)? };
         let header = parse_regf_header(&data)?;
         // The Python parser takes the first allocated cell of the first hbin
         // as the root NK record (not header.root_key_offset).
@@ -413,7 +455,9 @@ impl Hive {
         let mut pos = REGF_HEADER_SIZE + HBIN_HEADER_SIZE;
         let root_off = loop {
             if pos + 4 > hbin_end {
-                return Err(ParseError::Parsing("No allocated root cell found in first HBIN".to_string()));
+                return Err(ParseError::Parsing(
+                    "No allocated root cell found in first HBIN".to_string(),
+                ));
             }
             let size = u32_at(&data, pos, "cell size")? as i32;
             if size >= 0 {
@@ -432,81 +476,209 @@ impl Hive {
 
 // ─── Subkey lists ────────────────────────────────────────────────────────────
 
-/// Result of enumerating a subkey list: the successfully parsed prefix and,
-/// if enumeration failed midway, the error. This mirrors Python generator
-/// semantics where earlier elements are yielded before the exception raises.
-pub struct SubkeyList {
-    pub subkeys: Vec<NkRecord>,
-    pub error: Option<ParseError>,
+/// One level of a (possibly nested, via `ri`) subkey list.
+enum SubkeyFrame {
+    /// A leaf list (`lf`/`lh`/`li`): subkey offsets parsed one at a time.
+    Leaf {
+        pos: usize,
+        stride: usize,
+        count: usize,
+        idx: usize,
+    },
+    /// An `ri` index: child lists opened one at a time, so a corrupt child
+    /// errors only after the previous children's subkeys were yielded
+    /// (Python generator semantics).
+    Ri {
+        payload: usize,
+        count: usize,
+        idx: usize,
+    },
 }
 
-fn parse_leaf_elements(data: &[u8], pos: usize, stride: usize, out: &mut Vec<NkRecord>) -> Result<()> {
-    let count = u16_at(data, pos, "subkey list count")? as usize;
-    for i in 0..count {
-        let elem_off = pos + 2 + stride * i;
-        let key_node_offset = u32_at(data, elem_off, "subkey element")? as usize;
-        // Skip the 4-byte cell size and the 2-byte "nk" signature.
-        let nk_off = REGF_HEADER_SIZE + key_node_offset + 4 + 2;
-        out.push(parse_nk(data, nk_off)?);
-    }
-    Ok(())
-}
-
-/// Enumerate the subkeys of `nk`, in on-disk list order (Python: NKRecord.iter_subkeys).
-pub fn list_subkeys(hive: &Hive, nk: &NkRecord) -> SubkeyList {
-    let mut out = Vec::new();
-    let error = list_subkeys_inner(&hive.data, nk, &mut out).err();
-    SubkeyList { subkeys: out, error }
-}
-
-fn list_subkeys_inner(data: &[u8], nk: &NkRecord, out: &mut Vec<NkRecord>) -> Result<()> {
-    if nk.subkey_count == 0 {
-        return Ok(());
-    }
-    // subkey_count comes from disk and may be corrupt — cap the pre-allocation.
-    out.reserve((nk.subkey_count as usize).min(4096));
-    let payload = REGF_HEADER_SIZE + 4 + nk.subkeys_list_offset as usize;
-    let sig = slice_at(data, payload, 2, "subkey list signature")
-        .map_err(|_| ParseError::Parsing(format!("Bad subkey at offset {payload}")))?;
-    match sig {
-        b"lf" | b"lh" => parse_leaf_elements(data, payload + 2, 8, out),
-        b"li" => parse_leaf_elements(data, payload + 2, 4, out),
+/// Open the list frame at `payload` for a known 2-byte signature.
+/// Returns `Ok(None)` for unknown signatures (Python silently yields nothing).
+fn frame_from_sig(data: &[u8], payload: usize, sig: &[u8]) -> Result<Option<SubkeyFrame>> {
+    let frame = match sig {
+        b"lf" | b"lh" => {
+            let count = u16_at(data, payload + 2, "subkey list count")? as usize;
+            SubkeyFrame::Leaf {
+                pos: payload + 2,
+                stride: 8,
+                count,
+                idx: 0,
+            }
+        }
+        b"li" => {
+            let count = u16_at(data, payload + 2, "subkey list count")? as usize;
+            SubkeyFrame::Leaf {
+                pos: payload + 2,
+                stride: 4,
+                count,
+                idx: 0,
+            }
+        }
         b"ri" => {
             let count = u16_at(data, payload + 2, "ri count")? as usize;
-            for i in 0..count {
-                let elem = u32_at(data, payload + 4 + 4 * i, "ri element")? as usize;
-                let child = REGF_HEADER_SIZE + 4 + elem;
-                let child_sig = slice_at(data, child, 2, "subkey list signature")?;
-                match child_sig {
-                    b"lf" | b"lh" => parse_leaf_elements(data, child + 2, 8, out)?,
-                    b"li" => parse_leaf_elements(data, child + 2, 4, out)?,
-                    other => {
-                        return Err(ParseError::Parsing(format!(
-                            "Expected a known signature, got: {other:?} at offset {child}"
-                        )))
+            SubkeyFrame::Ri {
+                payload,
+                count,
+                idx: 0,
+            }
+        }
+        _ => return Ok(None),
+    };
+    Ok(Some(frame))
+}
+
+/// Lazy subkey iterator (Python: NKRecord.iter_subkeys).
+///
+/// Parses one subkey per `next()` instead of materializing the whole list.
+/// Error semantics mirror the Python generator: successfully parsed subkeys
+/// are yielded first, then the first error (if any) is returned.
+pub struct SubkeyIter {
+    hive: Arc<Hive>,
+    stack: Vec<SubkeyFrame>,
+    pending: Option<ParseError>,
+    done: bool,
+}
+
+impl SubkeyIter {
+    pub fn new(hive: Arc<Hive>, nk: &NkRecord) -> Self {
+        let mut it = SubkeyIter {
+            hive,
+            stack: Vec::new(),
+            pending: None,
+            done: false,
+        };
+        if nk.subkey_count == 0 {
+            it.done = true;
+            return it;
+        }
+        let data: &[u8] = &it.hive.data;
+        let payload = REGF_HEADER_SIZE + 4 + nk.subkeys_list_offset as usize;
+        match slice_at(data, payload, 2, "subkey list signature") {
+            Err(_) => {
+                it.pending = Some(ParseError::Parsing(format!(
+                    "Bad subkey at offset {payload}"
+                )));
+            }
+            Ok(sig) => match frame_from_sig(data, payload, sig) {
+                Ok(Some(frame)) => it.stack.push(frame),
+                Ok(None) => it.done = true, // unknown signature: silently empty
+                Err(e) => it.pending = Some(e),
+            },
+        }
+        it
+    }
+}
+
+impl Iterator for SubkeyIter {
+    type Item = Result<NkRecord>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(e) = self.pending.take() {
+            self.done = true;
+            return Some(Err(e));
+        }
+        if self.done {
+            return None;
+        }
+        // Clone the Arc so `data` doesn't borrow `self` while we mutate it.
+        let hive = self.hive.clone();
+        let data: &[u8] = &hive.data;
+        loop {
+            let frame = self.stack.pop()?;
+            match frame {
+                SubkeyFrame::Leaf {
+                    pos,
+                    stride,
+                    count,
+                    idx,
+                } => {
+                    if idx >= count {
+                        continue; // list exhausted, resume parent frame
+                    }
+                    self.stack.push(SubkeyFrame::Leaf {
+                        pos,
+                        stride,
+                        count,
+                        idx: idx + 1,
+                    });
+                    let elem_off = pos + 2 + stride * idx;
+                    let key_node_offset = match u32_at(data, elem_off, "subkey element") {
+                        Ok(v) => v as usize,
+                        Err(e) => {
+                            self.done = true;
+                            return Some(Err(e));
+                        }
+                    };
+                    // Skip the 4-byte cell size and the 2-byte "nk" signature.
+                    let nk_off = REGF_HEADER_SIZE + key_node_offset + 4 + 2;
+                    match parse_nk(data, nk_off) {
+                        Ok(rec) => return Some(Ok(rec)),
+                        Err(e) => {
+                            self.done = true;
+                            return Some(Err(e));
+                        }
+                    }
+                }
+                SubkeyFrame::Ri {
+                    payload,
+                    count,
+                    idx,
+                } => {
+                    if idx >= count {
+                        continue;
+                    }
+                    self.stack.push(SubkeyFrame::Ri {
+                        payload,
+                        count,
+                        idx: idx + 1,
+                    });
+                    let child = match u32_at(data, payload + 4 + 4 * idx, "ri element") {
+                        Ok(v) => REGF_HEADER_SIZE + 4 + v as usize,
+                        Err(e) => {
+                            self.done = true;
+                            return Some(Err(e));
+                        }
+                    };
+                    let child_sig = match slice_at(data, child, 2, "subkey list signature") {
+                        Ok(s) => s,
+                        Err(e) => {
+                            self.done = true;
+                            return Some(Err(e));
+                        }
+                    };
+                    match frame_from_sig(data, child, child_sig) {
+                        Ok(Some(f)) => self.stack.push(f),
+                        Ok(None) => {
+                            self.done = true;
+                            return Some(Err(ParseError::Parsing(format!(
+                                "Expected a known signature, got: {child_sig:?} at offset {child}"
+                            ))));
+                        }
+                        Err(e) => {
+                            self.done = true;
+                            return Some(Err(e));
+                        }
                     }
                 }
             }
-            Ok(())
         }
-        // Python silently yields nothing for unknown list signatures.
-        _ => Ok(()),
     }
 }
 
 /// Case-insensitive subkey lookup (Python: NKRecord.get_subkey).
-pub fn find_subkey(hive: &Hive, nk: &NkRecord, name: &str) -> Result<Option<NkRecord>> {
+/// Short-circuits on the first match instead of parsing every sibling.
+pub fn find_subkey(hive: Arc<Hive>, nk: &NkRecord, name: &str) -> Result<Option<NkRecord>> {
     let target = name.to_uppercase();
-    let list = list_subkeys(hive, nk);
-    for sk in list.subkeys {
-        if sk.name.to_uppercase() == target {
+    for res in SubkeyIter::new(hive, nk) {
+        let sk = res?;
+        if sk.name_cow().to_uppercase() == target {
             return Ok(Some(sk));
         }
     }
-    match list.error {
-        Some(e) => Err(e),
-        None => Ok(None),
-    }
+    Ok(None)
 }
 
 // ─── VK records and value decoding ───────────────────────────────────────────
@@ -529,7 +701,9 @@ pub const VALUE_COMP_NAME: u16 = 0x0001;
 
 fn parse_vk(data: &[u8], payload: usize) -> Result<VkHeader> {
     if slice_at(data, payload, 2, "VK signature")? != b"vk" {
-        return Err(ParseError::Parsing(format!("Bad VK signature at offset {payload}")));
+        return Err(ParseError::Parsing(format!(
+            "Bad VK signature at offset {payload}"
+        )));
     }
     let name_size = u16_at(data, payload + 2, "VK")?;
     let data_size = u32_at(data, payload + 4, "VK")?;
@@ -544,7 +718,14 @@ fn parse_vk(data: &[u8], payload: usize) -> Result<VkHeader> {
     } else {
         decode_utf16le_replace(name_raw)
     };
-    Ok(VkHeader { name_size, data_size, data_offset, data_type, flags, name })
+    Ok(VkHeader {
+        name_size,
+        data_size,
+        data_offset,
+        data_type,
+        flags,
+        name,
+    })
 }
 
 pub fn value_type_name(t: u32) -> Option<&'static str> {
@@ -598,10 +779,86 @@ pub struct ParsedValue {
 }
 
 /// Result of enumerating a key's values: parsed prefix + optional fatal error
-/// (same generator semantics as SubkeyList).
-pub struct ValueList {
-    pub values: Vec<ParsedValue>,
-    pub error: Option<ParseError>,
+/// Lazy value iterator (Python: NKRecord.iter_values).
+///
+/// Decodes one value per `next()`. A corrupt VK record ends iteration
+/// silently (like Python); any other failure is returned after the values
+/// parsed so far.
+pub struct ValueIter {
+    hive: Arc<Hive>,
+    list_payload: usize,
+    count: usize,
+    idx: usize,
+    as_json: bool,
+    trim_values: bool,
+    max_len: usize,
+    done: bool,
+}
+
+impl ValueIter {
+    pub fn new(
+        hive: Arc<Hive>,
+        nk: &NkRecord,
+        as_json: bool,
+        trim_values: bool,
+        max_len: usize,
+    ) -> Self {
+        ValueIter {
+            hive,
+            list_payload: REGF_HEADER_SIZE + 4 + nk.values_list_offset as usize,
+            count: nk.values_count as usize,
+            idx: 0,
+            as_json,
+            trim_values,
+            max_len,
+            done: nk.values_count == 0,
+        }
+    }
+}
+
+impl Iterator for ValueIter {
+    type Item = Result<ParsedValue>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.done {
+            return None;
+        }
+        // Clone the Arc so `data` doesn't borrow `self` while we mutate it.
+        let hive = self.hive.clone();
+        let data: &[u8] = &hive.data;
+        while self.idx < self.count {
+            let pos = self.list_payload + 4 * self.idx;
+            self.idx += 1;
+            let vk_off = match u32_at(data, pos, "VK offset") {
+                Ok(v) => v,
+                Err(_) => {
+                    // Python: RegistryParsingException("Bad registry VK at ...")
+                    self.done = true;
+                    return Some(Err(ParseError::Parsing(format!(
+                        "Bad registry VK at {pos}"
+                    ))));
+                }
+            };
+            let vk_payload = REGF_HEADER_SIZE + 4 + vk_off as usize;
+            let vk = match parse_vk(data, vk_payload) {
+                Ok(v) => v,
+                // Python: a corrupt VK record ends value iteration silently.
+                Err(_) => {
+                    self.done = true;
+                    return None;
+                }
+            };
+            match decode_value(data, &vk, self.as_json, self.trim_values, self.max_len) {
+                Ok(Some(v)) => return Some(Ok(v)),
+                Ok(None) => continue, // skipped type (e.g. 0x200000)
+                Err(e) => {
+                    self.done = true;
+                    return Some(Err(e));
+                }
+            }
+        }
+        None
+    }
 }
 
 /// Python: `stream.read(data_size)` at the data cell payload — clamped at EOF,
@@ -623,7 +880,9 @@ fn raw_data<'a>(data: &'a [u8], vk: &VkHeader) -> Cow<'a, [u8]> {
 /// intended behavior it converges to: iterate the real segment offsets.
 pub fn read_big_data(data: &[u8], value_head: &[u8], data_size: u32) -> Result<Vec<u8>> {
     if value_head.len() < 8 {
-        return Err(ParseError::Parsing("Truncated big-data (db) record".to_string()));
+        return Err(ParseError::Parsing(
+            "Truncated big-data (db) record".to_string(),
+        ));
     }
     let num_segments = u16::from_le_bytes([value_head[2], value_head[3]]) as usize;
     let list_off = u32::from_le_bytes([value_head[4], value_head[5], value_head[6], value_head[7]]);
@@ -640,7 +899,9 @@ pub fn read_big_data(data: &[u8], value_head: &[u8], data_size: u32) -> Result<V
         if seg_payload >= data.len() {
             break;
         }
-        let take = remaining.min(BIG_DATA_THRESHOLD as usize).min(data.len() - seg_payload);
+        let take = remaining
+            .min(BIG_DATA_THRESHOLD as usize)
+            .min(data.len() - seg_payload);
         out.extend_from_slice(&data[seg_payload..seg_payload + take]);
         remaining -= take;
     }
@@ -654,16 +915,32 @@ pub fn read_big_data(data: &[u8], value_head: &[u8], data_size: u32) -> Result<V
 pub fn try_decode_binary(data: &[u8], as_json: bool, trim_values: bool) -> VData {
     if let Some(s) = decode_utf16le_strict(data) {
         let s = s.trim_end_matches('\0');
-        return VData::Str(if trim_values { truncate_chars(s, MAX_LEN) } else { s.to_string() });
+        return VData::Str(if trim_values {
+            truncate_chars(s, MAX_LEN)
+        } else {
+            s.to_string()
+        });
     }
     if let Ok(s) = std::str::from_utf8(data) {
         let s = s.trim_end_matches('\0');
-        return VData::Str(if trim_values { truncate_chars(s, MAX_LEN) } else { s.to_string() });
+        return VData::Str(if trim_values {
+            truncate_chars(s, MAX_LEN)
+        } else {
+            s.to_string()
+        });
     }
     if as_json {
-        VData::Str(if trim_values { hex_lower_trimmed(data, MAX_LEN) } else { hex_lower(data) })
+        VData::Str(if trim_values {
+            hex_lower_trimmed(data, MAX_LEN)
+        } else {
+            hex_lower(data)
+        })
     } else {
-        let end = if trim_values { data.len().min(MAX_LEN) } else { data.len() };
+        let end = if trim_values {
+            data.len().min(MAX_LEN)
+        } else {
+            data.len()
+        };
         VData::Bytes(data[..end].to_vec())
     }
 }
@@ -690,7 +967,8 @@ pub fn greedy_utf16_cstrings(data: &[u8]) -> Vec<String> {
             // discards the partial element.
             break;
         }
-        match char::decode_utf16(units.iter().copied()).collect::<std::result::Result<String, _>>() {
+        match char::decode_utf16(units.iter().copied()).collect::<std::result::Result<String, _>>()
+        {
             Ok(s) => {
                 out.push(s);
                 pos = p;
@@ -821,7 +1099,9 @@ fn decode_value(
         Some("REG_FILETIME") => {
             let raw = raw_data(data, vk);
             if raw.len() < 8 {
-                return Err(ParseError::Parsing("Truncated REG_FILETIME data".to_string()));
+                return Err(ParseError::Parsing(
+                    "Truncated REG_FILETIME data".to_string(),
+                ));
             }
             let mut b = [0u8; 8];
             b.copy_from_slice(&raw[..8]);
@@ -835,43 +1115,12 @@ fn decode_value(
         }
     };
 
-    Ok(Some(ParsedValue { name: vk.name.clone(), vtype, data: vdata, is_corrupted: false }))
-}
-
-/// Enumerate the values of `nk` (Python: NKRecord.iter_values).
-pub fn list_values(hive: &Hive, nk: &NkRecord, as_json: bool, trim_values: bool, max_len: usize) -> ValueList {
-    let data = &hive.data;
-    let mut out = Vec::new();
-    if nk.values_count == 0 {
-        return ValueList { values: out, error: None };
-    }
-    // values_count comes from disk and may be corrupt — cap the pre-allocation.
-    out.reserve((nk.values_count as usize).min(4096));
-    let list_payload = REGF_HEADER_SIZE + 4 + nk.values_list_offset as usize;
-    for i in 0..nk.values_count as usize {
-        let vk_off = match u32_at(data, list_payload + 4 * i, "VK offset") {
-            Ok(v) => v,
-            Err(_) => {
-                // Python: RegistryParsingException("Bad registry VK at ...")
-                return ValueList {
-                    values: out,
-                    error: Some(ParseError::Parsing(format!("Bad registry VK at {}", list_payload + 4 * i))),
-                };
-            }
-        };
-        let vk_payload = REGF_HEADER_SIZE + 4 + vk_off as usize;
-        let vk = match parse_vk(data, vk_payload) {
-            Ok(v) => v,
-            // Python: a corrupt VK record ends value iteration silently.
-            Err(_) => return ValueList { values: out, error: None },
-        };
-        match decode_value(data, &vk, as_json, trim_values, max_len) {
-            Ok(Some(v)) => out.push(v),
-            Ok(None) => continue,
-            Err(e) => return ValueList { values: out, error: Some(e) },
-        }
-    }
-    ValueList { values: out, error: None }
+    Ok(Some(ParsedValue {
+        name: vk.name.clone(),
+        vtype,
+        data: vdata,
+        is_corrupted: false,
+    }))
 }
 
 // ─── Class name ──────────────────────────────────────────────────────────────
@@ -959,7 +1208,9 @@ fn ace_type_name(t: u8) -> String {
 /// Parse a SID at a file offset (Python: SID struct + convert_sid).
 fn parse_sid_at(data: &[u8], off: usize) -> Result<String> {
     let revision = *slice_at(data, off, 1, "SID revision")?.first().unwrap();
-    let count = *slice_at(data, off + 1, 1, "SID subauthority count")?.first().unwrap() as usize;
+    let count = *slice_at(data, off + 1, 1, "SID subauthority count")?
+        .first()
+        .unwrap() as usize;
     let auth_raw = slice_at(data, off + 2, 6, "SID identifier authority")?;
     let mut auth: u64 = 0;
     for &b in auth_raw {
@@ -982,7 +1233,9 @@ fn parse_acl_at(data: &[u8], off: usize) -> Result<Vec<Ace>> {
         let size = u16_at(data, pos + 2, "ACE size")? as usize;
         let access_mask = u32_at(data, pos + 4, "ACE access mask")?;
         if size < 8 {
-            return Err(ParseError::Parsing(format!("Bad ACE size {size} at offset {pos}")));
+            return Err(ParseError::Parsing(format!(
+                "Bad ACE size {size} at offset {pos}"
+            )));
         }
         // The SID is parsed out of the ACE's trailing bytes.
         need(data, pos + 8, size - 8, "ACE SID")?;
@@ -1005,7 +1258,9 @@ pub fn security_info(hive: &Hive, nk: &NkRecord) -> Result<SecurityInfo> {
     // SECURITY_KEY_v1_1: 4 unknown bytes (cell size), "sk" signature, 2 unknown,
     // prev/next offsets, reference count, sd size, then the security descriptor.
     if slice_at(data, sk_cell + 4, 2, "SK signature")? != b"sk" {
-        return Err(ParseError::Parsing(format!("Bad SK signature at offset {sk_cell}")));
+        return Err(ParseError::Parsing(format!(
+            "Bad SK signature at offset {sk_cell}"
+        )));
     }
     let sd_base = sk_cell + 24;
     // SECURITY_DESCRIPTOR (self-relative): offsets are relative to its start.
@@ -1016,7 +1271,445 @@ pub fn security_info(hive: &Hive, nk: &NkRecord) -> Result<SecurityInfo> {
 
     let owner = parse_sid_at(data, sd_base + owner_off)?;
     let group = parse_sid_at(data, sd_base + group_off)?;
-    let sacl = if sacl_off > 0 { Some(parse_acl_at(data, sd_base + sacl_off)?) } else { None };
-    let dacl = if dacl_off > 0 { Some(parse_acl_at(data, sd_base + dacl_off)?) } else { None };
-    Ok(SecurityInfo { owner, group, dacl, sacl })
+    let sacl = if sacl_off > 0 {
+        Some(parse_acl_at(data, sd_base + sacl_off)?)
+    } else {
+        None
+    };
+    let dacl = if dacl_off > 0 {
+        Some(parse_acl_at(data, sd_base + dacl_off)?)
+    } else {
+        None
+    };
+    Ok(SecurityInfo {
+        owner,
+        group,
+        dacl,
+        sacl,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const DIV10_CASES: &[(u64, u64)] = &[
+        (0, 0x0000000000000000),
+        (1, 0x3fb999999999999a),
+        (2, 0x3fc999999999999a),
+        (3, 0x3fd3333333333333),
+        (9, 0x3feccccccccccccd),
+        (10, 0x3ff0000000000000),
+        (11, 0x3ff199999999999a),
+        (99, 0x4023cccccccccccd),
+        (100, 0x4024000000000000),
+        (999, 0x4058f9999999999a),
+        (1000, 0x4059000000000000),
+        (9007199254740990, 0x4309999999999998),
+        (9007199254740991, 0x4309999999999999),
+        (9007199254740992, 0x430999999999999a),
+        (9007199254740993, 0x430999999999999a),
+        (9007199254740994, 0x430999999999999b),
+        (18014398509481983, 0x4319999999999999),
+        (18014398509481984, 0x431999999999999a),
+        (9223372036854775807, 0x43a999999999999a),
+        (9223372036854775808, 0x43a999999999999a),
+        (18446744073709551614, 0x43b999999999999a),
+        (18446744073709551615, 0x43b999999999999a),
+        (10000000000000000, 0x430c6bf526340000),
+        (10000000000000000000, 0x43abc16d674ec800),
+        (123456789012345678, 0x4345ee2a2eb5a5c4),
+        (5000000000000001, 0x42fc6bf526340002),
+        (9999999999999999, 0x430c6bf52633ffff),
+        (2053695854357871005, 0x4386ccf4661c8dfb),
+        (13679192365072849617, 0x43b2fbd34c4d70b6),
+        (4517457392071889495, 0x439913b16ce8f687),
+        (2574020394472462046, 0x438c93ce542db6ac),
+        (1890702223848595625, 0x4384fdb2ec96d44d),
+        (13662908291426823533, 0x43b2f60a452aec6b),
+        (10060236952204337488, 0x43abec3a70fa7ac7),
+        (10892664235628797826, 0x43ae3bb415047386),
+        (586287033698423193, 0x436a094fd7c009d2),
+        (1728372192399379054, 0x4383305448061a3c),
+        (4291835990902352011, 0x4397d310d67cc9dd),
+        (11105285438068160209, 0x43aed2c7a74d12fe),
+        (10353144037217341363, 0x43acbc59ee015bd0),
+        (13208230535885162025, 0x43b2548191b84a4d),
+        (12937162279754847113, 0x43b1f4340e10a315),
+        (7738774760351418614, 0x43a57abaedb58042),
+        (8286444275301796832, 0x43a6ffdf6ed81629),
+        (5131712758418120108, 0x439c7c9a39d5f0d9),
+        (16035760590688802187, 0x43b6410bedfb1f15),
+        (13997525239209781023, 0x43b36ceb8119c431),
+        (2945194472877206461, 0x4390595f81ec1dab),
+        (7795859673851708282, 0x43a5a34a9d23bea7),
+        (5125821543982213238, 0x439c743b03bc7110),
+        (3971837850219807024, 0x43960c5231431f00),
+        (14083980817542670947, 0x43b38ba297e54dfe),
+        (1885446857198079865, 0x4384eec32444ef40),
+        (7008421793132065041, 0x43a373c87f6b260a),
+        (6622000703604942743, 0x43a26136e93826e2),
+        (6344863178936378387, 0x43a19c4be391caae),
+        (4879548657232103939, 0x439b164175d76bea),
+        (801519116549617023, 0x4371cc1bd2e43322),
+        (8474893131606635472, 0x43a785c6148bc324),
+        (2302636251494628997, 0x4389907c606dd1cc),
+        (17013346644619304268, 0x43b79c5adcff4fd0),
+        (1453607047024582931, 0x438023665380b94e),
+        (5408184617760098545, 0x439e057e1a38876a),
+        (11596357474505186610, 0x43b017da917ba1fd),
+        (16333701732457992058, 0x43b6aae584c308bb),
+        (6670988768861278913, 0x43a28405c9c5b82a),
+        (3547098369942706623, 0x4393b0badea18557),
+        (1283066103397798384, 0x437c7d62eaba3150),
+        (12198155279199315353, 0x43b0eda7c2812c51),
+        (14260593838171589262, 0x43b3ca61743908c1),
+        (18174129289355940941, 0x43b938bf6e076888),
+        (15777827095392894769, 0x43b5e56903ced7ba),
+        (15983802509111602936, 0x43b62e965e9f8f38),
+        (7012091250016467664, 0x43a37663f7d1f8a5),
+        (8363943803604256569, 0x43a736f083db0841),
+        (15386621650891716399, 0x43b55a6d16437939),
+        (3000438492122948673, 0x4390a7e12a255bdb),
+        (6553587738384543240, 0x43a2309aaa46273c),
+        (12362549907685523630, 0x43b1280f5d38903a),
+        (12946299709363366021, 0x43b1f773196d3c11),
+        (12609228866373326921, 0x43b17fb2af4b2da9),
+        (1317143838265288107, 0x437d3f188c3ca2a3),
+        (11713281966713340531, 0x43b04164c9f5fe67),
+        (9853141541719096833, 0x43ab5914016f298c),
+        (4515964510634773972, 0x43991192517ddcd2),
+        (8527195849335553775, 0x43a7aaefe3a1f759),
+        (4979658421178727927, 0x439ba4852e26db32),
+        (17070454183419799270, 0x43b7b0a4c37fbb57),
+        (12694347471864137256, 0x43b19df02d439581),
+        (4051184843001971257, 0x43967d1475d2a1b4),
+        (5981960629525864751, 0x43a09a704cbca6fa),
+        (14172883882709689509, 0x43b3ab3847af2d50),
+        (1031873030137572921, 0x4376e984e2d77317),
+        (15159582174570800377, 0x43b509c3f785dd17),
+        (14850473871353034915, 0x43b49bf2bb00d25f),
+        (7400184238106052604, 0x43a48a25abdcf382),
+        (1220964237380856478, 0x437b1c60ced41111),
+        (16844388258623453356, 0x43b76054300566b2),
+        (10462625265789077476, 0x43ad0a2472fd13b5),
+        (13243180843756265710, 0x43b260ec47fcd5c3),
+        (3922267417137298135, 0x4395c5e092ed05e4),
+        (9209191298904019989, 0x43a98f862387f55e),
+        (16319523657909543376, 0x43b6a5dc07bd5403),
+        (11858523945066023525, 0x43b074fe784a9cc7),
+        (2635515642739380393, 0x438d429602c45f74),
+        (2575724861012783070, 0x438c98a67dcfd8f3),
+        (13742621121656847096, 0x43b3125c1c1fe9e6),
+        (9942376124693992059, 0x43ab987bae83245d),
+        (13779972549628856508, 0x43b31fa133d386b4),
+        (7903209073802702201, 0x43a5ef915b1dee49),
+        (10764282542738094197, 0x43ade07b96945e58),
+        (6677655823134432407, 0x43a288c284ae0c9f),
+        (18397413265700644792, 0x43b98812fd38d08a),
+        (2551770246706798576, 0x438c54913732b21a),
+        (9103760425370013864, 0x43a9449c5fe6e343),
+        (13941720072365397720, 0x43b359180dcf2095),
+        (15884545075369202069, 0x43b60b52f5679b2f),
+        (2819424749284882229, 0x438f4d497f49a7f9),
+        (2951146940301069764, 0x439061d500a6a686),
+        (12552662823614133900, 0x43b16b9a087aad5f),
+        (11001804832143224040, 0x43ae8940a4159d56),
+        (7097704095687072272, 0x43a3b338da9cda45),
+        (10992201237850606882, 0x43ae826dc1e056c3),
+        (8633996433839738777, 0x43a7f6d2cd663390),
+        (4637771848169556393, 0x4399beab91cfc804),
+        (10205216524262217657, 0x43ac533e1264eb52),
+        (17384780973582585581, 0x43b820509e62d601),
+        (12549013897651186576, 0x43b16a4e2a4d180b),
+        (2113106642663979449, 0x438775cf6fc6cdc8),
+        (16321466152587137559, 0x43b6a68cb2f7da0f),
+        (13851250634050167604, 0x43b338f3e80dbf17),
+        (14178144042647201736, 0x43b3ad16b053a177),
+        (6275129943002583699, 0x43a16abf7cba6ad1),
+        (5414121733845069545, 0x439e0dee033e9f79),
+        (2917495600126412442, 0x43903202b75fb84f),
+        (59865493798337699, 0x433544bc25371faa),
+        (13320247413671020492, 0x43b27c4d71e537ba),
+        (13275765128541234669, 0x43b26c7fcdfcd264),
+        (17928171007716980450, 0x43b8e15da786be25),
+        (14055721717480188255, 0x43b381987173370b),
+        (9365073917934051636, 0x43a9fe4905a2bf3a),
+        (1962933219357751919, 0x4385cafde3ee1b2f),
+        (11534752662811201046, 0x43b001f7a4afe2a1),
+        (15526059072672948392, 0x43b58bf6d8bad716),
+        (9364727264510620071, 0x43a9fe09f753ea0a),
+        (3669262207937771719, 0x43945e55d0a4c230),
+        (6897493091761027453, 0x43a324f6af3b067f),
+        (2980053737230559329, 0x43908ae93be7ae5d),
+        (17588965847757799010, 0x43b868db1ff43546),
+        (17015905361960636559, 0x43b79d4393c72202),
+        (16943214551238001182, 0x43b7837062f3fa20),
+        (11048577505222294225, 0x43aeaa7c8a666de5),
+        (9013184469153866811, 0x43a90440b443cbfa),
+        (2063595287456017794, 0x4386e9172f373058),
+        (6695813289279580209, 0x43a295a95795f848),
+        (18175971244446575280, 0x43b93966f4634b97),
+        (14882368366351747129, 0x43b4a74784954a67),
+        (4417115578808483583, 0x439885194952b080),
+        (4443296538731753242, 0x4398aa4ddd3921ac),
+        (10465888220884581560, 0x43ad0c75fa2cf43f),
+        (1452811136191383414, 0x43802123398ebc39),
+        (13501312085701517929, 0x43b2bca12e4efe23),
+        (15052972106611023585, 0x43b4e3e3d672d763),
+        (18040629558683101512, 0x43b90951b334f8cb),
+        (9826694299578192581, 0x43ab464947c08af7),
+        (2319872024959105460, 0x4389c1790d69a495),
+        (12170254566408733533, 0x43b0e3be3469afd4),
+        (17466275249064254238, 0x43b83d447ad8f79c),
+        (3046054765042593200, 0x4390e8b4449eb32c),
+        (9733863205026578499, 0x43ab0453670d9226),
+        (11189682723832186266, 0x43af0ebf6e2cab28),
+        (17789355694006387871, 0x43b8b00c79a46ead),
+        (17135429527665141793, 0x43b7c7ba3c9f05a4),
+        (13932183773720301307, 0x43b355b4bb8dce55),
+        (12725811749825856298, 0x43b1a91dd612afad),
+        (13151587223000228575, 0x43b24061e3d1f310),
+        (7360108821668995994, 0x43a46dabfedcc287),
+        (12390437464425241534, 0x43b131f7b8ffe036),
+        (6888392457627527310, 0x43a31e7f49ee12e2),
+        (16594950762504082337, 0x43b707b5fabe6a55),
+        (8328449353085606324, 0x43a71db81cb41992),
+        (4573051503924355479, 0x439962b2720c640d),
+        (1181069398379971535, 0x437a399a2d28d606),
+        (388013639099795099, 0x43613b345114f5af),
+        (10218048544868886114, 0x43ac5c5c33eaebe1),
+        (10854804241263414419, 0x43ae20cd63a561c3),
+        (132647652111166134, 0x4347901de9380223),
+        (13057360759567981142, 0x43b21ee80b01d143),
+        (1086029281467823798, 0x43781d5c9a9c198b),
+        (1243316505448017364, 0x437b9b6fa390f97d),
+        (579466799507675942, 0x4369bbc6594c1ebd),
+        (6095329886943121601, 0x43a0eafe0c2c036a),
+        (9484506392353289491, 0x43aa5325a99d3a57),
+        (5136998843743592237, 0x439c841d4ae52bf3),
+        (8954317038990532775, 0x43a8da6cc7ef0d3a),
+        (9947110392639011130, 0x43ab9bd8d70af80b),
+        (13343499577104216175, 0x43b284903783631e),
+        (16277094700513352822, 0x43b696c92397f2fc),
+        (10629228785065517402, 0x43ad808573ea0993),
+        (4482507869643667449, 0x4398e206dcfd3396),
+        (8724810724676522399, 0x43a83759d35b5f5d),
+        (7508930986792984477, 0x43a4d76a96f624d3),
+        (1740003900829643871, 0x43835163768d655d),
+        (12156086182128678187, 0x43b0deb599027b3f),
+        (6535636613594701523, 0x43a223d95fe2dead),
+        (7583498532299974161, 0x43a50c6658e27cbb),
+        (15934975371981548979, 0x43b61d3d913f27e5),
+        (999281963395495706, 0x43763042a45dd458),
+        (12054126087653924451, 0x43b0ba7c61913cf6),
+        (11919912492747341904, 0x43b08acdb9cc6506),
+        (1118106495833205230, 0x4378d3b318284fdd),
+        (13433169699312644154, 0x43b2a46baabd81d2),
+        (14768325111238658311, 0x43b47ec358224941),
+        (2015657872592376414, 0x438660d81fe3aba8),
+        (3534213002786500868, 0x43939e6b334ca994),
+        (9892726009100339183, 0x43ab753460d689e8),
+        (2585906988015179389, 0x438cb596f6c246ac),
+        (3384756894773047137, 0x4392ca07629199c6),
+        (8533981636164762649, 0x43a7afc23774a959),
+        (16131418598117953727, 0x43b66307f9866522),
+        (1390605763237061244, 0x437ee0adb7e091d1),
+        (14905379553914455092, 0x43b4af745f8b581a),
+        (15789802189125410791, 0x43b5e9aa24afa68a),
+        (1806097268602969763, 0x43840d3cb7a3e819),
+        (12029949924523334488, 0x43b0b1e59267b1f0),
+        (9972087237154765269, 0x43abad9819fff698),
+        (272234306624415600, 0x43582de4388cf296),
+    ];
+
+    #[test]
+    fn div10_matches_cpython() {
+        for &(x, expected_bits) in DIV10_CASES {
+            let got = u64_div10_f64(x).to_bits();
+            assert_eq!(got, expected_bits, "x = {x}");
+        }
+    }
+
+    #[test]
+    fn div10_is_monotone() {
+        // x/10 is monotone; any inversion means a rounding bug.
+        let mut prev = 0.0f64;
+        let mut x: u64 = 0;
+        for _ in 0..50_000 {
+            x = x.wrapping_add(1_000_003); // strictly increasing, no wrap
+            let v = u64_div10_f64(x);
+            assert!(v >= prev, "not monotone at x = {x}");
+            prev = v;
+        }
+    }
+
+    #[test]
+    fn ascii_replace_maps_high_bytes() {
+        assert_eq!(decode_ascii_replace(b"abc"), "abc");
+        assert_eq!(decode_ascii_replace(b"a\xffb\x80"), "a\u{FFFD}b\u{FFFD}");
+        assert_eq!(decode_ascii_replace(b""), "");
+    }
+
+    #[test]
+    fn utf16le_replace_handles_surrogates_and_odd_tail() {
+        // "A" + lone high surrogate + "B"
+        let data = [0x41, 0x00, 0x3D, 0xD8, 0x42, 0x00];
+        assert_eq!(decode_utf16le_replace(&data), "A\u{FFFD}B");
+        // Odd trailing byte -> single FFFD, like CPython.
+        assert_eq!(decode_utf16le_replace(&[0x41, 0x00, 0x42]), "A\u{FFFD}");
+        assert_eq!(decode_utf16le_replace(&[]), "");
+    }
+
+    #[test]
+    fn utf16le_strict_rejects_bad_input() {
+        assert_eq!(decode_utf16le_strict(&[0x41, 0x00]), Some("A".to_string()));
+        assert_eq!(decode_utf16le_strict(&[0x41, 0x00, 0x42]), None); // odd length
+        assert_eq!(decode_utf16le_strict(&[0x3D, 0xD8]), None); // lone surrogate
+        assert_eq!(decode_utf16le_strict(&[]), Some(String::new()));
+    }
+
+    #[test]
+    fn truncate_counts_code_points_not_bytes() {
+        assert_eq!(truncate_chars("héllo wörld", 5), "héllo");
+        assert_eq!(truncate_chars("abc", 10), "abc");
+        assert_eq!(truncate_chars("", 3), "");
+        // Emoji are single code points.
+        assert_eq!(truncate_chars("a🙂b", 2), "a🙂");
+    }
+
+    #[test]
+    fn hex_encoding_basics() {
+        assert_eq!(hex_lower(&[0x00, 0xAB, 0xFF]), "00abff");
+        assert_eq!(hex_lower(&[]), "");
+        // Odd max_chars: encode just enough bytes, then truncate the string.
+        assert_eq!(hex_lower_trimmed(&[0x12, 0x34, 0x56], 5), "12345");
+        assert_eq!(hex_lower_trimmed(&[0x12, 0x34, 0x56], 6), "123456");
+        assert_eq!(hex_lower_trimmed(&[0x12, 0x34, 0x56], 100), "123456");
+    }
+
+    #[test]
+    fn filetime_known_values() {
+        let epoch = filetime_to_civil(0);
+        assert_eq!(
+            epoch,
+            CivilDateTime {
+                year: 1601,
+                month: 1,
+                day: 1,
+                hour: 0,
+                minute: 0,
+                second: 0,
+                microsecond: 0
+            }
+        );
+        // 132223104000000000 == 2020-01-01T00:00:00Z (verified against CPython).
+        let y2k20 = filetime_to_civil(132_223_104_000_000_000);
+        assert_eq!(y2k20.year, 2020);
+        assert_eq!((y2k20.month, y2k20.day), (1, 1));
+        assert_eq!((y2k20.hour, y2k20.minute, y2k20.second), (0, 0, 0));
+        assert_eq!(y2k20.microsecond, 0);
+        // Overflow clamps to the epoch, like regipy.utils.convert_wintime.
+        assert_eq!(filetime_to_civil(u64::MAX), epoch);
+        // Fractional microseconds round half-to-even: 5 ticks = 0.5us -> 0.
+        assert_eq!(filetime_to_civil(5).microsecond, 0);
+        // 15 ticks = 1.5us -> 2 (ties away from the .5 go up).
+        assert_eq!(filetime_to_civil(15).microsecond, 2);
+    }
+
+    #[test]
+    fn civil_date_roundtrip() {
+        for (y, m, d) in [
+            (1601, 1, 1),
+            (1970, 1, 1),
+            (2000, 2, 29),
+            (2026, 9, 12),
+            (9999, 12, 31),
+        ] {
+            let days = days_from_civil(y, m, d);
+            assert_eq!(civil_from_days(days), (y, m, d));
+        }
+        // 1970-01-01 is day 0 by definition.
+        assert_eq!(days_from_civil(1970, 1, 1), 0);
+    }
+
+    #[test]
+    fn greedy_utf16_cstrings_skips_empties_and_partial_tail() {
+        // "AB", "", "C", then an unterminated tail (dropped like construct).
+        let data = b"A\x00B\x00\x00\x00\x00\x00C\x00\x00\x00D\x00";
+        assert_eq!(greedy_utf16_cstrings(data), vec!["AB", "C"]);
+        assert_eq!(greedy_utf16_cstrings(b""), Vec::<String>::new());
+    }
+
+    #[test]
+    fn big_data_reassembly() {
+        // Real big-data segments are BIG_DATA_THRESHOLD bytes except the last.
+        let seg1 = vec![b'A'; BIG_DATA_THRESHOLD as usize];
+        let seg2 = b"world";
+        let total = seg1.len() + seg2.len();
+        let list_off = 100u32;
+        let seg1_off = 200u32;
+        let seg2_off = seg1_off + BIG_DATA_THRESHOLD + 64;
+        let mut data = vec![0u8; REGF_HEADER_SIZE + 4 + seg2_off as usize + 64];
+        let list_payload = REGF_HEADER_SIZE + 4 + list_off as usize;
+        data[list_payload..list_payload + 4].copy_from_slice(&seg1_off.to_le_bytes());
+        data[list_payload + 4..list_payload + 8].copy_from_slice(&seg2_off.to_le_bytes());
+        let p1 = REGF_HEADER_SIZE + 4 + seg1_off as usize;
+        let p2 = REGF_HEADER_SIZE + 4 + seg2_off as usize;
+        data[p1..p1 + seg1.len()].copy_from_slice(&seg1);
+        data[p2..p2 + seg2.len()].copy_from_slice(seg2);
+
+        let mut head = vec![0u8; 8];
+        head[0..2].copy_from_slice(b"db");
+        head[2..4].copy_from_slice(&2u16.to_le_bytes());
+        head[4..8].copy_from_slice(&list_off.to_le_bytes());
+
+        let out = read_big_data(&data, &head, total as u32).unwrap();
+        let mut expected = seg1.clone();
+        expected.extend_from_slice(seg2);
+        assert_eq!(out, expected);
+        // Truncated head is an error, not a panic.
+        assert!(read_big_data(&data, &head[..4], total as u32).is_err());
+    }
+
+    #[test]
+    fn try_decode_binary_prefers_utf16le_then_utf8_then_hex() {
+        // Valid UTF-16LE with trailing NULs (trimmed).
+        let utf16 = b"H\x00i\x00\x00\x00\x00\x00";
+        assert!(matches!(
+            try_decode_binary(utf16, false, true),
+            VData::Str(ref s) if s == "Hi"
+        ));
+        // Odd length is never valid strict UTF-16LE; valid UTF-8 falls through.
+        let utf8 = "héllo!".as_bytes(); // 7 bytes
+        assert!(matches!(
+            try_decode_binary(utf8, false, true),
+            VData::Str(ref s) if s == "héllo!"
+        ));
+        // Neither: hex when as_json, raw bytes otherwise.
+        let bin = &[0xFF, 0xFE, 0xFD];
+        assert!(matches!(
+            try_decode_binary(bin, true, false),
+            VData::Str(ref s) if s == "fffefd"
+        ));
+        assert!(matches!(
+            try_decode_binary(bin, false, false),
+            VData::Bytes(ref b) if b == bin
+        ));
+        // trim_values caps strings at MAX_LEN code points. Odd byte length so
+        // the strict UTF-16LE path fails and UTF-8 is exercised.
+        let long = "x".repeat(MAX_LEN + 11);
+        match try_decode_binary(long.as_bytes(), false, true) {
+            VData::Str(s) => assert_eq!(s.chars().count(), MAX_LEN),
+            other => panic!("expected Str, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn value_type_names_known() {
+        assert_eq!(value_type_name(1), Some("REG_SZ"));
+        assert_eq!(value_type_name(11), Some("REG_QWORD"));
+        assert_eq!(value_type_name(16), Some("REG_FILETIME"));
+        assert_eq!(value_type_name(0xBEEF), None);
+    }
 }

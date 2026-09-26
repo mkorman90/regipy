@@ -11,6 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 pyo3 = { version = "0.22", features = ["abi3-py39"] }
+memmap2 = "0.9"
 
 [features]
 extension-module = ["pyo3/extension-module"]
@@ -19,3 +20,8 @@ extension-module = ["pyo3/extension-module"]
 opt-level = 3
 lto = true
 codegen-units = 1
+
+[lints.clippy]
+# pyo3 0.22's #[pymethods]/#[pyfunction] macros generate a redundant PyErr
+# conversion that newer clippy flags; fixed upstream in pyo3 0.23.
+useless_conversion = "allow"

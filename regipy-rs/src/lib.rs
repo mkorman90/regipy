@@ -1,3 +1,7 @@
+// pyo3 0.22's create_exception! macro emits a cfg for a feature that no
+// longer exists; the allow cannot be attached to the macro call itself, so it
+// lives here at crate level.
+#![allow(unexpected_cfgs)]
 //! PyO3 bindings for the Rust REGF parser core.
 //!
 //! The Python-facing drop-in API lives in `regipy/registry_rs.py`; this module
@@ -17,10 +21,12 @@ use pyo3::sync::GILOnceCell;
 use pyo3::types::{PyBytes, PyDict, PyList, PyString, PyTuple};
 
 use parser::{
-    class_name, find_subkey, list_subkeys, list_values, security_info, Ace, Hive, NkRecord,
-    ParseError, ParsedValue, SubkeyList, VData, VType, MAX_LEN,
+    class_name, find_subkey, security_info, Ace, Hive, NkRecord, ParseError, ParsedValue,
+    SubkeyIter, VData, VType, ValueIter, MAX_LEN,
 };
 
+// pyo3 0.22's create_exception! emits a cfg for a feature that no longer
+// exists; allowed at crate level (see top of file).
 create_exception!(
     regipy_rs,
     ParsingError,
@@ -170,7 +176,9 @@ impl PyNkFlags {
                 return Ok(self.value & bit != 0);
             }
         }
-        Err(pyo3::exceptions::PyAttributeError::new_err(name.to_string()))
+        Err(pyo3::exceptions::PyAttributeError::new_err(
+            name.to_string(),
+        ))
     }
 
     fn keys(&self) -> Vec<&'static str> {
@@ -204,8 +212,11 @@ impl PyNkFlags {
     }
 
     fn __repr__(&self) -> String {
-        let set: Vec<&str> =
-            NK_FLAG_NAMES.iter().filter(|(_, b)| self.value & b != 0).map(|(n, _)| *n).collect();
+        let set: Vec<&str> = NK_FLAG_NAMES
+            .iter()
+            .filter(|(_, b)| self.value & b != 0)
+            .map(|(n, _)| *n)
+            .collect();
         format!("NkFlags({})", set.join("|"))
     }
 }
@@ -220,7 +231,9 @@ pub struct PyNkHeader {
 impl PyNkHeader {
     #[getter]
     fn flags(&self) -> PyNkFlags {
-        PyNkFlags { value: self.rec.flags }
+        PyNkFlags {
+            value: self.rec.flags,
+        }
     }
 
     #[getter]
@@ -389,7 +402,9 @@ impl PyNkHeader {
     fn __repr__(&self) -> String {
         format!(
             "NkHeader(name={:?}, subkey_count={}, values_count={})",
-            self.rec.name, self.rec.subkey_count, self.rec.values_count
+            self.rec.name_cow(),
+            self.rec.subkey_count,
+            self.rec.values_count
         )
     }
 }
@@ -442,8 +457,8 @@ pub struct PyNkRecord {
 #[pymethods]
 impl PyNkRecord {
     #[getter]
-    fn name(&self) -> &str {
-        &self.rec.name
+    fn name(&self) -> std::borrow::Cow<'_, str> {
+        self.rec.name_cow()
     }
 
     #[getter]
@@ -468,26 +483,28 @@ impl PyNkRecord {
 
     #[getter]
     fn header(&self) -> PyNkHeader {
-        PyNkHeader { rec: self.rec.clone() }
+        PyNkHeader {
+            rec: self.rec.clone(),
+        }
     }
 
     /// Iterate direct subkeys lazily; raises ParsingError after yielding the
     /// successfully parsed prefix if the subkey list is corrupt (mirroring
     /// Python generator semantics).
     fn subkeys(&self) -> PySubkeyIter {
-        let SubkeyList { subkeys, error } = list_subkeys(&self.hive, &self.rec);
         PySubkeyIter {
             hive: self.hive.clone(),
-            subkeys,
-            error: error.map(|e| e.to_string()),
-            idx: 0,
+            iter: SubkeyIter::new(self.hive.clone(), &self.rec),
         }
     }
 
     /// Case-insensitive subkey lookup. Returns None when missing.
-    fn find_subkey(&self, name: &str) -> PyResult<Option<PyNkRecord>>{
-        match find_subkey(&self.hive, &self.rec, name) {
-            Ok(Some(rec)) => Ok(Some(PyNkRecord { hive: self.hive.clone(), rec })),
+    fn find_subkey(&self, name: &str) -> PyResult<Option<PyNkRecord>> {
+        match find_subkey(self.hive.clone(), &self.rec, name) {
+            Ok(Some(rec)) => Ok(Some(PyNkRecord {
+                hive: self.hive.clone(),
+                rec,
+            })),
             Ok(None) => Ok(None),
             Err(e) => Err(to_pyerr(e)),
         }
@@ -497,12 +514,17 @@ impl PyNkRecord {
     /// values is the successfully parsed prefix.
     #[pyo3(signature = (as_json = false, trim_values = true, max_len = MAX_LEN))]
     fn values(&self, py: Python<'_>, as_json: bool, trim_values: bool, max_len: usize) -> PyObject {
-        let result = list_values(&self.hive, &self.rec, as_json, trim_values, max_len);
-        let values: Vec<PyObject> = result.values.iter().map(|v| value_to_tuple(py, v)).collect();
-        let err: PyObject = match result.error {
-            Some(e) => PyString::new_bound(py, &e.to_string()).into_py(py),
-            None => py.None(),
-        };
+        let mut values: Vec<PyObject> = Vec::new();
+        let mut err: PyObject = py.None();
+        for res in ValueIter::new(self.hive.clone(), &self.rec, as_json, trim_values, max_len) {
+            match res {
+                Ok(v) => values.push(value_to_tuple(py, &v)),
+                Err(e) => {
+                    err = PyString::new_bound(py, &e.to_string()).into_py(py);
+                    break;
+                }
+            }
+        }
         PyTuple::new_bound(py, [PyList::new_bound(py, values).into_py(py), err]).into_py(py)
     }
 
@@ -510,7 +532,7 @@ impl PyNkRecord {
         class_name(&self.hive, &self.rec)
     }
 
-    fn security_info(&self, py: Python<'_>) -> PyResult<PyObject>{
+    fn security_info(&self, py: Python<'_>) -> PyResult<PyObject> {
         let info = security_info(&self.hive, &self.rec).map_err(to_pyerr)?;
         let dict = PyDict::new_bound(py);
         dict.set_item("owner", &info.owner)?;
@@ -523,13 +545,17 @@ impl PyNkRecord {
     fn __repr__(&self) -> String {
         format!(
             "NKRecord(name={:?}, subkey_count={}, values_count={})",
-            self.rec.name, self.rec.subkey_count, self.rec.values_count
+            self.rec.name_cow(),
+            self.rec.subkey_count,
+            self.rec.values_count
         )
     }
 }
 
 fn acl_to_py(py: Python<'_>, acl: Option<&[Ace]>) -> PyResult<PyObject> {
-    let Some(aces) = acl else { return Ok(py.None()) };
+    let Some(aces) = acl else {
+        return Ok(py.None());
+    };
     let list = PyList::empty_bound(py);
     for ace in aces {
         let d = PyDict::new_bound(py);
@@ -557,9 +583,7 @@ fn acl_to_py(py: Python<'_>, acl: Option<&[Ace]>) -> PyResult<PyObject> {
 #[pyclass(name = "SubkeyIter", module = "regipy_rs")]
 pub struct PySubkeyIter {
     hive: Arc<Hive>,
-    subkeys: Vec<NkRecord>,
-    error: Option<String>,
-    idx: usize,
+    iter: SubkeyIter,
 }
 
 #[pymethods]
@@ -569,24 +593,33 @@ impl PySubkeyIter {
     }
 
     fn __next__(mut slf: PyRefMut<'_, Self>) -> PyResult<Option<PyNkRecord>> {
-        if slf.idx < slf.subkeys.len() {
-            let rec = slf.subkeys[slf.idx].clone();
-            slf.idx += 1;
-            return Ok(Some(PyNkRecord { hive: slf.hive.clone(), rec }));
+        match slf.iter.next() {
+            Some(Ok(rec)) => Ok(Some(PyNkRecord {
+                hive: slf.hive.clone(),
+                rec,
+            })),
+            Some(Err(e)) => Err(ParsingError::new_err(e.to_string())),
+            None => Ok(None),
         }
-        if let Some(msg) = slf.error.take() {
-            return Err(ParsingError::new_err(msg));
-        }
-        Ok(None)
     }
 }
 
 // ─── Recursive traversal iterator ────────────────────────────────────────────
 
 enum Task {
-    Expand { rec: NkRecord, path_root: String, depth: u32 },
-    Emit { rec: NkRecord, path: String },
-    EmitRoot { rec: NkRecord, path: String },
+    Expand {
+        iter: SubkeyIter,
+        path_root: String,
+        depth: u32,
+    },
+    Emit {
+        rec: NkRecord,
+        path: String,
+    },
+    EmitRoot {
+        rec: NkRecord,
+        path: String,
+    },
     RaiseError(String),
 }
 
@@ -608,24 +641,42 @@ pub struct PyRecurseIter {
 
 impl PyRecurseIter {
     /// (name, path, timestamp, header_values_count, values, values_err, is_root)
-    fn make_entry(&self, py: Python<'_>, rec: &NkRecord, path: &str, is_root: bool) -> PyResult<PyObject> {
+    fn make_entry(
+        &self,
+        py: Python<'_>,
+        rec: &NkRecord,
+        path: &str,
+        is_root: bool,
+    ) -> PyResult<PyObject> {
         // Quirk preserved: the starting key's values are fetched even when
         // fetch_values=False (Python's is_init branch has no fetch_values guard).
-        let fetch = if is_root { rec.values_count > 0 } else { self.fetch_values && rec.values_count > 0 };
+        let fetch = if is_root {
+            rec.values_count > 0
+        } else {
+            self.fetch_values && rec.values_count > 0
+        };
         let (values, err): (Vec<PyObject>, bool) = if fetch {
-            let result = list_values(&self.hive, rec, self.as_json, true, MAX_LEN);
-            match result.error {
-                // Python: the exception discards the partially built list.
-                Some(_) => (Vec::new(), true),
-                None => (result.values.iter().map(|v| value_to_tuple(py, v)).collect(), false),
+            let mut values = Vec::new();
+            let mut failed = false;
+            for res in ValueIter::new(self.hive.clone(), rec, self.as_json, true, MAX_LEN) {
+                match res {
+                    Ok(v) => values.push(value_to_tuple(py, &v)),
+                    // Python: the exception discards the partially built list.
+                    Err(_) => {
+                        values.clear();
+                        failed = true;
+                        break;
+                    }
+                }
             }
+            (values, failed)
         } else {
             (Vec::new(), false)
         };
         Ok(PyTuple::new_bound(
             py,
             [
-                PyString::new_bound(py, &rec.name).into_py(py),
+                PyString::new_bound(py, rec.name_cow().as_ref()).into_py(py),
                 PyString::new_bound(py, path).into_py(py),
                 filetime_to_py(py, rec.last_modified, self.as_json)?,
                 rec.values_count.into_py(py),
@@ -646,37 +697,59 @@ impl PyRecurseIter {
 
     fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> PyResult<Option<PyObject>> {
         loop {
-            let Some(task) = slf.stack.pop() else { return Ok(None) };
+            let Some(task) = slf.stack.pop() else {
+                return Ok(None);
+            };
             match task {
-                Task::Expand { rec, path_root, depth } => {
-                    if rec.subkey_count == 0 {
-                        continue;
-                    }
+                Task::Expand {
+                    mut iter,
+                    path_root,
+                    depth,
+                } => {
                     if depth >= MAX_KEY_DEPTH {
                         return Err(ParsingError::new_err(format!(
                             "Maximum key depth ({MAX_KEY_DEPTH}) exceeded at {path_root} — subkey list cycle?"
                         )));
                     }
-                    let SubkeyList { subkeys, error } = list_subkeys(&slf.hive, &rec);
-                    // Python pulls the subkey generator lazily: elements parsed
-                    // before a corrupt one are fully processed, then the error
-                    // propagates. Push the error sentinel first (deepest).
-                    if let Some(e) = error {
-                        slf.stack.push(Task::RaiseError(e.to_string()));
-                    }
-                    for child in subkeys.into_iter().rev() {
-                        let child_path = if path_root.is_empty() {
-                            format!("\\{}", child.name)
-                        } else {
-                            format!("{}\\{}", path_root, child.name)
-                        };
-                        slf.stack.push(Task::Emit { rec: child.clone(), path: child_path.clone() });
-                        if child.subkey_count > 0 {
-                            slf.stack.push(Task::Expand { rec: child, path_root: child_path, depth: depth + 1 });
+                    let Some(res) = iter.next() else {
+                        continue; // list exhausted
+                    };
+                    let child = match res {
+                        Ok(rec) => rec,
+                        // Python pulls the subkey generator lazily: elements parsed
+                        // before a corrupt one are fully processed, then the error
+                        // propagates.
+                        Err(e) => {
+                            slf.stack.push(Task::RaiseError(e.to_string()));
+                            continue;
                         }
-                    }
+                    };
+                    let child_path = if path_root.is_empty() {
+                        format!("\\{}", child.name_cow())
+                    } else {
+                        format!("{}\\{}", path_root, child.name_cow())
+                    };
+                    // Deepest first: resume siblings, then emit the child, then
+                    // traverse the child's subtree before the child itself.
+                    let hive = slf.hive.clone();
+                    slf.stack.push(Task::Expand {
+                        iter,
+                        path_root,
+                        depth,
+                    });
+                    slf.stack.push(Task::Emit {
+                        rec: child.clone(),
+                        path: child_path.clone(),
+                    });
+                    slf.stack.push(Task::Expand {
+                        iter: SubkeyIter::new(hive, &child),
+                        path_root: child_path,
+                        depth: depth + 1,
+                    });
                 }
-                Task::Emit { rec, path } => return Ok(Some(slf.make_entry(py, &rec, &path, false)?)),
+                Task::Emit { rec, path } => {
+                    return Ok(Some(slf.make_entry(py, &rec, &path, false)?))
+                }
                 Task::EmitRoot { rec, path } => {
                     return Ok(Some(slf.make_entry(py, &rec, &path, true)?))
                 }
@@ -726,7 +799,10 @@ impl PyRegistryHive {
     }
 
     fn root(&self) -> PyNkRecord {
-        PyNkRecord { hive: self.hive.clone(), rec: self.hive.root.clone() }
+        PyNkRecord {
+            hive: self.hive.clone(),
+            rec: self.hive.root.clone(),
+        }
     }
 
     /// Raw REGF header bytes (for checksum validation in the CLI).
@@ -751,11 +827,27 @@ impl PyRegistryHive {
         let path_root = path_root.unwrap_or_default();
         let mut stack = Vec::new();
         if is_init {
-            let root_path = if path_root.is_empty() { "\\".to_string() } else { path_root.clone() };
-            stack.push(Task::EmitRoot { rec: rec.clone(), path: root_path });
+            let root_path = if path_root.is_empty() {
+                "\\".to_string()
+            } else {
+                path_root.clone()
+            };
+            stack.push(Task::EmitRoot {
+                rec: rec.clone(),
+                path: root_path,
+            });
         }
-        stack.push(Task::Expand { rec, path_root, depth: 0 });
-        PyRecurseIter { hive: self.hive.clone(), stack, as_json, fetch_values }
+        stack.push(Task::Expand {
+            iter: SubkeyIter::new(self.hive.clone(), &rec),
+            path_root,
+            depth: 0,
+        });
+        PyRecurseIter {
+            hive: self.hive.clone(),
+            stack,
+            as_json,
+            fetch_values,
+        }
     }
 
     fn __repr__(&self) -> String {
