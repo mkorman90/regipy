@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "regipy-rs"
-version = "0.1.0a2"
+version = "0.1.0a3"
 description = "Rust-accelerated core parser for regipy (Windows registry hive / REGF format)"
 readme = "README.md"
 license = {text = "MIT"}
