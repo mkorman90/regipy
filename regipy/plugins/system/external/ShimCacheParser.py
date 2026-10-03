@@ -14,6 +14,9 @@
 # permissions and limitations under the License.
 #
 # Identifies and parses Application Compatibility Shim Cache entries for forensic data.
+#
+# Modifications Copyright 2026 Aïssa BELKOUSSA
+# - 2026-10-03: read NT5.2 (Windows 2003/Vista/2008) entry paths from `entry.offset`.
 
 
 # Original Mandiant shim cache parser, ported to Python 3
@@ -368,7 +371,7 @@ def read_nt5_entries(bin_data, entry, as_json=False):
         entry.update(bin_data[offset : offset + entry_size])
 
         last_mod_date = convert_filetime(entry.dw_low_date_time, entry.dw_high_date_time)
-        path = bin_data[entry.offsets : entry.offset + entry.w_length].decode("utf-16le", "replace")
+        path = bin_data[entry.offset : entry.offset + entry.w_length].decode("utf-16le", "replace")
 
         # It contains file size data.
         exec_flag = None

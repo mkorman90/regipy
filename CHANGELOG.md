@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **`shimcache` plugin on Windows Server 2003 / Vista / Server 2008 (NT5.2 format)** - every run crashed with `AttributeError: 'CacheEntryNt5' object has no attribute 'offsets'`, so no entries could be extracted from these SYSTEM hives (and `regipy-plugins-run` aborted unless `--continue-on-error` was set). Added regression tests for the 32-bit and 64-bit layouts
+
 ## [6.4.0] - 2026-07-25
 
 ### Added
