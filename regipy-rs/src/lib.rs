@@ -1,7 +1,3 @@
-// pyo3 0.22's create_exception! macro emits a cfg for a feature that no
-// longer exists; the allow cannot be attached to the macro call itself, so it
-// lives here at crate level.
-#![allow(unexpected_cfgs)]
 //! PyO3 bindings for the Rust REGF parser core.
 //!
 //! The Python-facing drop-in API lives in `regipy/registry_rs.py`; this module
@@ -17,16 +13,15 @@ use std::sync::Arc;
 use pyo3::create_exception;
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
-use pyo3::sync::GILOnceCell;
+use pyo3::sync::PyOnceLock;
 use pyo3::types::{PyBytes, PyDict, PyList, PyString, PyTuple};
+use pyo3::IntoPyObjectExt;
 
 use parser::{
     class_name, find_subkey, security_info, Ace, Hive, NkRecord, ParseError, ParsedValue,
     SubkeyIter, VData, VType, ValueIter, MAX_LEN,
 };
 
-// pyo3 0.22's create_exception! emits a cfg for a feature that no longer
-// exists; allowed at crate level (see top of file).
 create_exception!(
     regipy_rs,
     ParsingError,
@@ -42,21 +37,21 @@ fn to_pyerr(e: ParseError) -> PyErr {
 /// the limited API (abi3), so datetimes are built by calling the constructor;
 /// pytz.utc is attached so timestamps are indistinguishable from the ones
 /// regipy.utils.convert_wintime produces.
-static DATETIME_CTOR: GILOnceCell<(Py<PyAny>, Py<PyAny>)> = GILOnceCell::new();
+static DATETIME_CTOR: PyOnceLock<(Py<PyAny>, Py<PyAny>)> = PyOnceLock::new();
 
 fn datetime_ctor(py: Python<'_>) -> PyResult<&'static (Py<PyAny>, Py<PyAny>)> {
     DATETIME_CTOR.get_or_try_init(py, || {
-        let datetime_type = py.import_bound("datetime")?.getattr("datetime")?.unbind();
-        let utc = py.import_bound("pytz")?.getattr("utc")?.unbind();
+        let datetime_type = py.import("datetime")?.getattr("datetime")?.unbind();
+        let utc = py.import("pytz")?.getattr("utc")?.unbind();
         Ok((datetime_type, utc))
     })
 }
 
 /// Build the timestamp exactly like regipy.utils.convert_wintime: ISO string
 /// when as_json, else a pytz.utc-aware datetime.
-fn filetime_to_py(py: Python<'_>, wintime: u64, as_json: bool) -> PyResult<PyObject> {
+fn filetime_to_py(py: Python<'_>, wintime: u64, as_json: bool) -> PyResult<Py<PyAny>> {
     if as_json {
-        return Ok(PyString::new_bound(py, &parser::filetime_to_iso(wintime)).into_py(py));
+        return parser::filetime_to_iso(wintime).into_py_any(py);
     }
     let c = parser::filetime_to_civil(wintime);
     let (datetime_type, utc) = datetime_ctor(py)?;
@@ -70,7 +65,7 @@ fn filetime_to_py(py: Python<'_>, wintime: u64, as_json: bool) -> PyResult<PyObj
         c.microsecond,
         utc.bind(py),
     ))?;
-    Ok(dt.into_py(py))
+    dt.unbind().into_py_any(py)
 }
 
 // ─── REGF header ─────────────────────────────────────────────────────────────
@@ -123,20 +118,20 @@ impl PyRegfHeader {
         ]
     }
 
-    fn __getitem__(&self, py: Python<'_>, key: &str) -> PyResult<PyObject> {
-        let v: PyObject = match key {
-            "primary_sequence_num" => self.primary_sequence_num.into_py(py),
-            "secondary_sequence_num" => self.secondary_sequence_num.into_py(py),
-            "last_modification_time" => self.last_modification_time.into_py(py),
-            "major_version" => self.major_version.into_py(py),
-            "minor_version" => self.minor_version.into_py(py),
-            "file_type" => self.file_type.into_py(py),
-            "file_format" => self.file_format.into_py(py),
-            "root_key_offset" => self.root_key_offset.into_py(py),
-            "hive_bins_data_size" => self.hive_bins_data_size.into_py(py),
-            "clustering_factor" => self.clustering_factor.into_py(py),
-            "file_name" => self.file_name.clone().into_py(py),
-            "checksum" => self.checksum.into_py(py),
+    fn __getitem__(&self, py: Python<'_>, key: &str) -> PyResult<Py<PyAny>> {
+        let v: Py<PyAny> = match key {
+            "primary_sequence_num" => self.primary_sequence_num.into_py_any(py)?,
+            "secondary_sequence_num" => self.secondary_sequence_num.into_py_any(py)?,
+            "last_modification_time" => self.last_modification_time.into_py_any(py)?,
+            "major_version" => self.major_version.into_py_any(py)?,
+            "minor_version" => self.minor_version.into_py_any(py)?,
+            "file_type" => self.file_type.into_py_any(py)?,
+            "file_format" => self.file_format.into_py_any(py)?,
+            "root_key_offset" => self.root_key_offset.into_py_any(py)?,
+            "hive_bins_data_size" => self.hive_bins_data_size.into_py_any(py)?,
+            "clustering_factor" => self.clustering_factor.into_py_any(py)?,
+            "file_name" => self.file_name.clone().into_py_any(py)?,
+            "checksum" => self.checksum.into_py_any(py)?,
             other => return Err(pyo3::exceptions::PyKeyError::new_err(other.to_string())),
         };
         Ok(v)
@@ -189,13 +184,13 @@ impl PyNkFlags {
         self.__getattr__(key)
     }
 
-    fn __eq__(&self, py: Python<'_>, other: PyObject) -> PyResult<bool> {
+    fn __eq__(&self, py: Python<'_>, other: Py<PyAny>) -> PyResult<bool> {
         // Compare against another NkFlags or a {name: bool} mapping
         // (ignoring underscore keys, like construct Containers do).
         if let Ok(o) = other.extract::<PyRef<PyNkFlags>>(py) {
             return Ok(self.value == o.value);
         }
-        if let Ok(d) = other.downcast_bound::<PyDict>(py) {
+        if let Ok(d) = other.bind(py).cast::<PyDict>() {
             for (flag, bit) in NK_FLAG_NAMES {
                 match d.get_item(flag)? {
                     Some(v) => {
@@ -243,7 +238,7 @@ impl PyNkHeader {
 
     #[getter]
     fn access_bits<'py>(&self, py: Python<'py>) -> Bound<'py, PyBytes> {
-        PyBytes::new_bound(py, &self.rec.access_bits)
+        PyBytes::new(py, &self.rec.access_bits)
     }
 
     #[getter]
@@ -323,7 +318,7 @@ impl PyNkHeader {
 
     #[getter]
     fn key_name_string<'py>(&self, py: Python<'py>) -> Bound<'py, PyBytes> {
-        PyBytes::new_bound(py, &self.rec.key_name_raw)
+        PyBytes::new(py, &self.rec.key_name_raw)
     }
 
     /// Support dict(header), like construct Containers.
@@ -351,34 +346,34 @@ impl PyNkHeader {
         ]
     }
 
-    fn __getitem__(&self, py: Python<'_>, key: &str) -> PyResult<PyObject> {
+    fn __getitem__(&self, py: Python<'_>, key: &str) -> PyResult<Py<PyAny>> {
         let r = &self.rec;
-        let v: PyObject = match key {
-            "flags" => Py::new(py, PyNkFlags { value: r.flags })?.into_py(py),
-            "last_modified" => r.last_modified.into_py(py),
-            "access_bits" => PyBytes::new_bound(py, &r.access_bits).into_py(py),
-            "parent_key_offset" => r.parent_key_offset.into_py(py),
-            "subkey_count" => r.subkey_count.into_py(py),
-            "volatile_subkey_count" => r.volatile_subkey_count.into_py(py),
-            "subkeys_list_offset" => r.subkeys_list_offset.into_py(py),
-            "volatile_subkeys_list_offset" => r.volatile_subkeys_list_offset.into_py(py),
-            "values_count" => r.values_count.into_py(py),
-            "values_list_offset" => r.values_list_offset.into_py(py),
-            "security_key_offset" => r.security_key_offset.into_py(py),
-            "class_name_offset" => r.class_name_offset.into_py(py),
-            "largest_sk_name" => r.largest_sk_name.into_py(py),
-            "largest_sk_class_name" => r.largest_sk_class_name.into_py(py),
-            "largest_value_name" => r.largest_value_name.into_py(py),
-            "largest_value_data" => r.largest_value_data.into_py(py),
-            "key_name_size" => r.key_name_size.into_py(py),
-            "class_name_size" => r.class_name_size.into_py(py),
-            "key_name_string" => PyBytes::new_bound(py, &r.key_name_raw).into_py(py),
+        let v: Py<PyAny> = match key {
+            "flags" => Py::new(py, PyNkFlags { value: r.flags })?.into_py_any(py)?,
+            "last_modified" => r.last_modified.into_py_any(py)?,
+            "access_bits" => PyBytes::new(py, &r.access_bits).into_py_any(py)?,
+            "parent_key_offset" => r.parent_key_offset.into_py_any(py)?,
+            "subkey_count" => r.subkey_count.into_py_any(py)?,
+            "volatile_subkey_count" => r.volatile_subkey_count.into_py_any(py)?,
+            "subkeys_list_offset" => r.subkeys_list_offset.into_py_any(py)?,
+            "volatile_subkeys_list_offset" => r.volatile_subkeys_list_offset.into_py_any(py)?,
+            "values_count" => r.values_count.into_py_any(py)?,
+            "values_list_offset" => r.values_list_offset.into_py_any(py)?,
+            "security_key_offset" => r.security_key_offset.into_py_any(py)?,
+            "class_name_offset" => r.class_name_offset.into_py_any(py)?,
+            "largest_sk_name" => r.largest_sk_name.into_py_any(py)?,
+            "largest_sk_class_name" => r.largest_sk_class_name.into_py_any(py)?,
+            "largest_value_name" => r.largest_value_name.into_py_any(py)?,
+            "largest_value_data" => r.largest_value_data.into_py_any(py)?,
+            "key_name_size" => r.key_name_size.into_py_any(py)?,
+            "class_name_size" => r.class_name_size.into_py_any(py)?,
+            "key_name_string" => PyBytes::new(py, &r.key_name_raw).into_py_any(py)?,
             other => return Err(pyo3::exceptions::PyKeyError::new_err(other.to_string())),
         };
         Ok(v)
     }
 
-    fn __eq__(&self, py: Python<'_>, other: PyObject) -> PyResult<bool> {
+    fn __eq__(&self, py: Python<'_>, other: Py<PyAny>) -> PyResult<bool> {
         if let Ok(o) = other.extract::<PyRef<PyNkHeader>>(py) {
             let a = &self.rec;
             let b = &o.rec;
@@ -411,39 +406,40 @@ impl PyNkHeader {
 
 // ─── Value conversion ────────────────────────────────────────────────────────
 
-fn vtype_to_py(py: Python<'_>, vt: &VType) -> PyObject {
-    match vt {
-        VType::Named(n) => PyString::new_bound(py, n).into_py(py),
-        VType::NumStr(n) => PyString::new_bound(py, &n.to_string()).into_py(py),
-        VType::Num(n) => n.into_py(py),
-    }
+fn vtype_to_py(py: Python<'_>, vt: &VType) -> PyResult<Py<PyAny>> {
+    Ok(match vt {
+        VType::Named(n) => PyString::new(py, n).unbind().into_py_any(py)?,
+        VType::NumStr(n) => PyString::new(py, &n.to_string()).unbind().into_py_any(py)?,
+        VType::Num(n) => n.into_py_any(py)?,
+    })
 }
 
-fn vdata_to_py(py: Python<'_>, d: &VData) -> PyObject {
-    match d {
-        VData::Str(s) => PyString::new_bound(py, s).into_py(py),
-        VData::Bytes(b) => PyBytes::new_bound(py, b).into_py(py),
-        VData::U32(v) => v.into_py(py),
-        VData::U64(v) => v.into_py(py),
-        VData::List(items) => PyList::new_bound(py, items.iter()).into_py(py),
-        VData::Filetime(v) => v.into_py(py),
-    }
+fn vdata_to_py(py: Python<'_>, d: &VData) -> PyResult<Py<PyAny>> {
+    Ok(match d {
+        VData::Str(s) => PyString::new(py, s).unbind().into_py_any(py)?,
+        VData::Bytes(b) => PyBytes::new(py, b).unbind().into_py_any(py)?,
+        VData::U32(v) => v.into_py_any(py)?,
+        VData::U64(v) => v.into_py_any(py)?,
+        VData::List(items) => PyList::new(py, items.iter())?.unbind().into_py_any(py)?,
+        VData::Filetime(v) => v.into_py_any(py)?,
+    })
 }
 
 /// (name, value_type, value, is_corrupted, is_filetime)
-fn value_to_tuple(py: Python<'_>, v: &ParsedValue) -> PyObject {
+fn value_to_tuple(py: Python<'_>, v: &ParsedValue) -> PyResult<Py<PyAny>> {
     let is_filetime = matches!(v.data, VData::Filetime(_));
-    PyTuple::new_bound(
+    PyTuple::new(
         py,
         [
-            PyString::new_bound(py, &v.name).into_py(py),
-            vtype_to_py(py, &v.vtype),
-            vdata_to_py(py, &v.data),
-            v.is_corrupted.into_py(py),
-            is_filetime.into_py(py),
+            PyString::new(py, &v.name).unbind().into_py_any(py)?,
+            vtype_to_py(py, &v.vtype)?,
+            vdata_to_py(py, &v.data)?,
+            v.is_corrupted.into_py_any(py)?,
+            is_filetime.into_py_any(py)?,
         ],
-    )
-    .into_py(py)
+    )?
+    .unbind()
+    .into_py_any(py)
 }
 
 // ─── NKRecord ────────────────────────────────────────────────────────────────
@@ -513,33 +509,47 @@ impl PyNkRecord {
     /// Parse the key's values. Returns (values, error_message_or_None) where
     /// values is the successfully parsed prefix.
     #[pyo3(signature = (as_json = false, trim_values = true, max_len = MAX_LEN))]
-    fn values(&self, py: Python<'_>, as_json: bool, trim_values: bool, max_len: usize) -> PyObject {
-        let mut values: Vec<PyObject> = Vec::new();
-        let mut err: PyObject = py.None();
+    fn values(
+        &self,
+        py: Python<'_>,
+        as_json: bool,
+        trim_values: bool,
+        max_len: usize,
+    ) -> PyResult<Py<PyAny>> {
+        let mut values: Vec<Py<PyAny>> = Vec::new();
+        let mut err: Py<PyAny> = py.None();
         for res in ValueIter::new(self.hive.clone(), &self.rec, as_json, trim_values, max_len) {
             match res {
-                Ok(v) => values.push(value_to_tuple(py, &v)),
+                Ok(v) => values.push(value_to_tuple(py, &v)?),
                 Err(e) => {
-                    err = PyString::new_bound(py, &e.to_string()).into_py(py);
+                    err = e.to_string().into_py_any(py)?;
                     break;
                 }
             }
         }
-        PyTuple::new_bound(py, [PyList::new_bound(py, values).into_py(py), err]).into_py(py)
+        PyTuple::new(
+            py,
+            [
+                PyList::new(py, values.iter())?.unbind().into_py_any(py)?,
+                err,
+            ],
+        )?
+        .unbind()
+        .into_py_any(py)
     }
 
     fn class_name(&self) -> String {
         class_name(&self.hive, &self.rec)
     }
 
-    fn security_info(&self, py: Python<'_>) -> PyResult<PyObject> {
+    fn security_info(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let info = security_info(&self.hive, &self.rec).map_err(to_pyerr)?;
-        let dict = PyDict::new_bound(py);
+        let dict = PyDict::new(py);
         dict.set_item("owner", &info.owner)?;
         dict.set_item("group", &info.group)?;
         dict.set_item("dacl", acl_to_py(py, info.dacl.as_deref())?)?;
         dict.set_item("sacl", acl_to_py(py, info.sacl.as_deref())?)?;
-        Ok(dict.into_py(py))
+        dict.into_py_any(py)
     }
 
     fn __repr__(&self) -> String {
@@ -552,30 +562,30 @@ impl PyNkRecord {
     }
 }
 
-fn acl_to_py(py: Python<'_>, acl: Option<&[Ace]>) -> PyResult<PyObject> {
+fn acl_to_py(py: Python<'_>, acl: Option<&[Ace]>) -> PyResult<Py<PyAny>> {
     let Some(aces) = acl else {
         return Ok(py.None());
     };
-    let list = PyList::empty_bound(py);
+    let list = PyList::empty(py);
     for ace in aces {
-        let d = PyDict::new_bound(py);
+        let d = PyDict::new(py);
         d.set_item("ace_type", &ace.ace_type)?;
         // Match dict(construct FlagsEnum container) from compiled structs,
         // which contains only the flag names.
-        let flags = PyDict::new_bound(py);
+        let flags = PyDict::new(py);
         for (name, bit) in parser::ACE_FLAG_NAMES {
             flags.set_item(name, ace.flags.value & bit != 0)?;
         }
-        d.set_item("flags", flags)?;
-        let mask = PyDict::new_bound(py);
+        d.set_item("flags", flags.into_py_any(py)?)?;
+        let mask = PyDict::new(py);
         for (name, bit) in parser::ACCESS_MASK_NAMES {
             mask.set_item(name, ace.access_mask.value & bit != 0)?;
         }
-        d.set_item("access_mask", mask)?;
+        d.set_item("access_mask", mask.into_py_any(py)?)?;
         d.set_item("sid", &ace.sid)?;
-        list.append(d)?;
+        list.append(d.unbind())?;
     }
-    Ok(list.into_py(py))
+    list.unbind().into_py_any(py)
 }
 
 // ─── Subkey iterator ─────────────────────────────────────────────────────────
@@ -647,7 +657,7 @@ impl PyRecurseIter {
         rec: &NkRecord,
         path: &str,
         is_root: bool,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         // Quirk preserved: the starting key's values are fetched even when
         // fetch_values=False (Python's is_init branch has no fetch_values guard).
         let fetch = if is_root {
@@ -655,12 +665,12 @@ impl PyRecurseIter {
         } else {
             self.fetch_values && rec.values_count > 0
         };
-        let (values, err): (Vec<PyObject>, bool) = if fetch {
+        let (values, err): (Vec<Py<PyAny>>, bool) = if fetch {
             let mut values = Vec::new();
             let mut failed = false;
             for res in ValueIter::new(self.hive.clone(), rec, self.as_json, true, MAX_LEN) {
                 match res {
-                    Ok(v) => values.push(value_to_tuple(py, &v)),
+                    Ok(v) => values.push(value_to_tuple(py, &v)?),
                     // Python: the exception discards the partially built list.
                     Err(_) => {
                         values.clear();
@@ -673,19 +683,20 @@ impl PyRecurseIter {
         } else {
             (Vec::new(), false)
         };
-        Ok(PyTuple::new_bound(
+        PyTuple::new(
             py,
             [
-                PyString::new_bound(py, rec.name_cow().as_ref()).into_py(py),
-                PyString::new_bound(py, path).into_py(py),
+                rec.name_cow().into_py_any(py)?,
+                path.into_py_any(py)?,
                 filetime_to_py(py, rec.last_modified, self.as_json)?,
-                rec.values_count.into_py(py),
-                PyList::new_bound(py, values).into_py(py),
-                err.into_py(py),
-                is_root.into_py(py),
+                rec.values_count.into_py_any(py)?,
+                PyList::new(py, values.iter())?.unbind().into_py_any(py)?,
+                err.into_py_any(py)?,
+                is_root.into_py_any(py)?,
             ],
-        )
-        .into_py(py))
+        )?
+        .unbind()
+        .into_py_any(py)
     }
 }
 
@@ -695,7 +706,7 @@ impl PyRecurseIter {
         slf
     }
 
-    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> PyResult<Option<PyObject>> {
+    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> PyResult<Option<Py<PyAny>>> {
         loop {
             let Some(task) = slf.stack.pop() else {
                 return Ok(None);
@@ -808,7 +819,7 @@ impl PyRegistryHive {
     /// Raw REGF header bytes (for checksum validation in the CLI).
     fn header_bytes<'py>(&self, py: Python<'py>) -> Bound<'py, PyBytes> {
         let end = self.hive.data.len().min(REGF_RAW_HEADER_LEN);
-        PyBytes::new_bound(py, &self.hive.data[..end])
+        PyBytes::new(py, &self.hive.data[..end])
     }
 
     #[pyo3(signature = (start = None, path_root = None, as_json = false, fetch_values = true, is_init = true))]
@@ -867,7 +878,7 @@ fn convert_wintime_iso(wintime: u64) -> String {
 
 /// FILETIME → pytz.utc-aware datetime (convert_wintime(x, as_json=False) semantics).
 #[pyfunction]
-fn convert_wintime_datetime(py: Python<'_>, wintime: u64) -> PyResult<PyObject> {
+fn convert_wintime_datetime(py: Python<'_>, wintime: u64) -> PyResult<Py<PyAny>> {
     filetime_to_py(py, wintime, false)
 }
 
@@ -880,11 +891,11 @@ fn regipy_rs(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyRegfHeader>()?;
     m.add_class::<PySubkeyIter>()?;
     m.add_class::<PyRecurseIter>()?;
-    m.add("ParsingError", py.get_type_bound::<ParsingError>())?;
+    m.add("ParsingError", py.get_type::<ParsingError>())?;
     m.add_function(wrap_pyfunction!(convert_wintime_iso, m)?)?;
     m.add_function(wrap_pyfunction!(convert_wintime_datetime, m)?)?;
     // Keep in sync with [project].version in pyproject.toml (the wheel version;
     // Cargo's own version stays plain semver).
-    m.add("__version__", "0.1.0a1")?;
+    m.add("__version__", "0.1.0a3")?;
     Ok(())
 }
