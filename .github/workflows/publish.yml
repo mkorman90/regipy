@@ -9,6 +9,15 @@ permissions:
 
 jobs:
   build:
+    # regipy-rs releases (tags `regipy-rs-*`) are published by
+    # regipy-rs.yml; this workflow covers the Python package only. Without
+    # this filter every rust release would also rebuild and re-publish the
+    # Python package (a no-op only thanks to `skip-existing`), and attach
+    # the SBOM to the rust release. `publish` needs this job, so a skipped
+    # build skips the whole workflow.
+    if: >-
+      github.event_name == 'release' &&
+      !startsWith(github.event.release.tag_name, 'regipy-rs-')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -71,8 +80,8 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          # Fallback to API token if trusted publishing is not configured
-          # To use trusted publishing, configure it at https://pypi.org/manage/account/publishing/
+          # Fallback to API token if trusted publishing is not configured.
+          # See https://pypi.org/manage/account/publishing/ to set it up.
           password: ${{ secrets.PYPI_API_TOKEN }}
           skip-existing: true
 
