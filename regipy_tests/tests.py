@@ -1,10 +1,12 @@
 import json
 import os
+import struct
 from tempfile import mkdtemp
 
 from regipy import NoRegistrySubkeysException
 from regipy.cli_utils import get_filtered_subkeys
 from regipy.hive_types import NTUSER_HIVE_TYPE
+from regipy.plugins.system.external.ShimCacheParser import get_shimcache_entries
 from regipy.plugins.utils import dump_hive_to_json
 from regipy.recovery import apply_transaction_logs
 from regipy.regdiff import compare_hives
@@ -422,3 +424,52 @@ def test_big_data_reg_sz_is_reassembled(software_hive):
     values = {v.name: v.value for v in subkey.iter_values(as_json=False, trim_values=False)}
     big_values = [v for v in values.values() if isinstance(v, str) and len(v) > 0x3FD8 // 2]
     assert big_values, "expected at least one reassembled big-data string value"
+
+
+def _build_nt5_shimcache(path, is_32_bit, size_or_flags):
+    # Minimal Windows 2003/Vista/2008 (NT5.2) AppCompatCache blob holding a single entry.
+    # 2009-05-16T06:01:28Z as a FILETIME.
+    filetime = 128869272880000000
+    path_bytes = path.encode("utf-16le")
+    entry_size = 0x18 if is_32_bit else 0x20
+    path_offset = 8 + entry_size
+    header = struct.pack("<LL", 0xBADC0FFE, 1)
+    if is_32_bit:
+        entry = struct.pack(
+            "<2H 3L 2L",
+            len(path_bytes),
+            len(path_bytes) + 2,
+            path_offset,
+            filetime & 0xFFFFFFFF,
+            filetime >> 32,
+            size_or_flags,
+            0,
+        )
+    else:
+        entry = struct.pack(
+            "<2H 4x Q 2L 2L",
+            len(path_bytes),
+            len(path_bytes) + 2,
+            path_offset,
+            filetime & 0xFFFFFFFF,
+            filetime >> 32,
+            size_or_flags,
+            0,
+        )
+    return header + entry + path_bytes + b"\x00\x00"
+
+
+def test_shimcache_nt5_32bit_exec_flag():
+    path = "\\??\\C:\\Windows\\system32\\notepad.exe"
+    cachebin = _build_nt5_shimcache(path, is_32_bit=True, size_or_flags=0x2)
+    assert list(get_shimcache_entries(cachebin, as_json=True)) == [
+        {"last_mod_date": "2009-05-16T06:01:28+00:00", "path": path, "exec_flag": "True"}
+    ]
+
+
+def test_shimcache_nt5_64bit_file_size():
+    path = "\\??\\C:\\Program Files\\App\\app.exe"
+    cachebin = _build_nt5_shimcache(path, is_32_bit=False, size_or_flags=123456)
+    assert list(get_shimcache_entries(cachebin, as_json=True)) == [
+        {"last_mod_date": "2009-05-16T06:01:28+00:00", "path": path, "file_size": 123456}
+    ]
