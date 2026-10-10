@@ -8,7 +8,7 @@ from regipy import boomerang_stream
 from regipy.exceptions import RegistryRecoveryException
 from regipy.hive_types import DIRT_TRANSACTION_LOG_MAGIC, HVLE_TRANSACTION_LOG_MAGIC
 from regipy.registry import RegistryHive
-from regipy.structs import REGF_HEADER_SIZE, TRANSACTION_LOG
+from regipy.structs import HVLE_BLOCK_HEADER_SIZE, REGF_HEADER_SIZE, TRANSACTION_LOG
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ def _parse_hvle_block(hive_path, transaction_log_stream, log_size, expected_sequ
     """
     recovered_dirty_pages_count = 0
     restored_hive_buffer = BytesIO(open(hive_path, "rb").read())
+    hive_file_size = restored_hive_buffer.getbuffer().nbytes
 
     hvle_block_start_offset = transaction_log_stream.tell()
 
@@ -40,6 +41,16 @@ def _parse_hvle_block(hive_path, transaction_log_stream, log_size, expected_sequ
         logger.info(f"seq number: {parsed_hvle_block.sequence_number}")
         logger.info(f"dirty pages: {parsed_hvle_block.dirty_pages_count}")
 
+        # The only thing that advances this loop is the block's own log_size field.
+        # A corrupt or crafted log with log_size < HVLE_BLOCK_HEADER_SIZE (the size of the
+        # block header itself) would otherwise be re-parsed forever at the same offset.
+        if parsed_hvle_block.log_size < HVLE_BLOCK_HEADER_SIZE:
+            raise RegistryRecoveryException(
+                f"HvLE block at {hex(hvle_block_start_offset)} has an invalid log_size "
+                f"({parsed_hvle_block.log_size}) - smaller than the {HVLE_BLOCK_HEADER_SIZE}-byte block header. "
+                f"The transaction log is corrupt or malformed, refusing to continue."
+            )
+
         if parsed_hvle_block.sequence_number == expected_sequence_number:
             logger.info("This hvle block holds valid dirty blocks")
             expected_sequence_number += 1
@@ -47,9 +58,24 @@ def _parse_hvle_block(hive_path, transaction_log_stream, log_size, expected_sequ
         for dirty_page_entry in parsed_hvle_block.dirty_pages_references:
             # Write the actual dirty page to the original hive
             target_offset = REGF_HEADER_SIZE + dirty_page_entry.offset
+            # Dirty page offsets come from the log (u32) and may be corrupt.
+            # Without this check a crafted log would make restored_hive_buffer balloon
+            # up to 4 GiB (and be written to disk as such).
+            if target_offset >= hive_file_size:
+                raise RegistryRecoveryException(
+                    f"Dirty page entry at offset {hex(dirty_page_entry.offset)} points outside "
+                    f"of the hive (size {hive_file_size}). The transaction log is corrupt "
+                    f"or malformed, refusing to continue."
+                )
             restored_hive_buffer.seek(target_offset)
             transaction_log_stream_offset = transaction_log_stream.tell()
             dirty_page_buffer = transaction_log_stream.read(dirty_page_entry.size)
+            if target_offset + len(dirty_page_buffer) > hive_file_size:
+                raise RegistryRecoveryException(
+                    f"Dirty page entry at offset {hex(dirty_page_entry.offset)} extends beyond the "
+                    f"end of the hive (size {hive_file_size}). The transaction log is corrupt "
+                    f"or malformed, refusing to continue."
+                )
             restored_hive_buffer.write(dirty_page_buffer)
             logger.info(
                 f"Restored {dirty_page_entry.size} bytes to offset {hex(target_offset)} "
@@ -86,6 +112,14 @@ def _parse_dirt_block(hive_path, transaction_log, hbins_data_size):
     log_file_base = 1024  # 512 + len(b'DIRT') + dirty_vector_length
     primary_file_base = 4096
     bitmap = transaction_log.read(dirty_vector_length)
+    if len(bitmap) < dirty_vector_length:
+        raise RegistryRecoveryException(
+            f"Expected a dirty page vector of {dirty_vector_length} bytes (based on the hive's "
+            f"hbins_data_size) but the transaction log only holds {len(bitmap)} bytes. "
+            f"The transaction log is corrupt or does not match the hive, refusing to continue."
+        )
+
+    hive_file_size = restored_hive_buffer.getbuffer().nbytes
 
     bit_counter = 0
     bitmap_offset = 0
@@ -97,6 +131,15 @@ def _parse_dirt_block(hive_path, transaction_log, hbins_data_size):
         if is_bit_set:
             # We skip the basic block for the offsets
             registry_offset = primary_file_base + (bit_counter * 512)
+
+            # hbins_data_size comes from the hive header (u32) and may be corrupt -
+            # without this check a crafted hive would make restored_hive_buffer balloon.
+            if registry_offset >= hive_file_size:
+                raise RegistryRecoveryException(
+                    f"Dirty page at offset {hex(registry_offset)} points outside of the hive "
+                    f"(size {hive_file_size}). The hive header or transaction log is corrupt, "
+                    f"refusing to continue."
+                )
 
             # And also the DIRT signature in the transaction log
             transaction_log_offset = log_file_base + (bitmap_offset * 512)

@@ -1,16 +1,22 @@
+import io
 import json
 import os
 import struct
-from tempfile import mkdtemp
+import types
+from tempfile import mkdtemp, mktemp
+
+import pytest
 
 from regipy import NoRegistrySubkeysException
 from regipy.cli_utils import get_filtered_subkeys
+from regipy.exceptions import RegistryRecoveryException
 from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.system.external.ShimCacheParser import get_shimcache_entries
 from regipy.plugins.utils import dump_hive_to_json
 from regipy.recovery import apply_transaction_logs
 from regipy.regdiff import compare_hives
 from regipy.registry import NKRecord, RegistryHive
+from regipy.structs import REGF_HEADER_SIZE
 
 
 def test_parse_header(ntuser_hive):
@@ -257,6 +263,75 @@ def test_system_apply_transaction_logs_2(transaction_usrclass, usrclass_tr_log_1
     assert len(found_differences) == 225
     assert len([x for x in found_differences if x[0] == "new_subkey"]) == 93
     assert len([x for x in found_differences if x[0] == "new_value"]) == 132
+
+
+def test_parse_indirect_block_output_bounded_by_hive_size():
+    """
+    The value size (vk.data_size) and the segment offsets of an indirect ("db")
+    block both come from the hive and may be corrupt. A crafted hive could declare
+    up to 0x7FFFFFFF bytes and repeat segment offsets, amplifying a small file into
+    gigabytes of memory. The reassembled value must be bounded by the number of
+    segments in the db block header and by the size of the hive file itself.
+    """
+    db_cell = b"db" + struct.pack("<HI", 65535, 8)  # number_of_segments, offset_to_list
+    list_start = REGF_HEADER_SIZE + 4 + 8
+    segments = 100
+    list_end = list_start + 4 * segments
+    # A file that declares 0x7FFFFFFF bytes of value data while holding ~20 KB:
+    # a segment list repeating one offset plus a single 16,344-byte data area
+    file = bytearray(list_start) + struct.pack("<I", list_end - (REGF_HEADER_SIZE + 4)) * segments + b"\x42" * 0x3FD8
+    file = bytes(file)
+    value = types.SimpleNamespace(value=db_cell, size=0x7FFFFFFF)
+
+    data = NKRecord._parse_indirect_block(io.BytesIO(file), value)
+    assert len(data) == len(file)
+
+
+def test_transaction_log_hvle_zero_log_size_rejected(transaction_ntuser):
+    """
+    An HvLE block whose log_size is smaller than the 40-byte block header used to
+    make _parse_hvle_block re-parse the same block forever (infinite loop).
+    Such a block must be rejected with a RegistryRecoveryException.
+    """
+    log_path = mktemp()
+    log = bytearray(512) + struct.pack("<4sIIIIIQQ", b"HvLE", 0, 0, 5, 0x10000, 0, 0, 0)  # log_size=0
+    with open(log_path, "wb") as f:
+        f.write(bytes(log))
+
+    with pytest.raises(RegistryRecoveryException, match="invalid log_size"):
+        apply_transaction_logs(transaction_ntuser, log_path, restored_hive_path=os.path.join(mkdtemp(), "restored.dat"))
+
+
+def test_transaction_log_dirty_page_outside_hive_rejected(transaction_ntuser):
+    """
+    A dirty page entry pointing outside of the primary hive must be rejected.
+    Without the check the restored hive buffer (and the file written to disk)
+    would balloon up to the 32-bit offset (up to ~4 GiB) from a sub-KiB log.
+    """
+    log_path = mktemp()
+    header = struct.pack("<4sIIIIIQQ", b"HvLE", 64, 0, 5, 0x10000, 1, 0, 0)  # 1 dirty page
+    ref = struct.pack("<II", 0x7FFFFF00, 512)  # ~4 GiB into the "hive"
+    log = bytearray(512) + header + ref + b"\x00" * (64 - 40 - 8)
+    with open(log_path, "wb") as f:
+        f.write(bytes(log))
+
+    with pytest.raises(RegistryRecoveryException, match="points outside of the hive"):
+        apply_transaction_logs(transaction_ntuser, log_path, restored_hive_path=os.path.join(mkdtemp(), "restored.dat"))
+
+
+def test_transaction_log_dirt_short_vector_rejected(transaction_ntuser):
+    """
+    The DIRT dirty page vector must match the hive's hbins_data_size (190 bytes for
+    the transaction NTUSER fixture). A shorter log must be rejected cleanly instead
+    of failing mid-recovery with an IndexError.
+    """
+    log_path = mktemp()
+    log = bytearray(512) + b"DIRT" + b"\x00" * 64  # 64 < 190
+    with open(log_path, "wb") as f:
+        f.write(bytes(log))
+
+    with pytest.raises(RegistryRecoveryException, match="dirty page vector"):
+        apply_transaction_logs(transaction_ntuser, log_path, restored_hive_path=os.path.join(mkdtemp(), "restored.dat"))
 
 
 def test_hive_serialization(ntuser_hive, temp_output_file):
