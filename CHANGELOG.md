@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Bounded memory and CPU usage when parsing untrusted hives and transaction logs**
+  - `NKRecord._parse_indirect_block`: big-data ("db") value reassembly is now bounded by the db header's `number_of_segments`, the hive file size, and per-segment file bounds (mirroring the bounds `regipy-rs/src/parser.rs` already enforced). Previously, a crafted hive declaring a huge `data_size` with repeated segment offsets could amplify a small file into unbounded memory allocation
+  - `apply_transaction_logs`: HvLE blocks with `log_size` smaller than the 40-byte block header (infinite re-parse loop), dirty-page entries pointing outside the primary hive (up to ~4 GiB restored-buffer ballooning, then written to disk), and DIRT dirty-page vectors shorter than the hive's `hbins_data_size` (raw `IndexError`) now raise `RegistryRecoveryException`
+  - Behavior on valid hives and transaction logs is byte-identical; four new regression tests cover the crafted-input vectors
+  - Reported by Zhang Yan <r0ck3t0615@gmail.com>
+
 ### Fixed
 
 - **`shimcache` plugin on Windows Server 2003 / Vista / Server 2008 (NT5.2 format)** - every run crashed with `AttributeError: 'CacheEntryNt5' object has no attribute 'offsets'`, so no entries could be extracted from these SYSTEM hives (and `regipy-plugins-run` aborted unless `--continue-on-error` was set). Added regression tests for the 32-bit and 64-bit layouts
