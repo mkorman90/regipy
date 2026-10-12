@@ -175,6 +175,12 @@ LF_LH_SK_ELEMENT = Struct(
 
 DIRTY_PAGES_REFERENCES = Struct("offset" / Int32ul, "size" / Int32ul)
 
+# Fixed-size portion of an HvLE transaction-log block header:
+# signature(4) + log_size(4) + flags(4) + sequence_number(4) + hive_bin_size(4)
+# + dirty_pages_count(4) + hash_1(8) + hash_2(8); the variable-length
+# dirty_pages_references array follows it.
+HVLE_BLOCK_HEADER_SIZE = 40
+
 TRANSACTION_LOG = Struct(
     "signature" / Const(b"HvLE"),
     "log_size" / Int32ul,

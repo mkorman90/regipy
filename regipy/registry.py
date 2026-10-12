@@ -483,16 +483,28 @@ class NKRecord:
         big_data_block_header = BIG_DATA_BLOCK.parse(value.value)  # type: ignore[union-attr]
 
         # Go to the start of the segment offset list (+4 skips the cell size header)
-        stream.seek(REGF_HEADER_SIZE + 4 + big_data_block_header.offset_to_list_of_segments)
+        segment_list_offset = REGF_HEADER_SIZE + 4 + big_data_block_header.offset_to_list_of_segments
+        stream.seek(segment_list_offset)
         buffer = BytesIO()
 
-        # Read them sequentially until we got all the size of the VK
-        value_size = value.size
-        while value_size > 0:
+        # The value size (vk.data_size) and the segment offsets both come from the hive and may be
+        # corrupt. A crafted hive could declare up to 0x7FFFFFFF bytes and repeat segment offsets,
+        # exhausting memory. The reassembled value cannot be bigger than the hive itself, and the
+        # number of segments is bounded by the db block header, so we honor both bounds.
+        file_size = stream.seek(0, 2)
+        stream.seek(segment_list_offset)
+        value_size = min(value.size, file_size)
+        for _ in range(big_data_block_header.number_of_segments):
+            if value_size <= 0:
+                break
             data_segment_offset = Int32ul.parse_stream(stream)  # type: ignore[union-attr]
+            data_segment_position = REGF_HEADER_SIZE + 4 + data_segment_offset
+            if data_segment_position >= file_size:
+                # Segment points outside of the hive - corrupted or crafted db block
+                break
             with boomerang_stream(stream) as tmpstream:
-                tmpstream.seek(REGF_HEADER_SIZE + 4 + data_segment_offset)
-                tmpbuffer = tmpstream.read(min(0x3FD8, value_size))
+                tmpstream.seek(data_segment_position)
+                tmpbuffer = tmpstream.read(min(0x3FD8, value_size, file_size - data_segment_position))
                 value_size -= len(tmpbuffer)
                 buffer.write(tmpbuffer)
         buffer.seek(0)

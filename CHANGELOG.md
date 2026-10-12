@@ -5,7 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [6.5.0] - 2026-10-11
+
+### Security
+
+- **Bounded memory and CPU usage when parsing untrusted hives and transaction logs**
+  - `NKRecord._parse_indirect_block`: big-data ("db") value reassembly is now bounded by the db header's `number_of_segments`, the hive file size, and per-segment file bounds (mirroring the bounds `regipy-rs/src/parser.rs` already enforced). Previously, a crafted hive declaring a huge `data_size` with repeated segment offsets could amplify a small file into unbounded memory allocation
+  - `apply_transaction_logs`: HvLE blocks with `log_size` smaller than the 40-byte block header (infinite re-parse loop), dirty-page entries pointing outside the primary hive (up to ~4 GiB restored-buffer ballooning, then written to disk), and DIRT dirty-page vectors shorter than the hive's `hbins_data_size` (raw `IndexError`) now raise `RegistryRecoveryException`
+  - Behavior on valid hives and transaction logs is byte-identical; four new regression tests cover the crafted-input vectors
+  - Reported by Zhang Yan <r0ck3t0615@gmail.com>
 
 ### Fixed
 
