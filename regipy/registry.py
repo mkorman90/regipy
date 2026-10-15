@@ -361,6 +361,23 @@ class HBin:
             offset += stream.tell() + bytes_to_read
 
 
+# Value types whose resident (data_size >= 0x80000000) values iter_values rebuilds
+# from the VK data_offset field. For these, the out-of-line buffer returned by
+# NKRecord.read_value is never used, so its read can be skipped without changing
+# output (see #350). Every other type (REG_FILETIME, REG_RESOURCE_*, unknown and
+# DEVPROP types) consumes that buffer even for resident-flagged values, and its
+# output must stay byte-identical to earlier versions and to the Rust backend.
+_RESIDENT_SAFE_TYPES = (
+    0,  # REG_NONE
+    1,  # REG_SZ
+    2,  # REG_EXPAND_SZ
+    3,  # REG_BINARY
+    4,  # REG_DWORD
+    7,  # REG_MULTI_SZ
+    11,  # REG_QWORD
+)
+
+
 class NKRecord:
     """
     The NKRecord represents a Name Key entry
@@ -468,7 +485,22 @@ class NKRecord:
         """
         stream.seek(REGF_HEADER_SIZE + 4 + vk.data_offset)
         data_type = vk.data_type
-        data = stream.read(vk.data_size)
+        # Resident values (data_size >= 0x80000000) store their data inline in the
+        # data_offset field and have no out-of-line data cell. For the types whose
+        # resident branches in iter_values rebuild the value from data_offset, the
+        # buffer returned here is never used, so the read can be skipped. Without
+        # this, each resident value asked the stream for ~2 GiB and copied the
+        # entire tail of the hive into memory (see #350).
+        #
+        # Every other type keeps the original read on purpose: REG_FILETIME,
+        # REG_RESOURCE_*, unknown types and DEVPROP types (e.g. 0xFFFF0001, which
+        # iter_values reassigns to the non-resident-checked REG_SZ branch) all
+        # consume this buffer even for resident-flagged values, and their output
+        # must stay byte-identical to earlier versions and to the Rust backend.
+        if vk.data_size >= 0x80000000 and int(data_type) in _RESIDENT_SAFE_TYPES:
+            data = b""
+        else:
+            data = stream.read(vk.data_size)
         return VKRecord(
             value_type=data_type,
             value_type_str=str(data_type),
