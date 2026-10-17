@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The restored hive now grows to the bin size an entry declares (bounded by 4096-byte alignment, the 32-bit addressable range, and the current hive size plus the log's own footprint) instead of failing with "points outside of the hive"
   - The restored hive header now records the last applied entry's sequence number as primary (and the preceding number as secondary), matching the spec's base-block state after the last applied entry
   - Test expectations for the SYSTEM and UsrClass.dat transaction-log fixtures were regenerated for the spec-correct order (previously locked counts were generated from the buggy order): SYSTEM 2507 → 2519, UsrClass 225 → 73. The NTUSER.DAT single-log case is unchanged
+## [6.5.1] - 2026-10-15
+
+### Fixed
+
+- **Performance: resident (inline) values no longer trigger a read of the entire tail of the hive** (gh #350)
+  - `NKRecord.read_value` passed the flagged `data_size` (≥ 0x80000000) straight to `stream.read()`, and since the hive stream is a `BytesIO` of the whole file, every resident value copied the tail of the hive into memory and discarded it (~46% of the values in NTUSER.DAT, 28% in Amcache.hve, 29% in SOFTWARE)
+  - The read is now skipped for the types whose resident branches in `iter_values` rebuild the value from the VK `data_offset` field (`REG_NONE`/`REG_SZ`/`REG_EXPAND_SZ`/`REG_BINARY`/`REG_DWORD`/`REG_MULTI_SZ`/`REG_QWORD`); every other type keeps the original read, so output is byte-identical to earlier versions and to the `regipy-rs` backend
+  - A full walk of the 36 MiB SOFTWARE test hive dropped from 400+s to ~5s
 
 ## [6.5.0] - 2026-10-11
 
