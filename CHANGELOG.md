@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.5.1] - 2026-10-15
+
+### Fixed
+
+- **Performance: resident (inline) values no longer trigger a read of the entire tail of the hive** (gh #350)
+  - `NKRecord.read_value` passed the flagged `data_size` (≥ 0x80000000) straight to `stream.read()`, and since the hive stream is a `BytesIO` of the whole file, every resident value copied the tail of the hive into memory and discarded it (~46% of the values in NTUSER.DAT, 28% in Amcache.hve, 29% in SOFTWARE)
+  - The read is now skipped for the types whose resident branches in `iter_values` rebuild the value from the VK `data_offset` field (`REG_NONE`/`REG_SZ`/`REG_EXPAND_SZ`/`REG_BINARY`/`REG_DWORD`/`REG_MULTI_SZ`/`REG_QWORD`); every other type keeps the original read, so output is byte-identical to earlier versions and to the `regipy-rs` backend
+  - A full walk of the 36 MiB SOFTWARE test hive dropped from 400+s to ~5s
+
 ## [6.5.0] - 2026-10-11
 
 ### Security

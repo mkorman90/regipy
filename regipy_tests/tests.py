@@ -478,6 +478,89 @@ def test_inline_reg_binary_value_is_decoded(ntuser_hive):
     assert values["SchemeLangID"].value == "0904"
 
 
+class _ReadCountingStream:
+    """Delegates to a hive stream while recording what read() is asked to return."""
+
+    def __init__(self, stream):
+        self._stream = stream
+        self.max_requested = 0
+        self.total_requested = 0
+
+    def read(self, size=-1):
+        if size is not None and size >= 0:
+            self.max_requested = max(self.max_requested, size)
+            self.total_requested += size
+        return self._stream.read(size)
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
+def test_resident_values_do_not_read_hive_tail(ntuser_hive):
+    # Regression test for #350. Resident values (data_size >= 0x80000000) store
+    # their data inline in the VK data_offset field and have no out-of-line
+    # data cell. read_value used to pass the flagged data_size to stream.read(),
+    # so every resident value (1901 of the 4094 in this hive) asked the stream
+    # for ~2 GiB, copying the entire tail of the hive into memory and discarding it.
+    registry_hive = RegistryHive(ntuser_hive)
+    tracker = _ReadCountingStream(registry_hive._stream)
+    registry_hive._stream = tracker  # type: ignore[assignment]
+    registry_hive.root._stream = tracker  # type: ignore[assignment]
+
+    total_values = 0
+    for subkey in registry_hive.recurse_subkeys(as_json=True):
+        total_values += len(subkey.values)
+
+    assert total_values == 4094
+    # Before the fix, the first resident value alone requested 0x80000000 | n bytes.
+    assert tracker.max_requested < 0x80000000
+    # All reads combined must stay bounded by the hive size (the hive's real
+    # out-of-line value data is ~263 KiB), not by the hive tail per resident value.
+    assert tracker.total_requested < 2 * os.path.getsize(ntuser_hive)
+
+
+def test_resident_values_of_all_types_are_decoded(ntuser_hive):
+    # Resident (inline) values of the common types must be decoded from the
+    # VK data_offset field, which holds their payload for them. REG_BINARY is
+    # covered by test_inline_reg_binary_value_is_decoded.
+    registry_hive = RegistryHive(ntuser_hive)
+
+    # Resident REG_DWORD: the 32-bit value is stored in the data_offset field.
+    assert registry_hive.get_key(r"\Console").get_value("ColorTable01") == 0x800000
+    # Resident REG_SZ (default value, 2 zero bytes -> empty string).
+    assert registry_hive.get_key(r"\AppEvents\Schemes\Apps\.Default\AppGPFault\.Current").get_value() == ""
+    # Resident REG_EXPAND_SZ.
+    assert (
+        registry_hive.get_key(r"\Software\Microsoft\Windows\CurrentVersion\Themes\DefaultVisualStyleOff").get_value(
+            "InstallVisualStyle"
+        )
+        == ""
+    )
+    # Resident REG_MULTI_SZ (no entries).
+    assert (
+        registry_hive.get_key(r"\Software\Microsoft\Cryptography\CertificateTemplateCache\Administrator").get_value(
+            "msPKI-Supersede-Templates"
+        )
+        == []
+    )
+
+
+def test_resident_unknown_type_keeps_legacy_buffer_read(sam_hive):
+    # This default value has an unknown type (513) and the resident flag set.
+    # iter_values has no resident branch for unknown types: the final else
+    # consumes the raw buffer that read_value returns. read_value therefore
+    # keeps the original read for such values so the output stays byte-identical
+    # to earlier versions and to the Rust backend (see #350).
+    registry_hive = RegistryHive(sam_hive)
+    values = list(registry_hive.get_key(r"\SAM\Domains\Account\Groups\Names\None").iter_values(as_json=True))
+    assert len(values) == 1
+    assert values[0].name == "(default)"
+    assert values[0].value_type == "513"
+    assert isinstance(values[0].value, str)
+    assert len(values[0].value) == 256
+    assert values[0].value.startswith("0000000000100000000000000000000034ec4d905adccf01")
+
+
 def test_big_data_reg_multi_sz_is_reassembled(software_hive):
     # REG_MULTI_SZ values larger than 16344 bytes are stored in big-data (db)
     # segments. Regression test: these used to be parsed from the raw db
