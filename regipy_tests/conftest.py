@@ -96,6 +96,13 @@ def transaction_log(test_data_dir):
 
 
 @pytest.fixture(scope="module")
+def transaction_log_2(test_data_dir):
+    temp_path = extract_lzma(os.path.join(test_data_dir, "transactions_ntuser.dat.log2.xz"))
+    yield temp_path
+    os.remove(temp_path)
+
+
+@pytest.fixture(scope="module")
 def transaction_system(test_data_dir):
     temp_path = extract_lzma(os.path.join(test_data_dir, "SYSTEM_B.xz"))
     yield temp_path

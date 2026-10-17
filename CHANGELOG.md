@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.5.2] - 2026-10-17
+
+### Fixed
+
+- **`apply_transaction_logs` now applies transaction logs in sequence order and validates every entry** (gh #352)
+  - The log with the earlier sequence chain is applied first, and a second log is only applied if its first entry continues the first log's last sequence number (N+1). Previously the caller's argument order decided, so the older log's stale pages could clobber newer ones (the UsrClass.dat test fixture lost 119 subkeys, the SYSTEM fixture 16)
+  - Sequence continuity is enforced across the applied chain: recovery stops after entry N if N+1 does not follow, per the registry file format specification
+  - Every entry's Marvin32 Hash-1/Hash-2 fields are verified (and the Hive bins data size must be a multiple of 4096 bytes); an invalid entry stops recovery and only the preceding entries are applied. A hash-valid entry whose declared page size exceeds its own data bounds is rejected at scan time
+  - The restored hive now grows to the bin size an entry declares (bounded by 4096-byte alignment, the 32-bit addressable range, and the current hive size plus the log's own footprint) instead of failing with "points outside of the hive"
+  - The restored hive header now records the last applied entry's sequence number as primary (and the preceding number as secondary), matching the spec's base-block state after the last applied entry
+  - Test expectations for the SYSTEM and UsrClass.dat transaction-log fixtures were regenerated for the spec-correct order (previously locked counts were generated from the buggy order): SYSTEM 2507 → 2519, UsrClass 225 → 73. The NTUSER.DAT single-log case is unchanged
+
 ## [6.5.0] - 2026-10-11
 
 ### Security
