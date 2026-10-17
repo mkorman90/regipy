@@ -13,10 +13,10 @@ from regipy.exceptions import RegistryRecoveryException
 from regipy.hive_types import NTUSER_HIVE_TYPE
 from regipy.plugins.system.external.ShimCacheParser import get_shimcache_entries
 from regipy.plugins.utils import dump_hive_to_json
-from regipy.recovery import apply_transaction_logs
+from regipy.recovery import _marvin32, _scan_hvle_entries, apply_transaction_logs
 from regipy.regdiff import compare_hives
 from regipy.registry import NKRecord, RegistryHive
-from regipy.structs import REGF_HEADER_SIZE
+from regipy.structs import HVLE_BLOCK_HEADER_SIZE, REGF_HEADER_SIZE, TRANSACTION_LOG
 
 
 def test_parse_header(ntuser_hive):
@@ -229,12 +229,15 @@ def test_system_apply_transaction_logs(transaction_system, system_tr_log_1, syst
     assert recovered_dirty_pages_count == 315
 
     found_differences = compare_hives(transaction_system, restored_hive_path)
-    # Was 2511 before inline values (data stored in the VK data_offset field)
-    # were decoded properly: 4 spurious differences came from inline values
-    # being compared as raw data_offset integers or misread data.
-    assert len(found_differences) == 2507
-    assert len([x for x in found_differences if x[0] == "new_subkey"]) == 2458
-    assert len([x for x in found_differences if x[0] == "new_value"]) == 49
+    # The previously locked count (2507) was generated with the older sequence chain
+    # applied last, so stale pages from the older log clobbered newer ones (gh #352).
+    # With the spec-correct order (earlier chain first, then the later one) the
+    # restored hive is larger: 16 additional subkeys and one hive bins data size
+    # difference (the hive grows to the last applied entry's declared bin size).
+    assert len(found_differences) == 2519
+    assert len([x for x in found_differences if x[0] == "new_subkey"]) == 2472
+    assert len([x for x in found_differences if x[0] == "new_value"]) == 46
+    assert len([x for x in found_differences if x[0] == "different_hive_bin_data_size"]) == 1
 
 
 def test_system_hive_devprop_structure(system_devprop):
@@ -260,9 +263,11 @@ def test_system_apply_transaction_logs_2(transaction_usrclass, usrclass_tr_log_1
     assert recovered_dirty_pages_count == 158
 
     found_differences = compare_hives(transaction_usrclass, restored_hive_path)
-    assert len(found_differences) == 225
-    assert len([x for x in found_differences if x[0] == "new_subkey"]) == 93
-    assert len([x for x in found_differences if x[0] == "new_value"]) == 132
+    # Was 225 with the older sequence chain applied last (gh #352): stale pages from
+    # the older log clobbered 119 newer subkeys. Spec-correct order recovers them all.
+    assert len(found_differences) == 73
+    assert len([x for x in found_differences if x[0] == "new_subkey"]) == 33
+    assert len([x for x in found_differences if x[0] == "new_value"]) == 40
 
 
 def test_parse_indirect_block_output_bounded_by_hive_size():
@@ -287,6 +292,48 @@ def test_parse_indirect_block_output_bounded_by_hive_size():
     assert len(data) == len(file)
 
 
+def _build_hvle_log(sequence_number, hive_bin_size, dirty_pages, log_size=None):
+    """Build a crafted single-entry HvLE transaction log (512 zero bytes of REGF
+    header plus one HvLE entry) with valid Marvin32 hashes.
+
+    :param sequence_number: the entry's sequence number
+    :param hive_bin_size: the entry's declared hive bins data size
+    :param dirty_pages: list of (offset, declared_size, data) page references -
+        the entry holds *data* bytes for a page but declares *declared_size*,
+        so a reference can be inflated to test the corrupt-references path
+    :param log_size: override for the entry's declared Size field (defaults to
+        the true entry size); the zero-size rejection test passes 0
+    """
+    references = [{"offset": offset, "size": declared_size} for offset, declared_size, _ in dirty_pages]
+    page_data = b"".join(data for _, _, data in dirty_pages)
+    if log_size is None:
+        log_size = HVLE_BLOCK_HEADER_SIZE + 8 * len(dirty_pages) + len(page_data)
+
+    body = (
+        TRANSACTION_LOG.build(
+            {
+                "signature": b"HvLE",
+                "log_size": log_size,
+                "flags": 0,
+                "sequence_number": sequence_number,
+                "hive_bin_size": hive_bin_size,
+                "dirty_pages_count": len(dirty_pages),
+                "hash_1": 0,
+                "hash_2": 0,
+                "dirty_pages_references": references,
+            }
+        )
+        + page_data
+    )
+
+    # Hash-1 covers everything from the first page reference on; Hash-2 covers
+    # the first 32 bytes of the entry, which include Hash-1, so the two are
+    # computed in that order and patched into the built header.
+    hash_1 = _marvin32(body[HVLE_BLOCK_HEADER_SIZE:])
+    hash_2 = _marvin32(body[:24] + struct.pack("<Q", hash_1))
+    return b"\x00" * 512 + body[:24] + struct.pack("<QQ", hash_1, hash_2) + body[40:]
+
+
 def test_transaction_log_hvle_zero_log_size_rejected(transaction_ntuser):
     """
     An HvLE block whose log_size is smaller than the 40-byte block header used to
@@ -294,9 +341,8 @@ def test_transaction_log_hvle_zero_log_size_rejected(transaction_ntuser):
     Such a block must be rejected with a RegistryRecoveryException.
     """
     log_path = mktemp()
-    log = bytearray(512) + struct.pack("<4sIIIIIQQ", b"HvLE", 0, 0, 5, 0x10000, 0, 0, 0)  # log_size=0
     with open(log_path, "wb") as f:
-        f.write(bytes(log))
+        f.write(_build_hvle_log(sequence_number=5, hive_bin_size=0x10000, dirty_pages=[], log_size=0))
 
     with pytest.raises(RegistryRecoveryException, match="invalid log_size"):
         apply_transaction_logs(transaction_ntuser, log_path, restored_hive_path=os.path.join(mkdtemp(), "restored.dat"))
@@ -307,16 +353,45 @@ def test_transaction_log_dirty_page_outside_hive_rejected(transaction_ntuser):
     A dirty page entry pointing outside of the primary hive must be rejected.
     Without the check the restored hive buffer (and the file written to disk)
     would balloon up to the 32-bit offset (up to ~4 GiB) from a sub-KiB log.
+
+    The crafted entry is structurally valid and carries valid Marvin32 hashes,
+    so it reaches the bounds check at apply time: the 4096-byte page image sits
+    inside the entry, but its target offset (~4 GiB) is far beyond the hive,
+    and the entry's declared hive bin size (0x10000) is too small to cover it.
     """
     log_path = mktemp()
-    header = struct.pack("<4sIIIIIQQ", b"HvLE", 64, 0, 5, 0x10000, 1, 0, 0)  # 1 dirty page
-    ref = struct.pack("<II", 0x7FFFFF00, 512)  # ~4 GiB into the "hive"
-    log = bytearray(512) + header + ref + b"\x00" * (64 - 40 - 8)
+    # The 4096-byte page image is inside the entry (the hashes are valid), but
+    # its target offset (~4 GiB) is far beyond the hive, and the entry's
+    # declared hive bin size (0x10000) is too small to cover it.
+    page_data = b"\x41" * 4096
     with open(log_path, "wb") as f:
-        f.write(bytes(log))
+        f.write(
+            _build_hvle_log(sequence_number=5, hive_bin_size=0x10000, dirty_pages=[(0x7FFFFF00, len(page_data), page_data)])
+        )
 
     with pytest.raises(RegistryRecoveryException, match="points outside of the hive"):
         apply_transaction_logs(transaction_ntuser, log_path, restored_hive_path=os.path.join(mkdtemp(), "restored.dat"))
+
+
+def test_transaction_log_corrupt_page_references_stop_recovery(transaction_ntuser):
+    """
+    A hash-valid crafted entry can declare a page size that exceeds the page data
+    held by the entry (the hash only proves the bytes are intact, not that the
+    declared size fits). Such an entry must stop recovery cleanly: no pages are
+    applied and the restored hive is byte-identical to the original.
+    """
+    log_path = mktemp()
+    with open(log_path, "wb") as f:
+        # Declares 512 bytes for its page, holds only 16.
+        f.write(_build_hvle_log(sequence_number=5, hive_bin_size=0x10000, dirty_pages=[(0x7FFFFF00, 512, b"\x00" * 16)]))
+
+    output_path = os.path.join(mkdtemp(), "restored.dat")
+    restored_hive_path, recovered_dirty_pages_count = apply_transaction_logs(
+        transaction_ntuser, log_path, restored_hive_path=output_path
+    )
+    assert recovered_dirty_pages_count == 0
+    with open(transaction_ntuser, "rb") as f1, open(restored_hive_path, "rb") as f2:
+        assert f1.read() == f2.read()
 
 
 def test_transaction_log_dirt_short_vector_rejected(transaction_ntuser):
@@ -332,6 +407,93 @@ def test_transaction_log_dirt_short_vector_rejected(transaction_ntuser):
 
     with pytest.raises(RegistryRecoveryException, match="dirty page vector"):
         apply_transaction_logs(transaction_ntuser, log_path, restored_hive_path=os.path.join(mkdtemp(), "restored.dat"))
+
+
+def test_system_apply_transaction_logs_order_independent(transaction_system, system_tr_log_1, system_tr_log_2):
+    """
+    Which log holds the earlier sequence chain is a property of the logs, not of
+    the caller's argument order. Previously the secondary log was always applied
+    first (gh #352), so applying (LOG1, LOG2) and (LOG2, LOG1) produced different
+    restored hives - with the older chain applied last, its stale pages clobbered
+    newer ones. Both argument orders must now yield the identical restored hive.
+    """
+
+    # The fixture logs form a continuous chain: LOG1 (2107-2110) then LOG2 (2111-2130),
+    # so the expected page count is the sum of the dirty pages of both logs.
+    expected_pages = sum(len(pages) for _, _, pages in _scan_hvle_entries(system_tr_log_1)) + sum(
+        len(pages) for _, _, pages in _scan_hvle_entries(system_tr_log_2)
+    )
+
+    output_12 = os.path.join(mkdtemp(), "recovered_12.dat")
+    output_21 = os.path.join(mkdtemp(), "recovered_21.dat")
+    _, count_12 = apply_transaction_logs(
+        transaction_system,
+        primary_log_path=system_tr_log_1,
+        secondary_log_path=system_tr_log_2,
+        restored_hive_path=output_12,
+    )
+    _, count_21 = apply_transaction_logs(
+        transaction_system,
+        primary_log_path=system_tr_log_2,
+        secondary_log_path=system_tr_log_1,
+        restored_hive_path=output_21,
+    )
+
+    assert count_12 == expected_pages == count_21
+    with open(output_12, "rb") as f1, open(output_21, "rb") as f2:
+        assert f1.read() == f2.read()
+
+
+def test_ntuser_apply_transaction_logs_gap_stops_recovery(transaction_ntuser, transaction_log, transaction_log_2):
+    """
+    The two bundled NTUSER logs do not form a continuous chain: log2 holds a single
+    entry with sequence 562 (stale relative to the hive's secondary sequence 566)
+    and log1 holds entries 566-588. Per the registry file format specification,
+    recovery stops when an entry N is not followed by N + 1, so only the older
+    chain (log2) is applied - in either argument order.
+    """
+
+    expected_pages = sum(len(pages) for _, _, pages in _scan_hvle_entries(transaction_log_2))
+
+    for primary, secondary in ((transaction_log, transaction_log_2), (transaction_log_2, transaction_log)):
+        _, count = apply_transaction_logs(
+            transaction_ntuser,
+            primary_log_path=primary,
+            secondary_log_path=secondary,
+            restored_hive_path=os.path.join(mkdtemp(), "recovered.dat"),
+        )
+        assert count == expected_pages
+
+
+def test_transaction_log_hash_mismatch_stops_recovery(transaction_system, system_tr_log_1, system_tr_log_2):
+    """
+    Hash-1 covers everything from the first page reference of an entry on. A byte
+    of page data flipped in the first entry of LOG2 (sequence 2111) must make
+    recovery stop at that entry: only the entries of LOG1 are applied, and no
+    exception is raised (a failed hash stops recovery; it does not abort it).
+    """
+
+    expected_pages = sum(len(pages) for _, _, pages in _scan_hvle_entries(system_tr_log_1))
+
+    with open(system_tr_log_2, "rb") as f:
+        log_data = bytearray(f.read())
+
+    # Corrupt the first page-data byte of the first entry (at 512 + 40 + 8 * n_refs)
+    (dirty_pages_count,) = struct.unpack_from("<I", log_data, 512 + 20)
+    data_start = 512 + 40 + 8 * dirty_pages_count
+    log_data[data_start] ^= 0xFF
+
+    corrupt_log_path = mktemp()
+    with open(corrupt_log_path, "wb") as f:
+        f.write(bytes(log_data))
+
+    _, count = apply_transaction_logs(
+        transaction_system,
+        primary_log_path=system_tr_log_1,
+        secondary_log_path=corrupt_log_path,
+        restored_hive_path=os.path.join(mkdtemp(), "recovered.dat"),
+    )
+    assert count == expected_pages
 
 
 def test_hive_serialization(ntuser_hive, temp_output_file):
