@@ -363,10 +363,12 @@ def test_transaction_log_dirty_page_outside_hive_rejected(transaction_ntuser):
     # The 4096-byte page image is inside the entry (the hashes are valid), but
     # its target offset (~4 GiB) is far beyond the hive, and the entry's
     # declared hive bin size (0x10000) is too small to cover it.
+    # Sequence 566 equals the hive's secondary sequence number, so the log is
+    # not stale and the entry reaches the bounds check at apply time.
     page_data = b"\x41" * 4096
     with open(log_path, "wb") as f:
         f.write(
-            _build_hvle_log(sequence_number=5, hive_bin_size=0x10000, dirty_pages=[(0x7FFFFF00, len(page_data), page_data)])
+            _build_hvle_log(sequence_number=566, hive_bin_size=0x10000, dirty_pages=[(0x7FFFFF00, len(page_data), page_data)])
         )
 
     with pytest.raises(RegistryRecoveryException, match="points outside of the hive"):
@@ -444,16 +446,17 @@ def test_system_apply_transaction_logs_order_independent(transaction_system, sys
         assert f1.read() == f2.read()
 
 
-def test_ntuser_apply_transaction_logs_gap_stops_recovery(transaction_ntuser, transaction_log, transaction_log_2):
+def test_ntuser_apply_transaction_logs_stale_log_skipped(transaction_ntuser, transaction_log, transaction_log_2):
     """
     The two bundled NTUSER logs do not form a continuous chain: log2 holds a single
     entry with sequence 562 (stale relative to the hive's secondary sequence 566)
-    and log1 holds entries 566-588. Per the registry file format specification,
-    recovery stops when an entry N is not followed by N + 1, so only the older
-    chain (log2) is applied - in either argument order.
+    and log1 holds entries 566-588. Per the registry file format specification, a
+    log whose first entry is below the hive's secondary sequence number must not be
+    applied - its pages are older than the hive's current state - so only log1 is
+    applied, in either argument order.
     """
 
-    expected_pages = sum(len(pages) for _, _, pages in _scan_hvle_entries(transaction_log_2))
+    expected_pages = sum(len(pages) for _, _, pages in _scan_hvle_entries(transaction_log))
 
     for primary, secondary in ((transaction_log, transaction_log_2), (transaction_log_2, transaction_log)):
         _, count = apply_transaction_logs(
@@ -463,6 +466,57 @@ def test_ntuser_apply_transaction_logs_gap_stops_recovery(transaction_ntuser, tr
             restored_hive_path=os.path.join(mkdtemp(), "recovered.dat"),
         )
         assert count == expected_pages
+
+
+def test_transaction_log_stale_log_not_applied(transaction_ntuser):
+    """
+    A transaction log whose first entry predates the hive's secondary sequence number
+    (566 in the bundled NTUSER.DAT) is stale: applying it would overwrite newer hive
+    pages with older ones (gh-195). The stale log must be skipped outright - on its
+    own nothing is applied, and paired with a valid log (first entry 566) only the
+    valid log's page reaches the restored hive, in either argument order.
+    """
+
+    page_offset = 0x100
+    stale_log = _build_hvle_log(
+        sequence_number=562,
+        hive_bin_size=0x10000,
+        dirty_pages=[(page_offset, 4096, b"S" * 4096)],
+    )
+    fresh_log = _build_hvle_log(
+        sequence_number=566,
+        hive_bin_size=0x10000,
+        dirty_pages=[(page_offset, 4096, b"F" * 4096)],
+    )
+    stale_path = mktemp()
+    fresh_path = mktemp()
+    with open(stale_path, "wb") as f:
+        f.write(stale_log)
+    with open(fresh_path, "wb") as f:
+        f.write(fresh_log)
+
+    # A stale log on its own applies nothing.
+    restored_path = os.path.join(mkdtemp(), "stale_only.dat")
+    _, count = apply_transaction_logs(
+        transaction_ntuser,
+        primary_log_path=stale_path,
+        restored_hive_path=restored_path,
+    )
+    assert count == 0
+
+    # Paired with a valid log, only the valid log's page is applied (both orders).
+    for primary, secondary in ((fresh_path, stale_path), (stale_path, fresh_path)):
+        restored_path = os.path.join(mkdtemp(), "recovered.dat")
+        _, count = apply_transaction_logs(
+            transaction_ntuser,
+            primary_log_path=primary,
+            secondary_log_path=secondary,
+            restored_hive_path=restored_path,
+        )
+        assert count == 1
+        with open(restored_path, "rb") as f:
+            f.seek(REGF_HEADER_SIZE + page_offset)
+            assert f.read(4096) == b"F" * 4096
 
 
 def test_transaction_log_hash_mismatch_stops_recovery(transaction_system, system_tr_log_1, system_tr_log_2):
