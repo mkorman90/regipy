@@ -10,6 +10,7 @@ from regipy.exceptions import RegistryRecoveryException
 from regipy.hive_types import DIRT_TRANSACTION_LOG_MAGIC, HVLE_TRANSACTION_LOG_MAGIC
 from regipy.registry import RegistryHive
 from regipy.structs import HVLE_BLOCK_HEADER_SIZE, REGF_HEADER_SIZE, TRANSACTION_LOG
+from regipy.utils import calculate_xor32_checksum
 
 logger = logging.getLogger(__name__)
 
@@ -255,8 +256,10 @@ def _apply_entries_to_buffer(entries, restored_hive_buffer, hive_file_size, hive
 def _apply_header_state(restored_hive_buffer, last_applied_sequence, last_applied_bin_size):
     """Write the header state resulting from the applied log entries: the
     base block's primary sequence number becomes the last applied entry's
-    sequence number (and the secondary one the preceding number), and the
-    Hive bins data size becomes the last applied entry's declared size."""
+    sequence number (and the secondary one the preceding number), the Hive
+    bins data size becomes the last applied entry's declared size, and the
+    base block checksum is recomputed over the first 508 bytes so the
+    restored hive's header is self-consistent after those writes."""
     if last_applied_sequence is None:
         return
 
@@ -268,6 +271,15 @@ def _apply_header_state(restored_hive_buffer, last_applied_sequence, last_applie
     # Update hbins size from hvle to original header at offset 40
     restored_hive_buffer.seek(40)
     restored_hive_buffer.write(Int32ul.build(last_applied_bin_size))
+
+    # The sequence and bin-size writes above change bytes covered by the base
+    # block checksum (the XOR of the first 508 bytes, stored at offset 508).
+    # Recompute it so regipy-parse-header reports the restored hive as clean.
+    restored_hive_buffer.seek(0)
+    header = restored_hive_buffer.read(508)
+    if len(header) == 508:
+        restored_hive_buffer.seek(508)
+        restored_hive_buffer.write(Int32ul.build(calculate_xor32_checksum(header)))
 
 
 def _order_and_chain(entries_by_path, hive_secondary_sequence_num):
@@ -457,6 +469,7 @@ def apply_transaction_logs(
 
     # HvLE path: parse and validate both logs, apply the earlier sequence
     # chain first, and enforce sequence continuity across them.
+    hive_secondary_sequence_num = registry_hive.header.secondary_sequence_num
     entries_by_log = []
     for log_path in [primary_log_path, secondary_log_path]:
         if not log_path:
@@ -464,6 +477,22 @@ def apply_transaction_logs(
         log_size = os.path.getsize(log_path)
         logger.info(f"Log Size: {log_size}")
         entries = _scan_hvle_entries(log_path)
+
+        # A log whose first entry predates the hive's secondary sequence number
+        # is stale: every page it holds is older than the hive's current state,
+        # and applying it would overwrite newer pages with older ones (gh-195).
+        # Per the registry file format specification, a log's entries may only
+        # be applied if its first sequence number is not less than the hive's
+        # secondary sequence number, so a stale log is skipped outright.
+        if entries and entries[0][0] < hive_secondary_sequence_num:
+            logger.warning(
+                f"Transaction log {log_path} is stale: its first entry has sequence number "
+                f"{entries[0][0]}, which is below the hive's secondary sequence number "
+                f"{hive_secondary_sequence_num}. Skipping the log; applying it would overwrite "
+                "newer hive pages with older ones."
+            )
+            continue
+
         entries = [(sequence, bin_size, pages, log_size) for sequence, bin_size, pages in entries]
         entries_by_log.append(entries)
 
