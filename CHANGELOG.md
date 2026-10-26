@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **REG_SZ and REG_EXPAND_SZ values decode the string when the data after its NUL terminator is not valid UTF-16** - the whole value failed the UTF-16 decode, so it fell back to UTF-8 or raw bytes. For example `TimeZoneKeyName` in the SYSTEM test hive came back as bytes, and as hex in the `timezone_data` and `timezone_data2` plugins, instead of `Eastern Standard Time`. The new `try_decode_string` returns the string before the terminator in that case, and the `regipy-rs` backend does the same
+
 ## [6.5.2] - 2026-10-17
 
 ### Fixed

@@ -945,6 +945,30 @@ pub fn try_decode_binary(data: &[u8], as_json: bool, trim_values: bool) -> VData
     }
 }
 
+/// Python: try_decode_string. Decode REG_SZ and REG_EXPAND_SZ data like
+/// try_decode_binary, but when the data is not valid UTF-16LE, return the
+/// string before the NUL terminator.
+pub fn try_decode_string(data: &[u8], as_json: bool, trim_values: bool) -> VData {
+    if let Some(s) = decode_utf16le_strict(data) {
+        let s = s.trim_end_matches('\0');
+        return VData::Str(if trim_values {
+            truncate_chars(s, MAX_LEN)
+        } else {
+            s.to_string()
+        });
+    }
+    if let Some(end) = (0..data.len() / 2).position(|i| data[2 * i] == 0 && data[2 * i + 1] == 0) {
+        if let Some(s) = decode_utf16le_strict(&data[..end * 2]) {
+            return VData::Str(if trim_values {
+                truncate_chars(&s, MAX_LEN)
+            } else {
+                s
+            });
+        }
+    }
+    try_decode_binary(data, as_json, trim_values)
+}
+
 /// GreedyRange(CString("utf-16-le")) then filter out empty strings.
 pub fn greedy_utf16_cstrings(data: &[u8]) -> Vec<String> {
     let mut out = Vec::new();
@@ -1016,14 +1040,14 @@ fn decode_value(
         Some("REG_SZ") | Some("REG_EXPAND_SZ") => {
             if inline {
                 // Data is stored in the data_offset field itself.
-                try_decode_binary(inline_data, as_json, trim_values)
+                try_decode_string(inline_data, as_json, trim_values)
             } else {
                 let raw = raw_data(data, vk);
                 if vk.data_size > BIG_DATA_THRESHOLD && raw.starts_with(b"db") {
                     let big = read_big_data(data, &raw, vk.data_size)?;
-                    try_decode_binary(&big, as_json, trim_values)
+                    try_decode_string(&big, as_json, trim_values)
                 } else {
-                    try_decode_binary(&raw, as_json, trim_values)
+                    try_decode_string(&raw, as_json, trim_values)
                 }
             }
         }
@@ -1670,6 +1694,28 @@ mod tests {
         assert_eq!(out, expected);
         // Truncated head is an error, not a panic.
         assert!(read_big_data(&data, &head[..4], total as u32).is_err());
+    }
+
+    #[test]
+    fn try_decode_string_stops_at_terminator_before_invalid_utf16() {
+        // "Hi", a NUL terminator, then a lone high surrogate.
+        let data = b"H\x00i\x00\x00\x00\x00\xd8";
+        assert!(matches!(
+            try_decode_string(data, false, true),
+            VData::Str(ref s) if s == "Hi"
+        ));
+        // Valid UTF-16LE keeps the data after the terminator, like try_decode_binary.
+        let data = b"H\x00i\x00\x00\x00P\x00";
+        assert!(matches!(
+            try_decode_string(data, false, true),
+            VData::Str(ref s) if s == "Hi\0P"
+        ));
+        // Without a terminator, the try_decode_binary fallbacks apply.
+        let bin = &[0xFF, 0xFE, 0xFD];
+        assert!(matches!(
+            try_decode_string(bin, true, false),
+            VData::Str(ref s) if s == "fffefd"
+        ));
     }
 
     #[test]

@@ -723,6 +723,15 @@ def test_resident_unknown_type_keeps_legacy_buffer_read(sam_hive):
     assert values[0].value.startswith("0000000000100000000000000000000034ec4d905adccf01")
 
 
+def test_reg_sz_with_invalid_utf16_after_terminator(system_hive):
+    # The data after the NUL terminator of these strings is not valid UTF-16LE.
+    registry_hive = RegistryHive(system_hive)
+    subkey = registry_hive.get_key(r"\ControlSet001\Control\TimeZoneInformation")
+    assert subkey.get_value("TimeZoneKeyName") == "Eastern Standard Time"
+    subkey = registry_hive.get_key(r"\ControlSet001\services\Netlogon\Parameters")
+    assert subkey.get_value("DynamicSiteName") == "Default-First-Site-Name"
+
+
 def test_big_data_reg_multi_sz_is_reassembled(software_hive):
     # REG_MULTI_SZ values larger than 16344 bytes are stored in big-data (db)
     # segments. Regression test: these used to be parsed from the raw db

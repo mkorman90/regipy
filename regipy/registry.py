@@ -54,6 +54,7 @@ from regipy.utils import (
     identify_hive_type,
     trim_registry_data_for_error_msg,
     try_decode_binary,
+    try_decode_string,
 )
 
 logger = logging.getLogger(__name__)
@@ -608,12 +609,12 @@ class NKRecord:
                     if vk.data_size >= 0x80000000:
                         # data is stored inline, in the data_offset field itself
                         inline_data = Int32ul.build(vk.data_offset)[: vk.data_size - 0x80000000]
-                        actual_value = try_decode_binary(inline_data, as_json=as_json, trim_values=trim_values)
+                        actual_value = try_decode_string(inline_data, as_json=as_json, trim_values=trim_values)
                     elif vk.data_size > 0x3FD8 and value.value[:2] == b"db":
                         data = self._parse_indirect_block(substream, value)
-                        actual_value = try_decode_binary(data, as_json=as_json, trim_values=trim_values)
+                        actual_value = try_decode_string(data, as_json=as_json, trim_values=trim_values)
                     else:
-                        actual_value = try_decode_binary(value.value, as_json=as_json, trim_values=trim_values)
+                        actual_value = try_decode_string(value.value, as_json=as_json, trim_values=trim_values)
                 elif data_type in ["REG_BINARY", "REG_NONE"]:
                     if vk.data_size >= 0x80000000:
                         # data is stored inline, in the data_offset field itself

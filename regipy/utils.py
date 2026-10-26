@@ -191,6 +191,29 @@ def try_decode_binary(data, as_json=False, max_len=MAX_LEN, trim_values=True):
     return value
 
 
+def try_decode_string(data, as_json=False, max_len=MAX_LEN, trim_values=True):
+    """
+    Decode REG_SZ and REG_EXPAND_SZ data like try_decode_binary. The data after the NUL
+    terminator is not always valid UTF-16LE: then the string before the terminator is returned.
+    """
+    try:
+        value = data.decode("utf-16-le").rstrip("\x00")
+    except UnicodeDecodeError:
+        for i in range(0, len(data) - 1, 2):
+            if data[i] == 0 and data[i + 1] == 0:
+                try:
+                    value = data[:i].decode("utf-16-le")
+                except UnicodeDecodeError:
+                    break
+                return value[:max_len] if trim_values else value
+        return try_decode_binary(data, as_json=as_json, max_len=max_len, trim_values=trim_values)
+
+    if trim_values:
+        value = value[:max_len]
+
+    return value
+
+
 def _setup_logging(verbose):
     logging.basicConfig(
         stream=sys.stderr,
