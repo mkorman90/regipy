@@ -962,9 +962,10 @@ pub fn greedy_utf16_cstrings(data: &[u8]) -> Vec<String> {
             }
             units.push(u);
         }
-        if !terminated {
-            // EOF before the NUL terminator: construct raises and GreedyRange
-            // discards the partial element.
+        // The last string is not always NUL-terminated. Without a terminator it is
+        // kept, unless it ends in an odd byte: construct raises and GreedyRange
+        // discards the partial element.
+        if !terminated && (units.is_empty() || p != data.len()) {
             break;
         }
         match char::decode_utf16(units.iter().copied()).collect::<std::result::Result<String, _>>()
@@ -1635,9 +1636,14 @@ mod tests {
 
     #[test]
     fn greedy_utf16_cstrings_skips_empties_and_partial_tail() {
-        // "AB", "", "C", then an unterminated tail (dropped like construct).
+        // "AB", "", "C", then "D" without a NUL terminator.
         let data = b"A\x00B\x00\x00\x00\x00\x00C\x00\x00\x00D\x00";
-        assert_eq!(greedy_utf16_cstrings(data), vec!["AB", "C"]);
+        assert_eq!(greedy_utf16_cstrings(data), vec!["AB", "C", "D"]);
+        // A tail that ends in an odd byte is dropped like construct.
+        assert_eq!(
+            greedy_utf16_cstrings(b"A\x00B\x00\x00\x00C\x00D"),
+            vec!["AB"]
+        );
         assert_eq!(greedy_utf16_cstrings(b""), Vec::<String>::new());
     }
 

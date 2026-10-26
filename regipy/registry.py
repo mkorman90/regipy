@@ -650,6 +650,9 @@ class NKRecord:
                         multi_sz_data = self._parse_indirect_block(substream, value)
                     else:
                         multi_sz_data = value.value
+                    # The last string is not always NUL-terminated
+                    if len(multi_sz_data) % 2 == 0 and multi_sz_data[-2:] not in (b"", b"\x00\x00"):
+                        multi_sz_data += b"\x00\x00"
                     parsed_value = GreedyRange(CString("utf-16-le")).parse(multi_sz_data)  # type: ignore[union-attr]
                     # Because the ListContainer object returned by Construct cannot be turned into a list,
                     # we do this trick

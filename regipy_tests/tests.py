@@ -723,6 +723,17 @@ def test_resident_unknown_type_keeps_legacy_buffer_read(sam_hive):
     assert values[0].value.startswith("0000000000100000000000000000000034ec4d905adccf01")
 
 
+def test_reg_multi_sz_without_terminator(transaction_usrclass):
+    # The last string of a REG_MULTI_SZ value is not always NUL-terminated. This
+    # value holds a single string without a terminator.
+    registry_hive = RegistryHive(transaction_usrclass)
+    subkey = registry_hive.get_key(
+        r"\Local Settings\MrtCache\C:%5CProgram Files%5CWindowsApps"
+        r"%5CMicrosoft.Office.OneNote_17.8366.57611.0_x64__8wekyb3d8bbwe%5Cresources.pri\1d33931957c6aac\fae8ab0e"
+    )
+    assert subkey.get_value("LanguageList") == ["_en-US_standard_100_US_LTR_light_Desktop"]
+
+
 def test_big_data_reg_multi_sz_is_reassembled(software_hive):
     # REG_MULTI_SZ values larger than 16344 bytes are stored in big-data (db)
     # segments. Regression test: these used to be parsed from the raw db
