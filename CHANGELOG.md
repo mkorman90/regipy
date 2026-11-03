@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.5.3] - 2026-10-17
+
+### Fixed
+
+- **`apply_transaction_logs` skips stale transaction logs and recomputes the restored hive's header checksum** (gh #195)
+  - A log whose first entry predates the hive's secondary sequence number is stale: its pages are older than the hive's current state, and applying it overwrote newer pages with older ones. On the #195 dataset (SYSTEM seq 204/205 plus a stale LOG2 holding a 2013-era sequence chain), the stale log clobbered 904 newer pages and the restored hive failed to parse. Such logs are now skipped outright, per the registry file format specification, in either argument order
+  - The base block checksum is recomputed over the first 508 bytes after the recovered sequence numbers and bin size are written, so the restored hive passes the header checksum validation
+  - The restored #195 hive now matches the RegistryExplorer reference byte-for-byte except the secondary sequence word (210 vs 211 convention) and the checksum byte: 20018 keys, 0 parse errors, valid checksum
+- **`apply_transaction_logs` now handles DIRT (old format) transaction logs correctly** (gh #355)
+  - The dirty pages are read from the next 512-byte boundary after the dirty page vector (`512 + align_up(4 + dirty_vector_length, 512)`) instead of a fixed 1,024. For vectors of up to 508 bytes the two coincide (small-hive behavior is unchanged), but the NPS 2011 SYSTEM hive (13,070,336 bytes of bins data) has a 3,191-byte vector and its pages start at 4,096; with the fixed offset the log's vector bytes were written into the hive, 32 sectors changed, and the restored hive could no longer be walked
+  - A DIRT log is no longer applied to a clean hive (primary sequence number == secondary sequence number): such a log holds pages already present in the hive, and applying it clobbered them. These logs are skipped with a warning, recover 0 pages, and leave the restored hive a byte-identical copy of the input. The check runs per log, so a mixed DIRT + HvLE pair still applies the HvLE side
+  - A 512-byte page read that returns fewer bytes (a truncated log) now raises `RegistryRecoveryException` instead of writing a zero-padded partial page into the hive
+
 ## [6.5.2] - 2026-10-17
 
 ### Fixed
