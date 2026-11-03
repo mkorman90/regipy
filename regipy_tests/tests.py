@@ -465,6 +465,32 @@ def test_transaction_log_dirt_pages_read_from_aligned_offset(transaction_system)
             assert f.read(512) == page
 
 
+def test_transaction_log_dirt_not_applied_to_clean_hive(system_hive):
+    """
+    A DIRT log is only meaningful while the hive is dirty (primary sequence
+    number != secondary sequence number): it holds the pages of an interrupted
+    write, and a clean hive already contains them. The SYSTEM fixture is clean
+    (both sequence numbers 13,983), so its DIRT log must be skipped outright -
+    0 pages recovered and a restored hive byte-identical to the input. Applying
+    it instead clobbered the hive with the log's page copies and made it
+    unparseable (the NPS 2011 dataset of gh #355).
+    """
+    registry_hive = RegistryHive(system_hive)
+    assert registry_hive.header.primary_sequence_num == registry_hive.header.secondary_sequence_num
+    vector_length = registry_hive.header.hive_bins_data_size // 4096
+    assert vector_length > 508  # only then do the log's pages sit past the legacy 1,024 offset
+
+    log_path = mktemp()
+    with open(log_path, "wb") as f:
+        f.write(_build_dirt_log(vector_length, [0, 1], [b"X" * 512, b"Y" * 512]))
+
+    output_path = os.path.join(mkdtemp(), "recovered_hive.dat")
+    _, recovered_dirty_pages_count = apply_transaction_logs(system_hive, log_path, restored_hive_path=output_path)
+    assert recovered_dirty_pages_count == 0
+    with open(system_hive, "rb") as f1, open(output_path, "rb") as f2:
+        assert f1.read() == f2.read()
+
+
 def test_system_apply_transaction_logs_order_independent(transaction_system, system_tr_log_1, system_tr_log_2):
     """
     Which log holds the earlier sequence chain is a property of the logs, not of

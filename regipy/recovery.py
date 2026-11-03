@@ -407,6 +407,23 @@ def _parse_transaction_log_legacy(registry_hive, hive_path, transaction_log_path
             magic = s.read(4)
 
         if magic == DIRT_TRANSACTION_LOG_MAGIC:
+            # A DIRT log is only meaningful while the hive is dirty
+            # (primary_sequence_num != secondary_sequence_num): it holds the
+            # pages of an interrupted write, and a clean hive already contains
+            # them. Applying a DIRT log to a clean hive clobbers the hive with
+            # the log's page copies and makes it unparseable (gh #355), so it
+            # is skipped - the restored hive is a byte-identical copy of the
+            # input. The check lives here (per log) so a mixed DIRT + HvLE pair
+            # still applies the HvLE side.
+            if registry_hive.header.primary_sequence_num == registry_hive.header.secondary_sequence_num:
+                logger.warning(
+                    f"The hive is clean (primary and secondary sequence numbers are both "
+                    f"{registry_hive.header.primary_sequence_num}), so its DIRT transaction log "
+                    f"{transaction_log_path} holds pages already present in the hive. Skipping it - "
+                    "applying it would overwrite the hive's pages with the log's copies."
+                )
+                return BytesIO(open(hive_path, "rb").read()), 0
+
             # This is an old transaction log - DIRT
             hbins_data_size = registry_hive.header.hive_bins_data_size
             restored_hive_buffer, recovered_dirty_pages_count = _parse_dirt_block(hive_path, transaction_log, hbins_data_size)
