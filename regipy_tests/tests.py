@@ -334,6 +334,29 @@ def _build_hvle_log(sequence_number, hive_bin_size, dirty_pages, log_size=None):
     return b"\x00" * 512 + body[:24] + struct.pack("<QQ", hash_1, hash_2) + body[40:]
 
 
+def _build_dirt_log(dirty_vector_length, dirty_bits, page_data):
+    """Build a crafted DIRT transaction log: 512 zero bytes of REGF header, the
+    DIRT signature, the dirty page vector, and the dirty pages themselves.
+
+    The dirty pages follow the vector at the next 512-byte boundary (the vector
+    starts at 512 + 4), i.e. at 512 + align_up(4 + dirty_vector_length, 512)
+    (gh #355) - 1,024 for vectors up to 508 bytes, further out for larger hives.
+
+    :param dirty_vector_length: length of the dirty page vector in bytes
+        (the hive's hbins_data_size // 4096)
+    :param dirty_bits: absolute bit positions (one bit per 512 bytes of hive
+        bins data) whose pages the log holds, in ascending order
+    :param page_data: 512-byte page images, one per dirty bit, in bit order
+    """
+    vector = bytearray(dirty_vector_length)
+    for bit in dirty_bits:
+        vector[bit // 8] |= 1 << (bit % 8)
+
+    vector_end = 512 + len(b"DIRT") + dirty_vector_length
+    log_file_base = (vector_end + 511) // 512 * 512
+    return b"\x00" * 512 + b"DIRT" + bytes(vector) + b"\x00" * (log_file_base - vector_end) + b"".join(page_data)
+
+
 def test_transaction_log_hvle_zero_log_size_rejected(transaction_ntuser):
     """
     An HvLE block whose log_size is smaller than the 40-byte block header used to
@@ -409,6 +432,37 @@ def test_transaction_log_dirt_short_vector_rejected(transaction_ntuser):
 
     with pytest.raises(RegistryRecoveryException, match="dirty page vector"):
         apply_transaction_logs(transaction_ntuser, log_path, restored_hive_path=os.path.join(mkdtemp(), "restored.dat"))
+
+
+def test_transaction_log_dirt_pages_read_from_aligned_offset(transaction_system):
+    """
+    The dirty pages of a DIRT log follow the dirty page vector at the next
+    512-byte boundary, not at a fixed 1,024 (gh #355). The SYSTEM fixture's hive
+    bins data size (12,398,592 bytes) gives a 3,027-byte vector, so its pages
+    start at 3,584. With the old fixed 1,024 offset the wrong bytes of the log
+    (the vector itself) were written into the hive instead of the page images.
+
+    The hive is dirty (sequence 1622/1621), so the DIRT log is applied and each
+    logged page must land at 4,096 + bit * 512 in the restored hive.
+    """
+    vector_length = 12398592 // 4096  # the SYSTEM fixture's hbins_data_size // 4096
+    log_file_base = (512 + 4 + vector_length + 511) // 512 * 512
+    assert log_file_base == 3584 != 1024  # only the misaligned offset is the regression
+
+    dirty_bits = [1, 10, 100, 2048, 7000]
+    pages = [marker * 512 for marker in (b"A", b"B", b"C", b"D", b"E")]
+    log_path = mktemp()
+    with open(log_path, "wb") as f:
+        f.write(_build_dirt_log(vector_length, dirty_bits, pages))
+
+    output_path = os.path.join(mkdtemp(), "recovered_hive.dat")
+    _, recovered_dirty_pages_count = apply_transaction_logs(transaction_system, log_path, restored_hive_path=output_path)
+    assert recovered_dirty_pages_count == len(dirty_bits)
+
+    with open(output_path, "rb") as f:
+        for bit, page in zip(dirty_bits, pages):
+            f.seek(REGF_HEADER_SIZE + bit * 512)
+            assert f.read(512) == page
 
 
 def test_system_apply_transaction_logs_order_independent(transaction_system, system_tr_log_1, system_tr_log_2):

@@ -315,7 +315,13 @@ def _parse_dirt_block(hive_path, transaction_log, hbins_data_size):
     if transaction_log.read(4) != b"DIRT":
         raise RegistryRecoveryException("Expected DIRT signature!")
 
-    log_file_base = 1024  # 512 + len(b'DIRT') + dirty_vector_length
+    # The dirty pages follow the dirty page vector (which starts right after
+    # the DIRT signature at 512 + 4), aligned to the next 512-byte boundary.
+    # For vectors up to 508 bytes this evaluates to 1024, but for larger hives
+    # the vector pushes the pages further out - a hive with 13,070,336 bytes of
+    # bins data has a 3,191-byte vector and its pages start at 4,096 (gh #355).
+    vector_end = 512 + len(b"DIRT") + dirty_vector_length
+    log_file_base = (vector_end + 511) // 512 * 512
     primary_file_base = 4096
     bitmap = transaction_log.read(dirty_vector_length)
     if len(bitmap) < dirty_vector_length:
@@ -361,7 +367,17 @@ def _parse_dirt_block(hive_path, transaction_log, hbins_data_size):
         restored_hive_buffer.seek(registry_offset)
         transaction_log.seek(transaction_log_offset)
 
-        restored_hive_buffer.write(transaction_log.read(512))
+        # A short read here would write a partial (zero-padded) page into the
+        # hive and silently corrupt it.
+        page_data = transaction_log.read(512)
+        if len(page_data) < 512:
+            raise RegistryRecoveryException(
+                f"Expected 512 bytes of page data at {hex(transaction_log_offset)} in the transaction log but "
+                f"only {len(page_data)} bytes remain. The transaction log is corrupt or malformed, refusing "
+                "to continue."
+            )
+
+        restored_hive_buffer.write(page_data)
 
         recovered_dirty_pages_count += 1
     return restored_hive_buffer, recovered_dirty_pages_count
